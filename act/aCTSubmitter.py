@@ -1,6 +1,6 @@
 import os
 import time
-import aCTDB
+import aCTDBPanda
 from arclib import *
 import cgi
 import arclfc
@@ -142,7 +142,7 @@ class aCTSubmitter:
         self.log=self.logger()
 
         self.conf=aCTConfig.aCTConfig()
-        self.db=aCTDB.aCTDB(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
 
         self.log.info("Started")
 

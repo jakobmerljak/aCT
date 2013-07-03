@@ -1,6 +1,6 @@
 import os
 import time
-import aCTDB
+import aCTDBPanda, aCTDBArc
 from arclib import *
 import aCTConfig
 import re
@@ -71,7 +71,8 @@ class aCTDownloader:
         # config
         self.conf=aCTConfig.aCTConfig()
         # database
-        self.db=aCTDB.aCTDB(self.log,self.conf.get(["db","file"]))
+        self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         # ARC FTPControl
         #### self.ftpcontrol=FTPControl()
         # store the last checkJobs time to avoid overloading of GIIS
@@ -262,8 +263,8 @@ class aCTDownloader:
 
 
         self.log.info("Updating pstatus")
-        #jobs=self.db.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' )")
-	jobs=self.db.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid not like ''")
+        #jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' )")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid not like ''")
 
         jlist=[]
         for job in jobs:
@@ -293,8 +294,8 @@ class aCTDownloader:
                 jd['theartbeat']=time.time()-2*int(self.conf.get(['panda','heartbeattime']))
                 # expire check time
                 jd['tarcstatus']=time.time()-2*int(self.conf.get(['jobs','checkinterval']))
-                self.db.updateJob(job['pandaid'],jd)
-        #self.db.Commit()
+                self.dbpanda.updateJob(job['pandaid'],jd)
+        #self.dbpanda.Commit()
         self.log.info("updated %d jobs" % count)
         
         
@@ -311,10 +312,11 @@ class aCTDownloader:
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobs=self.db.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid like 'gsiftp%' and trfstatus like '"+trfstatus+"' and tarcstatus<strftime('%s','now')-"+str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid like 'gsiftp%' and trfstatus like '"+trfstatus+"' and tarcstatus<strftime('%s','now')-"+str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
 
+        # TODO: make function for this in aCTDBPanda
         # number of total jobs
-        c=self.db.conn.cursor()
+        c=self.dbpanda.conn.cursor()
         c.execute("select count(*) from jobs")
         njobs=c.fetchone()['count(*)']
         timeout=int(self.conf.get(['atlasgiis','timeout']))
@@ -340,7 +342,7 @@ class aCTDownloader:
                 self.log.error( "Failed to check: %d %s" % (job['pandaid'],job['arcjobid']))
             	#jd={}
                 #jd['trfstatus']="toresubmit"
-            	#self.db.updateJob(job['pandaid'],jd)
+            	#self.dbpanda.updateJob(job['pandaid'],jd)
                 continue
             self.log.debug( "%d %s %d %s %f %f %s %s" % (job['pandaid'],ji.status,ji.exitcode,ji.cluster,ji.used_cpu_time,ji.used_wall_time,ji.used_memory,ji.proxy_expire_time))
 
@@ -357,7 +359,7 @@ class aCTDownloader:
                 elif ji.rerunable == "FINISHING":
                     # check athena failed
                     # allow uploading only log tarball
-        	    self.db.Commit()
+        	    self.dbpanda.Commit()
                     if self.checkAthenaFailed(job):
                         jd['trfstatus']="tofinished"
                     else:
@@ -385,13 +387,13 @@ class aCTDownloader:
                 else:
                     jd['pstatus']='starting'
 
-            self.db.updateJobLazy(job['pandaid'],jd)
-            ###self.db.updateJob(job['pandaid'],jd)
+            self.dbpanda.updateJobLazy(job['pandaid'],jd)
+            ###self.dbpanda.updateJob(job['pandaid'],jd)
 
             # update arcstatus
-            ###AF jb=self.db.getJob(job['pandaid'])
+            ###AF jb=self.dbpanda.getJob(job['pandaid'])
 	    # this is very slow... 
-            row=self.db.getArcJob(job['pandaid'])
+            row=self.dbarc.getArcJob(job['pandaid'])
             ###AF if row is None or jb['tarcstatus'] != row['tarcstatus'] :
             if row is None or job['tarcstatus'] != row['tarcstatus'] :
                 #self.log.info("jobtimes: %s %s" % (st,et))
@@ -422,17 +424,18 @@ class aCTDownloader:
                 if et is not None:
                     jd['endtime']=et
                     
-                self.db.updateArcJobLazy(job['pandaid'],jd)
-                ###self.db.updateArcJob(job['pandaid'],jd)
+                self.dbarc.updateArcJobLazy(job['pandaid'],jd)
+                ###self.dbarc.updateArcJob(job['pandaid'],jd)
         self.log.info("Done")
-        self.db.Commit()
-        
+        #dbpanda.Commit() commits for ARC and Panda tables
+        self.dbpanda.Commit()
+    
     def processRerunable(self):
         """
         Try to rerun failed in download/upload
         """
             
-        jobs=self.db.getJobs(" ( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='torerun' limit 500")
+        jobs=self.dbpanda.getJobs(" ( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='torerun' limit 500")
         if len(jobs):
             self.log.info("%d" % len(jobs))
         else:
@@ -472,7 +475,7 @@ class aCTDownloader:
                     jd['tarcstatus']=time.time()+300
                     jd['trfstatus']='inarc'
                     self.log.info("%s reruned " % j['pandaid'])
-                self.db.updateJob(j['pandaid'],jd)
+                self.dbpanda.updateJob(j['pandaid'],jd)
             except FTPControlError,x:
                 self.log.error(x)
 		if str(x).find("Server responded: Job can't be restarted") != -1:
@@ -481,9 +484,9 @@ class aCTDownloader:
 		  jd['tarcstatus']=time.time()
 		  jd['trfstatus']='inarc'
 		  self.log.info("%s moved back to inarc " % j['pandaid'])
-		  self.db.updateJob(j['pandaid'],jd)
+		  self.dbpanda.updateJob(j['pandaid'],jd)
                 #jd['trfstatus']='tofailed'
-                #self.db.updateJob(j['pandaid'],jd)
+                #self.dbpanda.updateJob(j['pandaid'],jd)
                 continue
             except Exception,x:
                 self.log.error(x)
@@ -493,7 +496,7 @@ class aCTDownloader:
         """
         Cancel the job and resubmit. (for jobs queued to long or for clusters in downtime)
         """
-        jobs=self.db.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='toresubmit' limit 500")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='toresubmit' limit 500")
         if len(jobs):
             self.log.info("%d" % len(jobs))
         else:
@@ -520,7 +523,7 @@ class aCTDownloader:
                 jd['tarcstatus']=time.time()
                 jd['trfstatus']='tosubmit'
                 self.log.info("%s resubmitted " % j['pandaid'])
-                self.db.updateJob(j['pandaid'],jd)
+                self.dbpanda.updateJob(j['pandaid'],jd)
             except Exception,x:
                 self.log.error(x)
                 continue
@@ -531,7 +534,7 @@ class aCTDownloader:
         """
         Remove completed jobs from database and clean the jobs on clusters.
         """
-        jobs=self.db.getJobs("pstatus like '"+pstatus+"' and trfstatus='"+trfstatus+"'")
+        jobs=self.dbpanda.getJobs("pstatus like '"+pstatus+"' and trfstatus='"+trfstatus+"'")
         if len(jobs):
             self.log.info("%d" % len(jobs))
         else:
@@ -554,7 +557,7 @@ class aCTDownloader:
                     RemoveJobID(str(j['arcjobid']))
                 except:
                     pass
-                self.db.removeJobs(j['pandaid'])
+                self.dbpanda.removeJobs(j['pandaid'])
                 # clean xml and pickle
                 try:
                     os.unlink(self.conf.get(['tmp','dir'])+"/xml/"+str(j['pandaid'])+".xml")
@@ -575,7 +578,7 @@ class aCTDownloader:
         """
         not used
         """
-        jobs=self.db.getJobs("trfstatus='tobekilled' or pstatus='tobekilled'")
+        jobs=self.dbpanda.getJobs("trfstatus='tobekilled' or pstatus='tobekilled'")
 
         if len(jobs):
             self.log.info("%d" % len(jobs))
@@ -585,7 +588,7 @@ class aCTDownloader:
         c=JobFTPControl()
 
         for j in jobs:
-            aj=self.db.getArcJob(j['pandaid'])
+            aj=self.dbarc.getArcJob(j['pandaid'])
             try:
                 if j['arcjobid']:
                     c.Cancel(str(j['arcjobid']))
@@ -622,14 +625,14 @@ class aCTDownloader:
             jd={}
             jd['pstatus']='failed'
             jd['trfstatus']='topanda'
-            self.db.updateJob(j['pandaid'],jd)
+            self.dbpanda.updateJob(j['pandaid'],jd)
             
     
     def getDatasets(self,pandaid):
         """
         decode the job datasets from the pandajob description in database
         """
-        j=self.db.getJob(pandaid)
+        j=self.dbpanda.getJob(pandaid)
         #print j
         jobdesc = cgi.parse_qs(j['pandajob'])
         datasets={}
@@ -638,9 +641,9 @@ class aCTDownloader:
         return datasets
 
     def checkFailed(self):
-        jobs=self.db.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='tofailed'")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='tofailed'")
 	for j in jobs:
-	  aj=self.db.getArcJob(j['pandaid'])
+	  aj=self.dbarc.getArcJob(j['pandaid'])
 	  resubmit=0
 	  for error in self.conf.getList(['errors','toresubmit','arcerrors','item']):
 	    if aj['errors'].find(error) != -1:
@@ -650,13 +653,13 @@ class aCTDownloader:
 	    jd={}
 	    jd['pstatus'] = 'starting'
 	    jd['trfstatus']='toresubmit'
-	    self.db.updateJob(j['pandaid'],jd)
+	    self.dbpanda.updateJob(j['pandaid'],jd)
 
     def downloadFailed(self):
         """
         process jobs failed for other reasons than athena (log_extracts was not created by pilot)
         """
-        jobs=self.db.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='tofailed' limit 300 ")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' )  and trfstatus='tofailed' limit 300 ")
         if len(jobs):
             self.log.info("%d" % len(jobs))
         else:
@@ -772,7 +775,7 @@ class aCTDownloader:
 
             xml=""
             # xml and log
-            aj=self.db.getArcJob(j['pandaid'])
+            aj=self.dbarc.getArcJob(j['pandaid'])
 
             # set update, pickle from pilot is not available
             # some values might not be properly set
@@ -830,7 +833,7 @@ class aCTDownloader:
             jd={}
             jd['pstatus']='failed'
             jd['trfstatus']='topanda'
-            self.db.updateJob(j['pandaid'],jd)
+            self.dbpanda.updateJob(j['pandaid'],jd)
 
     def downloadPilotThr(self,trfstatus):
         """
@@ -840,7 +843,7 @@ class aCTDownloader:
             self.log.info("lfc downtime: no downlading")
             return
         
-        jobs=self.db.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' ) and trfstatus='"+trfstatus+"' limit %d" % int(self.conf.get(['loop','maxjobs','downloader'])))
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='transferring' or pstatus='starting' ) and trfstatus='"+trfstatus+"' limit %d" % int(self.conf.get(['loop','maxjobs','downloader'])))
         if len(jobs) == 0:
             return 0
         self.log.info("downloading: %d" % len(jobs))
@@ -861,7 +864,7 @@ class aCTDownloader:
             if cluster in self.conf.getList(['downtime','cluster','item']):
                 continue
             tcount+=1
-            aj=self.db.getArcJob(j['pandaid'])
+            aj=self.dbarc.getArcJob(j['pandaid'])
             datasets=self.getDatasets(j['pandaid'])
             turls=self.GetOutputTurls(j['pandaid'])
             t=DownloaderThr(self.downloadJobPilotThr,j,aj,datasets,turls)
@@ -875,7 +878,7 @@ class aCTDownloader:
 	    if t.status == "tobekilled":
 		jd={}
 	        jd['trfstatus']="tobekilled"
-		self.db.updateJob(t.job['pandaid'],jd)
+		self.dbpanda.updateJob(t.job['pandaid'],jd)
             elif t.status is not None:
                 jobsok.append(t.job)
                 lfcinput.update(t.status)
@@ -912,7 +915,7 @@ class aCTDownloader:
             print jd
             for j in jobsok:
                 print "Updating job ",j['pandaid']
-                self.db.updateJob(j['pandaid'],jd)
+                self.dbpanda.updateJob(j['pandaid'],jd)
             self.log.info("LFC ok")
         else:
             self.log.error("Failed in LFC registration")
@@ -1117,7 +1120,7 @@ class aCTDownloader:
         """
         get output turls from the database
         """
-        j=self.db.getJob(pandaid)
+        j=self.dbpanda.getJob(pandaid)
         turls = {}
         l=str(j['turls'])
         # strip ' at beginning and end

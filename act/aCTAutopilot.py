@@ -3,7 +3,7 @@ import os
 import subprocess
 import time
 import aCTPanda
-import aCTDB
+import aCTDBPanda
 import sys
 import aCTConfig
 import aCTProxy
@@ -59,7 +59,7 @@ class aCTAutopilot:
         self.log.info("Start")
 
         # database
-        self.db=aCTDB.aCTDB(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
         # panda
         # proxy path?????
         self.panda=aCTPanda.aCTPanda(self.log)

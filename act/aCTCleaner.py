@@ -1,6 +1,6 @@
 import os
 import time
-import aCTDB
+import aCTDBPanda
 from arclib import *
 import aCTConfig
 import re
@@ -46,7 +46,7 @@ class aCTCleaner:
         # config
         self.conf=aCTConfig.aCTConfig()
         # database
-        self.db=aCTDB.aCTDB(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
         # ARC FTPControl
         self.ftpcontrol=FTPControl()
         

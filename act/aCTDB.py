@@ -13,7 +13,7 @@ class aCTDB:
     def __init__(self,logger,dbname="aCTjobs.sqlite"):
         self.conn=sqlite.connect(dbname,1800)
         self.conn.row_factory=dict_factory
-	self.conn.execute('''PRAGMA synchronous=OFF''')
+        self.conn.execute('''PRAGMA synchronous=OFF''')
         self.log=logger
 
 
@@ -56,19 +56,15 @@ class aCTDB:
         #   - pstatus=running, arcstatus=FAILED -> processFailed ->
         #             1. rerunable -> arcstatus=submitted
         #             2. if not -> pstatus=failed, cleanup, logfiles, etc... TODO
-        str="create table jobs (pandaid integer, tstamp timestamp, pandajob text, arcjobid text, jobname text, arcstatus text, tarcstatus timestamp, arcexitcode integer, pstatus text, theartbeat timestamp, trfstatus text, nrerun integer,lfns text, turls text)"
-        str2="create table arcjobs (pandaid integer, tstamp timestamp, tarcstatus timestamp, cluster text,  submissiontime timestamp, completiontime timestamp, usedcputime integer, usedwalltime integer, errors text, exitcode integer, executionnodes text, proxyexpiretime timestamp, rerunable text, xml text, log text, starttime timestamp, endtime timestamp)"
-        str3="create table schedconfig (cluster text, status text)"
+        str="create table schedconfig (cluster text, status text)"
         c=self.conn.cursor()
         try:
-            c.execute("drop table jobs")
+            c.execute("drop table schedconfig")
         except:
-            self.log.warning("no jobs table")
+            self.log.warning("no schedconfig table")
             pass
         try:
             c.execute(str)
-            c.execute(str2)
-            c.execute(str3)
             self.conn.commit()
         except Exception,x:
             self.log.error("failed create tables %s" %x)
@@ -90,96 +86,8 @@ class aCTDB:
         row=c.fetchone()
         return row
 
-    def insertJob(self,pandaid,pandajob,desc={}):
-        desc['tstamp']=time.time()
-        k="(pandaid,pandajob,pstatus,"+",".join(['%s' % key for key in desc.keys()])+")"
-        v="("+str(pandaid)+",'"+pandajob+"','sent',"+",".join(['"%s"' % val for val in desc.values()])+")"
-        s="insert into jobs "+k+" values "+v
-        c=self.conn.cursor()
-        #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(time.time())+","+str(pandaid)+",'"+pandajob+"','sent')")
-        c.execute(s)
-        self.conn.commit()
-
-    def insertArcJob(self,pandaid):
-        c=self.conn.cursor()
-        c.execute("insert into arcjobs (tstamp,pandaid) values ("+str(time.time())+","+str(pandaid)+")")
-        self.conn.commit()
-
-    def deleteJob(self,pandaid):
-        c=self.conn.cursor()
-        c.execute("delete from jobs where pandaid="+str(pandaid))
-        self.conn.commit()
-
-    def deleteArcJob(self,pandaid):
-        c=self.conn.cursor()
-        c.execute("delete from arcjobs where pandaid="+str(pandaid))
-        self.conn.commit()
-
-    def updateJob(self,id,desc):
-        desc['tstamp']=time.time()
-        s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
-        c.execute(s)
-        self.conn.commit()
-
-    def updateArcJob(self,id,desc):
-        desc['tstamp']=time.time()
-        s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
-        c.execute("select pandaid from arcjobs where pandaid="+str(id))
-        row=c.fetchone()
-        if(row is None) :
-            self.insertArcJob(id)
-        c.execute(s)
-        self.conn.commit()
-
-    def updateJobLazy(self,id,desc):
-        desc['tstamp']=time.time()
-        s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
-        c.execute(s)
-
-    def updateArcJobLazy(self,id,desc):
-        desc['tstamp']=time.time()
-        s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
-        c.execute("select pandaid from arcjobs where pandaid="+str(id))
-        row=c.fetchone()
-        if(row is None) :
-            self.insertArcJob(id)
-        c.execute(s)
-
     def Commit(self):
         self.conn.commit()
-
-
-    def getJob(self,pandaid):
-        c=self.conn.cursor()
-        c.execute("select * from jobs where pandaid="+str(pandaid))
-        row=c.fetchone()
-        return row
-
-    def getJobs(self,select):
-        c=self.conn.cursor()
-        c.execute("select * from jobs where "+select)
-        rows=c.fetchall()
-        return rows
-
-    def getArcJob(self,pandaid):
-        c=self.conn.cursor()
-        c.execute("select * from arcjobs where pandaid="+str(pandaid))
-        row=c.fetchone()
-        return row
-
-    def getArcJobs(self,select):
-        c=self.conn.cursor()
-        c.execute("select * from arcjobs where "+select)
-        rows=c.fetchall()
-        return rows
 
     def removeJobs(self,pandaid):
         c=self.conn.cursor()
@@ -200,19 +108,3 @@ if __name__ == '__main__':
     adb=aCTDB(logging.getLogger('test'))
     adb.createTables()
     exit(0)
-    n={}
-    n['trfstatus']='tolfc'
-    adb.insertJob(1,"testblanj",n)
-    #adb.insertJob(2,"testbla tepec")
-    #time.sleep(2)
-    jd={}
-    jd['pstatus']='sent'
-    adb.updateJob(1,jd)
-    job=adb.getJob(1)
-    print job['pstatus'],job['pandaid']
-        
-    jobs=adb.getJobs("pstatus='sent'")
-    for j in jobs:
-        for k,v in j.items():
-            if v != None:
-                print k,v
