@@ -18,7 +18,7 @@ class aCTDB:
 
 
     def createTables(self):
-        # jobs:
+        # jobs (see aCTDBPanda.py):
         #   - pandaid:
         #   - tstamp: timestamp of last record update
         #   - pandajob: xml panda job description
@@ -31,7 +31,7 @@ class aCTDB:
         #   - theartbeat: time stamp of last heartbeat (pstatus set)
         #   - trfstatus: inarc, downloaded, lfcregisterred,
         #   - nrerun: rerun count
-        # arcjobs:
+        # arcjobs (see aCTDBArc.py):
         #   - pandaid:
         #   - tstamp: timestamp of last record update
         #   - tarcstatus: time stamp of last arcstatus ?

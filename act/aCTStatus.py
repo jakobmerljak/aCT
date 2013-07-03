@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import aCTDB
+import aCTDBPanda
 import aCTConfig
 import re
 
@@ -8,13 +8,11 @@ class aCTStatus:
     
     def __init__(self):
         self.conf=aCTConfig.aCTConfig()
-        self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(None,self.conf.get(["db","file"]))
 
 
     def JobReport(self):
-        c=self.db.conn.cursor()
-        c.execute("select arcjobid,arcstatus from jobs")
-        rows=c.fetchall()
+        rows=self.db.getJobReport()
         rep={}
         rtot={}
 

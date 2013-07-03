@@ -1,7 +1,7 @@
 import os
 import time
 from arclib import *
-import aCTDB
+import aCTDBPanda
 import aCTConfig
 import re
 
@@ -9,7 +9,7 @@ class aCTOrphanJobs:
     
     def __init__(self):
         self.conf=aCTConfig.aCTConfig()
-        self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(None,self.conf.get(["db","file"]))
 
 
     def check(self):
@@ -23,9 +23,7 @@ class aCTOrphanJobs:
         clusters = GetClusterResources(atlasgiisl,True,GetEffectiveSN(),timeout)
         jobs = GetAllJobs(clusters,True,GetEffectiveSN(),timeout)
 
-        c=self.db.conn.cursor()
-        c.execute("select arcjobid,arcstatus from jobs")
-        rows=c.fetchall()
+        rows=self.db.getJobReport()
 
         actjobs=[]
         for r in rows:

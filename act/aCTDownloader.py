@@ -316,9 +316,7 @@ class aCTDownloader:
 
         # TODO: make function for this in aCTDBPanda
         # number of total jobs
-        c=self.dbpanda.conn.cursor()
-        c.execute("select count(*) from jobs")
-        njobs=c.fetchone()['count(*)']
+        njobs=self.dbpanda.getNJobs()
         timeout=int(self.conf.get(['atlasgiis','timeout']))
 
         # Do not check too little jobs at once (at least 1% of running jobs)

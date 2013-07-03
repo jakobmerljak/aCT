@@ -92,6 +92,18 @@ class aCTDBPanda(aCTDB):
         rows=c.fetchall()
         return rows
 
+    def getNJobs(self):
+        c=self.dbpanda.conn.cursor()
+        c.execute("select count(*) from jobs")
+        njobs=c.fetchone()['count(*)']
+        return njobs
+
+    def getJobReport(self):
+        c=self.db.conn.cursor()
+        c.execute("select arcjobid,arcstatus from jobs")
+        rows=c.fetchall()
+        return rows
+
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
