@@ -1,0 +1,226 @@
+<config>
+
+<executable>
+  <wrapper>NGpilot</wrapper>
+  <wrapperurl>lfc://lfc1.ndgf.org//grid/atlas/dq2/user/user.andrejfilipcic.production/NGpilot.10</wrapperurl>
+  <ptarurl>lfc://lfc1.ndgf.org//grid/atlas/dq2/user/user.andrejfilipcic.production/pilot3-SULU47h1.tgz</ptarurl>
+</executable>
+
+<db>
+  <type>mysql</type>
+  <socket>/tmp/act.mysql.socket</socket>
+</db>
+
+<logger>
+  <level>info</level>
+  <main>aCTMain.log</main>
+  <pandajob>aCTPandaJob.log</pandajob>
+  <autopilot>/home/act01/log/aCTAutopilot.log</autopilot>
+  <submitter>/home/act01/log/aCTSubmitter.log</submitter>
+  <resolver>/home/act01/log/aCTResolver.log</resolver>
+  <downloader>/home/act01/log/aCTDownloader.log</downloader>
+  <cleaner>/home/act01/log/aCTCleaner.log</cleaner>
+  <clusterstatus>0.log</clusterstatus>
+  <size>10000000</size>
+  <rotate>25</rotate>
+</logger>
+
+<joblog>
+  <urlprefix>http://f9pc00.ijs.si/act/failedjobs</urlprefix>
+  <dir>/d1/www/act/failedjobs</dir>
+</joblog>
+
+<atlasgiis>
+  <timeout>90</timeout>
+  <item>ldap://arcgiis.titan.uio.no:2135/o=grid/Mds-Vo-name=Atlas</item>
+  <item>ldap://atlasgiis.nbi.dk:2135/o=grid/Mds-Vo-name=Atlas</item>
+</atlasgiis>
+
+
+<sites>
+  <site>
+    <name>ARC</name>
+    <clusters>
+      <item>pikolit.ijs.si</item>
+      <item>gateway01.dcsc.ku.dk</item>
+      <item>ce01.titan.uio.no</item>
+      <item>jost.arnes.si</item>
+      <item>pikolit.ijs.si</item>
+      <item>jeannedarc.hpc2n.umu.se</item>
+      <item>grad.uppmax.uu.se</item>
+      <item>arc-ce01.pdc.kth.se</item>
+      <item>siri.lunarc.lu.se</item>
+      <item>arc-ce.smokerings.nsc.liu.se</item>
+      <item>ce.lhep.unibe.ch</item>
+      <item>nordugrid.unibe.ch</item>
+      <item>grid03.unige.ch</item>
+      <item>arc01.lcg.cscs.ch</item>
+      <item>arc02.lcg.cscs.ch</item>
+    </clusters>
+  </site>
+</sites>
+
+<clustersreject>
+  <item>nosuchcluster</item>
+  <item>vm009.gla.scotgrid.ac.uk</item>
+  <item>ce03.titan.uio.no</item>
+  <item>arctest-ce.smokerings.nsc.liu.se</item>
+  <item>arc.bccs.uib.no</item>
+  <item>grid03.unige.ch</item>
+  <item>nordugrid.unibe.ch</item>
+  <item>arc01.lcg.cscs.ch</item>
+  <item>arc02.lcg.cscs.ch</item>
+  <item>siri.lunarc.lu.se</item>
+  <item>jeannedarc.hpc2n.umu.se</item>
+  <!-->
+  <item>gateway01.dcsc.ku.dk</item>
+  <item>grid.uio.no</item>
+  <item>arc.bccs.uib.no</item>
+  <item>ce01.titan.uio.no</item>
+  <item>ce03.titan.uio.no</item>
+  <item>jost.arnes.si</item>
+  <item>pikolit.ijs.si</item>
+  <item>jeannedarc.hpc2n.umu.se</item>
+  <item>grad.uppmax.uu.se</item>
+  <item>arc-ce01.pdc.kth.se</item>
+  <item>siri.lunarc.lu.se</item>
+  <item>arc-ce.smokerings.nsc.liu.se</item>
+  <item>arctest-ce.smokerings.nsc.liu.se</item>
+  <item>ce.lhep.unibe.ch</item>
+  <item>nordugrid.unibe.ch</item>
+  <item>grid03.unige.ch</item>
+  <item>arc01.lcg.cscs.ch</item>
+  <item>arc02.lcg.cscs.ch</item>
+  <item>vm009.gla.scotgrid.ac.uk</item>
+  </!-->
+</clustersreject>
+
+<jobs>
+  <maxqueued>8000</maxqueued>
+  <minqueued>4500</minqueued>
+  <maxrerun>3</maxrerun>
+  <checkinterval>7200</checkinterval>
+  <checkmintime>30</checkmintime>
+  <queuedratio>1.40</queuedratio>
+  <updateinterval>1</updateinterval>
+</jobs>
+
+<downtime>
+  <stopsubmission>false</stopsubmission>
+  <srmdown>false</srmdown>
+  <poolsdown>false</poolsdown>
+  <lfcdown>false</lfcdown>
+  <cluster>
+    <item>nosuchcluster</item>
+  </cluster>
+</downtime>
+
+<panda>
+  <!-->
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <server>https://voatlas58.cern.ch:25443/server/panda/</server>
+  </!-->
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <monitor>http://panda.cern.ch:25880/server/pandamon/</monitor>
+  <!-->
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <server>https://voatlas21.cern.ch:25443/server/panda/</server>
+  <server>https://pandasrv.usatlas.bnl.gov:25443/server/panda/</server>
+  </!-->
+  <cloud>ND</cloud>
+  <site>ARC</site>
+  <heartbeattime>3600</heartbeattime>
+  <threads>10</threads>
+  <getjobs>100</getjobs>
+  <schedulerid>aCT-AndrejFilipcic_1</schedulerid>
+  <timeout>60</timeout>
+  <schedinterval>60</schedinterval>
+  <queues>
+  	<item>ARC-arc-ce.smokerings.nsc.liu.se</item>
+  	<item>ARC-arc-ce01.pdc.kth.se</item>
+  	<item>ARC-arc01.lcg.cscs.ch</item>
+  	<item>ARC-ce01.titan.uio.no</item>
+  	<item>ARC-gateway01.dcsc.ku.dk</item>
+  	<item>ARC-grad.uppmax.uu.se</item>
+  	<item>ARC-grid.uio.no</item>
+  	<item>ARC-grid03.unige.ch</item>
+  	<item>ARC-jeannedarc.hpc2n.umu.se</item>
+  	<item>ARC-lheppc50.unibe.ch</item>
+  	<item>ARC-nordugrid.unibe.ch</item>
+  	<item>ARC-pikolit.ijs.si</item>
+  	<item>ARC-siri.lunarc.lu.se</item>
+        <item>ARC-arc.bccs.uib.no</item>
+  </queues>
+</panda>
+
+<voms>
+  <bindir>/usr/bin</bindir>
+  <proxylifetime>192:00</proxylifetime>
+  <minlifetime>432000</minlifetime>
+  <proxypath>/tmp/x509up_u501</proxypath>
+</voms>
+
+<lfc>
+  <host>lfc://lfc1.ndgf.org/</host>
+</lfc>
+
+<srm>
+  <prefix>srm://srm.ndgf.org</prefix>
+  <token>
+    <name>ATLASMCDISK</name>
+    <dir>/atlas/disk/atlasmcdisk</dir>
+  </token>
+  <token>
+    <name>ATLASMCTAPE</name>
+    <dir>/atlas/tape/atlasmctape</dir>
+  </token>
+  <token>
+    <name>ATLASDATADISK</name>
+    <dir>/atlas/disk/atlasdatadisk</dir>
+  </token>
+  <token>
+    <name>ATLASDATATAPE</name>
+    <dir>/atlas/tape/atlasdatatape</dir>
+  </token>
+</srm>
+
+
+<brokerlist>
+  <broker>
+    <name>standard</name>
+    <qreject>
+      <item>XXXatlas-t1-reprocessing</item>
+      <item>lcgadmin</item>
+    </qreject>
+  </broker>
+</brokerlist>
+
+<xrsl>
+  <item>(middleware >= nordugrid-arc-0.8.1)(rerun=2)</item>
+</xrsl>
+
+<errors>
+  <toresubmit>
+    <arcerrors>
+      <item>Job was lost</item>
+      <item>Job submission to LRMS failed</item>
+      <item>Failed extracting LRMS ID</item>
+      <item>Job disappeared from SGE</item>
+      <item>Failed extracting LRMS ID</item>
+      <item>Job was cancelled</item>
+      <item>Internal error in uploader</item>
+      <item>Job finished with non-zero exit code</item>
+      <item>LRMS error: (127) Job failed</item>
+      <item>Job missing from SLURM</item>
+      <item>Submission: runtime script</item>
+      <item>LRMS error: (-4)</item>
+      <item>Job failed with exit code 1</item>
+      <item>Job was killed by PBS</item>
+      <item>Local submission client failed</item>
+      <item>LRMS error: (255)</item>
+      <item>LRMS error: (1)</item>
+    </arcerrors>
+  </toresubmit>
+</errors>
+
+</config> 

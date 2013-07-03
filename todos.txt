@@ -1,0 +1,20 @@
+End July:
+
+J - DB stuff
+  -- sqlite -> generic sql
+  -- superclass for common tables, subclass for ARC and Panda tables
+  -- move all DB calls into aCTDB
+D - ARC 0.8 -> ARC 3
+J - adapt agents to new db schema
+J - move to new structure (process per cluster)
+
+End Aug:
+
+all - testbed (fake Panda)
+
+End Sept:
+
+A - panda engine inserts to ARC table
+all - svn/packaging/doc/monitoring
+? - use real users' proxies
+all - testing at scale
