@@ -2,8 +2,10 @@ End July:
 
 J - DB stuff
   -- sqlite -> generic sql
-  -- superclass for common tables, subclass for ARC and Panda tables
+  -- superclass for common db operations, subclass for ARC and Panda tables operations
+    -- done first attempt, may consider renaming some functions in aCTDBArc class
   -- move all DB calls into aCTDB
+    -- done first attempt, adding getJobReport and getNJobs to aCTDBPanda
 D - ARC 0.8 -> ARC 3
 J - adapt agents to new db schema
 J - move to new structure (process per cluster)
