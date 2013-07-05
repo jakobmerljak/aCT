@@ -3,7 +3,6 @@ import time
 import aCTDBPanda
 from arclib import *
 import cgi
-import arclfc
 import lfcthr as lfc
 import LFCTools
 import aCTConfig
@@ -212,15 +211,15 @@ class aCTSubmitter:
             return guids
         for g in guids.keys():
             try:
-                res=arclfc.getlfn(str(g))
+                links = lfc.lfc_getlinks('', str(g))
             except Exception,x:
                 self.log.error(x) 
                 lfc.lfc_endsess()
                 return guids
-            if res is None:
+            if not links or not links[1] or not links[1][0]:
                 guids[g]=None
             else:
-                guids[g]=lfcurl+res
+                guids[g]=lfcurl+links[1][0].path            
         lfc.lfc_endsess()
         return guids
 
