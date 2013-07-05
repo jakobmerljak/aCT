@@ -1,6 +1,7 @@
 import os
 import pysqlite2.dbapi2 as sqlite
 import time
+from aCTDB import aCTDB
 
 def dict_factory(cursor, row):
     d = {}
@@ -93,13 +94,13 @@ class aCTDBPanda(aCTDB):
         return rows
 
     def getNJobs(self):
-        c=self.dbpanda.conn.cursor()
+        c=self.conn.cursor()
         c.execute("select count(*) from jobs")
         njobs=c.fetchone()['count(*)']
         return njobs
 
     def getJobReport(self):
-        c=self.db.conn.cursor()
+        c=self.conn.cursor()
         c.execute("select arcjobid,arcstatus from jobs")
         rows=c.fetchall()
         return rows
