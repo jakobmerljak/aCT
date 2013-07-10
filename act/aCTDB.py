@@ -1,6 +1,6 @@
 import os
-import pysqlite2.dbapi2 as sqlite
 import time
+from aCTDBMS import aCTDBMS
 
 def dict_factory(cursor, row):
     d = {}
@@ -8,14 +8,11 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
-class aCTDB:
+class aCTDB(aCTDBMS):
 
-    def __init__(self,logger,dbname="aCTjobs.sqlite"):
-        self.conn=sqlite.connect(dbname,1800)
-        self.conn.row_factory=dict_factory
-        self.conn.execute('''PRAGMA synchronous=OFF''')
-        self.log=logger
-
+    def __init__(self,logger,dbname="aCTjobs.db"):
+        # inherit DB Mgmt System from aCTDBMS
+        aCTDBMS.__init__(self, logger, dbname)
 
     def createTables(self):
         # jobs (see aCTDBPanda.py):
