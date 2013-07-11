@@ -1,7 +1,7 @@
 import os
 import time
 import aCTDBPanda
-from arclib import *
+import arc
 import cgi
 import lfcthr as lfc
 import LFCTools
@@ -15,65 +15,59 @@ import re
 import copy
 
 class SubmitThr(Thread):
-   def __init__ (self,func,pandaid,X,logger):
+   def __init__ (self,func,pandaid,jobdescs,uc,logger):
       Thread.__init__(self)
       self.func=func
       self.pandaid=pandaid
-      self.X = X
+      self.jobdescs = jobdescs
+      self.uc = uc
       self.log=logger
       self.arcjobid=''
       self.jobname=''
       self.turls=''
    def run(self):
-      (self.arcjobid,self.jobname,self.turls)=self.func(self.X,self.log)
+      (self.arcjobid,self.jobname,self.turls)=self.func(self.jobdescs,self.uc,self.log)
 
 
-def Submit(X,log):
+def Submit(jobdescs,uc,log):
 
     global queuelist
 
-    try:
-        PerformXrslValidation(X)
-    except XrslError,x:
-        log.error("Xrsl not validated %s" % x)
-        return (None,None,None)
-    #for q in queuelist:
-    #	print q
     if len(queuelist) == 0  :
-	log.error("no cluster free for submission")
-	return (None,None,None)
-    targets=ConstructTargets(queuelist,X)
-    targets=PerformStandardBrokering(targets)
-    tl=[]
-    tll=copy.copy(targets)
-    for i in tll:
-      tl.append(i)
-    random.shuffle(tl)
-    #random.shuffle(targets)
-    #submitter = JobSubmission (X, targets)
-    submitter = JobSubmission (X, tl)
-    try:
-        arcjobid = submitter.Submit()
-    except JobSubmissionError,x:
-        log.error("Submission failed %s" % x)
+        log.error("no cluster free for submission")
         return (None,None,None)
-    lock=Lock()
-    lock.acquire()
-    queuelist = submitter.RegisterJobsubmission(queuelist)
-    lock.release()
-    jobname = X.GetRelation('jobname').GetSingleValue()
-    AddJobID(arcjobid, jobname)
-    log.info("job: %s %s" % (arcjobid,jobname))
-    ofs = X.GetRelation('outputfiles').GetDoubleListValue()
-    turls=[]
-    for i in ofs:
-        if i[1] != "":
-            turls.append(i[0]+" "+i[1])
-    turls="'"+'\n'.join(turls)+"'"
+    
+    # Do brokering among the available queues
+    jobdesc = jobdescs[0]
+    broker = arc.Broker(uc, jobdesc, "Random")
+    targetsorter = arc.ExecutionTargetSorter(broker)
+    for target in queuelist:
+        log.debug("considering target %s:%s" % (target.ComputingService.Name, target.ComputingShare.Name))
 
+        # Adding an entity performs matchmaking and brokering
+        targetsorter.addEntity(target)
+    
+    if len(targetsorter.getMatchingTargets()) == 0:
+        log.error("no clusters satisfied job description requirements")
+        return (None,None,None)
+        
+    targetsorter.reset() # required to reset iterator, otherwise we get a seg fault
+    selectedtarget = targetsorter.getCurrentTarget()
+    # Job object will contain the submitted job
+    job = arc.Job()
+    submitter = arc.Submitter(uc)
+    if submitter.Submit(selectedtarget, jobdesc, job) != arc.SubmissionStatus.NONE:
+        log.error("Submission failed")
+        return (None,None,None)
+    
+    arcjobid = job.JobID
+    jobname = job.Name
+    turls = "'"
+    for output in jobdesc.DataStaging.OutputFiles:
+        if output.Targets:
+            turls += output.Name + ' ' + output.Targets[0].str() + '\n'
+    turls += "'"
     return (arcjobid,jobname,turls)
-
-
 
 
     
@@ -142,6 +136,15 @@ class aCTSubmitter:
 
         self.conf=aCTConfig.aCTConfig()
         self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+
+        # ARC Configuration
+        self.uc = arc.UserConfig()
+        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
+        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
+        timeout=int(self.conf.get(['atlasgiis','timeout']))
+        self.uc.Timeout(timeout)
+        # Set random broker (it is the default but set here anyway)
+        self.uc.Broker("Random")
 
         self.log.info("Started")
 
@@ -731,12 +734,7 @@ class aCTSubmitter:
 
 	# print str(xrsl)
 
-        try:
-            pxrsl=Xrsl(str(xrsl))
-            return pxrsl
-        except XrslError,x:
-            self.log.error(x)
-            return None
+        return str(xrsl)
 
     def guidsTolfns(self):
         """
@@ -781,11 +779,11 @@ class aCTSubmitter:
         Main function to submit jobs.
         """
 
-	global queuelist
+        global queuelist
 
         # check for stopsubmission flag
         if self.conf.get(['downtime','stopsubmission']) == "true":
-           return 0
+            return 0
 
         #jobs=self.db.getJobs("pstatus='sent' and trfstatus='tosubmit' limit 500")
         jobs=self.db.getJobs("pstatus='sent' and trfstatus='tosubmit' limit 100")
@@ -795,54 +793,58 @@ class aCTSubmitter:
         self.log.info("Submitting %d jobs:" % len(jobs))
 
         # GIIS setup
-        gisl=self.conf.getList(['atlasgiis','item'])
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        atlasgiis=URL(str(gisl[0]))
-	atlasgiisl=[]
-	for g in gisl:
-	    atlasgiisl.append(URL(str(g)))
+        
+        
+        giislist=self.conf.getList(['atlasgiis','item'])
+        atlasgiisl=[]
+        for g in giislist:
+            # Specify explicitly EGIIS
+            atlasgiisl.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
 
-        # Query clusters
-        clusters = GetClusterResources(atlasgiisl,True,GetEffectiveSN(),timeout)
-        # Query cluster queues
-        ql = GetQueueInfo(clusters,MDS_FILTER_CLUSTERINFO,True,GetEffectiveSN(),timeout)
-
+        # retriever contains a list of CE endpoints
+        retriever = arc.ComputingServiceRetriever(self.uc, atlasgiisl)
+        retriever.wait()
+        # targets is the list of queues
+        # target.ComputingService.Name is the CE hostname
+        # target.ComputingShare.Name is the queue name
+        targets = retriever.GetExecutionTargets()
+        
         # block rejected queues and clusters
+        # TODO: When Submitter runs per site filter only sites for this process
         queuelist=[]
-        for q in ql:
-           #if q.name+"@"+q.cluster.hostname in self.conf.getList(['queuesreject','item']):
-           s = self.db.getSchedconfig(q.cluster.hostname)
-           status = 'online'
-           if s is not None:
-              status=s['status']
-           if q.name in self.conf.getList(['queuesreject','item']):
-              pass
-           elif q.cluster.hostname in self.conf.getList(['clustersreject','item']):
-              pass
-           elif status == "XXXoffline":
-              pass
-	   #elif q.cluster.hostname == "jeannedarc.hpc2n.umu.se" and q.name == "atlas-t1-repro":
-	   #   pass
-           else:
-	      # tmp hack
-	      q.local_queued=0
-	      q.prelrms_queued=0
-	      q.cpu_freq=2000.0
-	      qjobs=self.db.getJobs("arcjobid like '%" +str(q.cluster.hostname)+ "%' and  ( pstatus like 'sent' or pstatus like 'starting') ")
-	      rjobs=self.db.getJobs("arcjobid like '%" +str(q.cluster.hostname)+ "%' and  pstatus like 'running' ")
-	      #jlimit = max ( len(rjobs)*0.20, 50)
-	      #jlimit = len(rjobs)*0.15 + 30
-	      jlimit = len(rjobs)*0.15 + 20
-	      #jlimit = 30000
-	      q.grid_queued=len(qjobs)
-	      #if ( len(qjobs) < 200 ) :
-	      if ( len(qjobs) < jlimit ) :
-                queuelist.append(q)
-	      #if q.cluster.hostname == "lcg-lrz-ce2.grid.lrz.de":
-              #  queuelist.append(q)
-	   if q.cluster.hostname == "vm009.gla.scotgrid.ac.uk":
-	      q.cpu_freq=3000.0
-	      #q.total_cpus=100
+        for target in targets:
+            s = self.db.getSchedconfig(target.ComputingService.Name)
+            status = 'online'
+            if s is not None:
+                status=s['status']
+            if target.ComputingShare.Name in self.conf.getList(['queuesreject','item']):
+                pass
+            elif target.ComputingService.Name in self.conf.getList(['clustersreject','item']):
+                pass
+            elif status == "XXXoffline":
+                pass
+            #elif target.ComputingService.Name == "jeannedarc.hpc2n.umu.se" and target.ComputingShare.Name == "atlas-t1-repro":
+            #    pass
+            else:
+                # tmp hack
+                target.ComputingShare.LocalWaitingJobs = 0
+                target.ComputingShare.PreLRMSWaitingJobs = 0
+                target.ExecutionEnvironment.CPUClockSpeed = 2000
+                qjobs=self.db.getJobs("arcjobid like '%" +str(target.ComputingService.Name)+ "%' and  ( pstatus like 'sent' or pstatus like 'starting') ")
+                rjobs=self.db.getJobs("arcjobid like '%" +str(target.ComputingService.Name)+ "%' and  pstatus like 'running' ")
+                #jlimit = max ( len(rjobs)*0.20, 50)
+                #jlimit = len(rjobs)*0.15 + 30
+                jlimit = len(rjobs)*0.15 + 20
+                #jlimit = 30000
+                target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
+                #if ( len(qjobs) < 200 ) :
+                if len(qjobs) < jlimit:
+                    queuelist.append(target)
+                    self.log.debug("Adding target %s:%s" % (queuelist[-1].ComputingService.Name, target.ComputingShare.Name))
+                #if target.ComputingService.Name == "lcg-lrz-ce2.grid.lrz.de":
+                #   queuelist.append(target)
+                if target.ComputingService.Name == "vm009.gla.scotgrid.ac.uk":
+                    target.ExecutionEnvironment.CPUClockSpeed = 3000
 
         tlist=[]
 
@@ -856,16 +858,17 @@ class aCTSubmitter:
 
         for j in jobs:
             self.log.debug("preparing: %s" % j['pandaid'])
-            X = self.panda2xrsl(j['pandajob'],j['pandaid'])
-            if X is None:
-                self.log.error("Failed to prepare xrsl %d" % j['pandaid'])
+            jobdescstr = self.panda2xrsl(j['pandajob'],j['pandaid'])
+            jobdescs = arc.JobDescriptionList()
+            if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
+                self.log.error("Failed to prepare job description %d" % j['pandaid'])
                 continue
-            t=SubmitThr(Submit,j['pandaid'],X,self.log)
+            t=SubmitThr(Submit,j['pandaid'],jobdescs,self.uc,self.log)
             tlist.append(t)
             #t.start()
 
-	#aCTUtils.RunThreadsSplit(tlist,10)
-	self.RunThreadsSplit(tlist,1)
+        #aCTUtils.RunThreadsSplit(tlist,10)
+        self.RunThreadsSplit(tlist,1)
         self.log.info("threads finished")
 
 
@@ -888,86 +891,6 @@ class aCTSubmitter:
         #    self.db.updateJob(t.pandaid,jd)
         self.log.info("end submitting")
 
-
-            
-    def submitOld(self):
-        """
-        Main function to submit jobs. Not threaded yet
-        """
-        jobs=self.db.getJobs("pstatus='sent' and trfstatus='tosubmit'")
-        if len(jobs) == 0:
-            #self.log.debug("No jobs to submit")
-            return 0
-        self.log.debug("Submitting %d jobs:" % len(jobs))
-
-        # GIIS setup
-        gisl=self.conf.getList(['atlasgiis','item'])
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        atlasgiis=URL(str(gisl[0]))
-	atlasgiisl=[]
-	for g in gisl:
-	    atlasgiisl.append(URL(str(g)))
-
-        # Query clusters
-        clusters = GetClusterResources(atlasgiisl,True,GetEffectiveSN(),timeout)
-        # Query cluster queues
-        ql = GetQueueInfo(clusters,MDS_FILTER_CLUSTERINFO,True,GetEffectiveSN(),timeout)
-
-        # block rejected queues and clusters
-        queuelist=[]
-        for q in ql:
-            #if q.name+"@"+q.cluster.hostname in self.conf.getList(['queuesreject','item']):
-            if q.name in self.conf.getList(['queuesreject','item']):
-                pass
-            elif q.cluster.hostname in self.conf.getList(['clustersreject','item']):
-                pass
-            else:
-                queuelist.append(q)
-
-        for j in jobs:
-            self.log.debug("preparing: %s" % j['pandaid'])
-            X = self.panda2xrsl(j['pandajob'],j['pandaid'])
-            if X is None:
-                self.log.error("Failed to prepare xrsl %d" % j['pandaid'])
-                continue
-            PerformXrslValidation(X)
-
-            # prepare targets
-            #self.log.debug("preparing targets")
-            targets=ConstructTargets(queuelist,X)
-            targets=PerformStandardBrokering(targets)
-            broker=self.BrokerQueued()
-            targets=broker(targets)
-
-            # submit the job
-            #self.log.debug("submitting")
-            submitter = JobSubmission (X, targets)
-            try:
-                arcjobid = submitter.Submit()
-            except JobSubmissionError,x:
-                self.log.error("Submission failed %s" % x)
-                continue
-            queuelist = submitter.RegisterJobsubmission(queuelist)
-            jobname = X.GetRelation('jobname').GetSingleValue()
-            self.log.info("job: %s %s" % (arcjobid,jobname))
-
-            AddJobID(arcjobid, jobname)
-            # update db
-            jd={}
-            jd['arcjobid']=arcjobid
-            jd['jobname']=jobname
-            jd['arcstatus']='submitted'
-            # initial offset to 1 minute to force first status check
-            jd['tarcstatus']=time.time()-int(self.conf.get(['jobs','checkinterval']))+60
-            jd['trfstatus']='inarc'
-            ofs = X.GetRelation('outputfiles').GetDoubleListValue()
-            turls=[]
-            for i in ofs:
-                if i[1] != "":
-                    turls.append(i[0]+" "+i[1])
-            jd['turls']="'"+'\n'.join(turls)+"'"
-            self.db.updateJob(j['pandaid'],jd)
-            #self.log.debug("end submitting")
 
     def checkFailedSubmissions(self):
        # TODO trfstatus='submitting'
