@@ -2,6 +2,8 @@ import logging
 import logging.handlers
 import aCTConfig
 
+import arc
+
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warning': logging.WARNING,
@@ -25,14 +27,22 @@ class aCTLogger:
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
 
+        self.arclogfile = arc.LogFile(str(self.conf.get(["logger",name])))
+        self.arclogfile.setFormat(arc.LongFormat)
+        arc.Logger_getRootLogger().addDestination(self.arclogfile)
+        if self.conf.get(["logger", "arclevel"]):
+            arc.Logger_getRootLogger().setThreshold(arc.string_to_level(str(self.conf.get(["logger", "arclevel"])).upper()))
+        else:
+            arc.Logger_getRootLogger().setThreshold(arc.ERROR)
+
     def log(self,level,message,*args, **kwargs):
         lvl = LEVELS.get(level, logging.NOTSET)
         self.logger.log(lvl,message,*args, **kwargs)
 
     def write(self,s):
         if s == "\n":
-	  return
-    	self.logger.info(s)
+            return
+        self.logger.info(s)
 
     def __call__(self):
         return self.logger
