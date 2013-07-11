@@ -42,7 +42,10 @@ class aCTConfig:
         return l
         
     def get(self,nodes):
-        return self.getList(nodes)[0]
+        l = self.getList(nodes)
+        if l:
+            return l[0]
+        return None
 
 if __name__ == '__main__':
 
