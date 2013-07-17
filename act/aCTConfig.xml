@@ -26,6 +26,15 @@
   <type>sqlite3</type>
   <file>/home/act01/aCTjobs.sqlite</file>
 </db>
+ 
+<!-->
+<db>
+  <type>mysql</type>
+  <socket>/tmp/act.mysql.socket</socket>
+  <file>/tmp/act.mysql.socket</file>
+  <name>act</name>
+</db>
+ </!-->
 
 <loop>
   <time>
