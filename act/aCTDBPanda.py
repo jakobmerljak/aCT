@@ -10,7 +10,7 @@ def dict_factory(cursor, row):
     return d
 
 class aCTDBPanda(aCTDB):
-
+    
     def createTables(self):
         # jobs:
         #   - pandaid:
@@ -81,15 +81,15 @@ class aCTDBPanda(aCTDB):
         c=self.conn.cursor()
         c.execute(s)
 
-    def getJob(self,pandaid):
+    def getJob(self,pandaid,columns=[]):
         c=self.conn.cursor()
-        c.execute("select * from jobs where pandaid="+str(pandaid))
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
         return row
 
-    def getJobs(self,select):
+    def getJobs(self,select,columns=[]):
         c=self.conn.cursor()
-        c.execute("select * from jobs where "+select)
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE "+select)
         rows=c.fetchall()
         return rows
 
@@ -111,10 +111,10 @@ if __name__ == '__main__':
     #adb=aCTDB(logging.getLogger('test'),dbname='test.sqlite')
     adb=aCTDBPanda(logging.getLogger('test'))
     adb.createTables()
-    exit(0)
     n={}
     n['trfstatus']='tolfc'
     adb.insertJob(1,"testblanj",n)
+    exit(0)
     #adb.insertJob(2,"testbla tepec")
     #time.sleep(2)
     jd={}

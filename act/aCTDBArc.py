@@ -74,15 +74,16 @@ class aCTDBArc(aCTDB):
             self.insertArcJob(id)
         c.execute(s)
 
-    def getArcJob(self,pandaid):
+    def getArcJob(self,pandaid,columns=[]):
         c=self.conn.cursor()
-        c.execute("select * from arcjobs where pandaid="+str(pandaid))
+        print "SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid)
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
         return row
 
-    def getArcJobs(self,select):
+    def getArcJobs(self,select, columns=[]):
         c=self.conn.cursor()
-        c.execute("select * from arcjobs where "+select)
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         return rows
 
@@ -92,4 +93,8 @@ if __name__ == '__main__':
     #adb=aCTDB(logging.getLogger('test'),dbname='test.sqlite')
     adb=aCTDBArc(logging.getLogger('test'))
     adb.createTables()
+    adb.insertArcJob(0)
+    adb.insertArcJob(1)
+    aj=adb.getArcJobs("errors is NULL",columns=['executionnodes','exitcode','errors','usedwalltime','usedcputime','starttime','endtime'])
+    print aj['errors']
     exit(0)

@@ -13,7 +13,17 @@ class aCTDB(aCTDBMS):
     def __init__(self,logger,dbname="aCTjobs.db"):
         # inherit DB Mgmt System from aCTDBMS
         aCTDBMS.__init__(self, logger, dbname)
-
+    
+    def _column_list2str(self,columns):
+        s=""
+        if columns:
+            for col in columns:
+                s+=col+", "
+            s=s.strip(", ")
+        else:
+            s="*"
+        return s
+    
     def createTables(self):
         # jobs (see aCTDBPanda.py):
         #   - pandaid:
