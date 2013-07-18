@@ -85,12 +85,20 @@ class aCTDBPanda(aCTDB):
         c=self.conn.cursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
+        # mysql SELECT returns list, we want dict
+        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
+        if not isinstance(row,dict):
+            row=dict(zip(c.column_names,row))
         return row
 
     def getJobs(self,select,columns=[]):
         c=self.conn.cursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE "+select)
         rows=c.fetchall()
+        # mysql SELECT returns list, we want dict
+        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
+        if not isinstance(rows,dict):
+            rows=dict(zip(c.column_names, zip(*[list(row) for row in rows])))
         return rows
 
     def getNJobs(self):

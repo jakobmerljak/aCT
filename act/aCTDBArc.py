@@ -79,12 +79,20 @@ class aCTDBArc(aCTDB):
         print "SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid)
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
+        # mysql SELECT returns list, we want dict
+        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
+        if not isinstance(row,dict):
+            row=dict(zip(c.column_names,row))
         return row
 
     def getArcJobs(self,select, columns=[]):
         c=self.conn.cursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
+        # mysql SELECT returns list, we want dict
+        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
+        if not isinstance(rows,dict):
+            rows=dict(zip(c.column_names, zip(*[list(row) for row in rows])))
         return rows
 
 if __name__ == '__main__':
@@ -96,5 +104,6 @@ if __name__ == '__main__':
     adb.insertArcJob(0)
     adb.insertArcJob(1)
     aj=adb.getArcJobs("errors is NULL",columns=['executionnodes','exitcode','errors','usedwalltime','usedcputime','starttime','endtime'])
+    #aj=adb.getArcJobs("errors is NULL")
     print aj['errors']
     exit(0)
