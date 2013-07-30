@@ -1,8 +1,7 @@
 import aCTConfig
-import time
 
 try:
-    import pysqlite2.dbapi2 as sqlite
+    import sqlite3 as sqlite
 except:
     pass
 try:
@@ -22,9 +21,9 @@ class aCTDBSqlite:
     
     def __init__(self,logger):
         try:
-            self.conn=sqlite.connect(dbname,1800)
+            self.conn=sqlite.connect(self.dbname,1800)
         except Exception, x:
-            raise Exception, "Could not connect to sqlite. Have you installed pysqlite2?"
+            raise Exception, "Could not connect to sqlite: " + str(x)
         self.conn.row_factory=dict_factory
         self.conn.execute('''PRAGMA synchronous=OFF''')
         self.log.info("initialized aCTDBSqlite")
@@ -40,11 +39,11 @@ class aCTDBMySQL:
             print Exception, x
             # if db doesnt exist, create it
             if x.errno==1049:
-                self.conn=mysql.connect(unix_socket=socket)
+                self.conn=mysql.connect(unix_socket=self.socket)
                 c=self.conn.cursor()
-                c.execute("CREATE DATABASE "+dbname)
+                c.execute("CREATE DATABASE "+self.dbname)
             else:
-                raise "Could not connect to db "+dbname
+                raise "Could not connect to db "+self.dbname
         self.log.info("initialized aCTDBMySQL")
 
 class aCTDBOracle:
