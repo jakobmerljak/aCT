@@ -9,6 +9,15 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
+# arc.JobState cannot be properly constructed using public API, so use a subclass
+# and manipulate protected members directly
+class aCTJobState(arc.JobState):
+    
+    def __init__(self, statetype):
+        arc.JobState.__init__(self)
+        self.type = self.GetStateType(statetype)
+        self.state = statetype
+
 class aCTDBArc(aCTDB):
     
     def __init__(self,logger,dbname="aCTjobs.db"):
@@ -170,11 +179,12 @@ class aCTDBArc(aCTDB):
         for attr in self.jobattrs:
             if attr not in dbinfo:
                 continue
-            # JobState cannot be constructed using public API, so ignore...
             if self.jobattrs[attr] == arc.JobState:
+                js = aCTJobState(str(dbinfo[attr]))
+                setattr(j, attr, js)
                 continue
-            # StringStringMap needs special treatment
             if self.jobattrs[attr] == arc.StringStringMap:
+                # StringStringMap needs special treatment
                 m = arc.StringStringMap()
                 d = eval(dbinfo[attr])
                 if not isinstance(d, dict):
@@ -243,4 +253,4 @@ if __name__ == '__main__':
         
     adb.insertArcJob(1, jobs[0])
     dbjob = adb.getArcJob(1)
-    print dbjob[1].JobID
+    print dbjob[1].JobID, dbjob[1].State.GetGeneralState()
