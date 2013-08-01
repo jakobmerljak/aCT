@@ -58,16 +58,17 @@ class aCTDBArc(aCTDB):
         arcjobs: columns are attributes of arc.Job plus the following:
           - pandaid:
           - tstamp: timestamp of last record update
-          - arcstatus: tosubmit, submitted, running, tocancel, cancelled, finished, failed
+          - arcstate: tosubmit, submitting, submitted, toresubmit, running, tocancel,
+                      cancelling, cancelled, finished, failed
             "to" states are set by application engine
-          - tarcstatus: time stamp of last arcstatus
+          - tarcstate: time stamp of last arcstate
           - cluster: hostname of the cluster
           - jobdesc: job description added by the application engine
           - rerunnable:
         '''
         aCTDB.createTables(self)
         create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
-            ", pandaid integer, tstamp timestamp, tarcstatus timestamp, cluster text, jobdesc text, rerunable text)"
+            ", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, rerunable text)"
         c=self.conn.cursor()
         try:
             c.execute("drop table arcjobs")
@@ -94,7 +95,7 @@ class aCTDBArc(aCTDB):
         the job will be sent to the given cluster.
         '''
         c=self.conn.cursor()
-        c.execute("insert into arcjobs (tstamp,pandaid,arcstatus,tarcstatus,cluster,jobdesc) values ("
+        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc) values ("
                   +str(time.time())+","+str(pandaid)+",tosubmit,"+str(time.time())+","+cluster+","+jobdesc+")")
         self.conn.commit()
         
@@ -155,7 +156,15 @@ class aCTDBArc(aCTDB):
             row=dict(zip([col[0] for col in c.description], row))
         return {pandaid: self._db2job(row)}
         
-        
+    def getArcJobsInfo(self, select, columns=[]):
+        '''
+        Return a list of column: value dictionaries for jobs matching select
+        '''
+        c=self.conn.cursor()
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
+        rows=c.fetchall()
+        return rows
+
     def getArcJobs(self,select):
         '''
         Return a dictionary of pandaid: arc.Job for jobs matching select
@@ -228,6 +237,7 @@ if __name__ == '__main__':
     adb.createTables()
     
     usercfg = arc.UserConfig("", "")
+    usercfg.Timeout(10)
     
     # Simple job description which outputs hostname to stdout
     jobdescstring = "&(executable=/bin/hostname)(stdout=stdout)"
