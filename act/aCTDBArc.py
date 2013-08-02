@@ -59,7 +59,7 @@ class aCTDBArc(aCTDB):
           - pandaid:
           - tstamp: timestamp of last record update
           - arcstate: tosubmit, submitting, submitted, toresubmit, running, tocancel,
-                      cancelling, cancelled, finished, failed
+                      cancelling, cancelled, finished, failed, todelete
             "to" states are set by application engine
           - tarcstate: time stamp of last arcstate
           - cluster: hostname of the cluster
@@ -95,8 +95,8 @@ class aCTDBArc(aCTDB):
         the job will be sent to the given cluster.
         '''
         c=self.conn.cursor()
-        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc) values ("
-                  +str(time.time())+","+str(pandaid)+",tosubmit,"+str(time.time())+","+cluster+","+jobdesc+")")
+        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc) values ('"
+                  +str(time.time())+"','"+str(pandaid)+"','tosubmit','"+str(time.time())+"','"+cluster+"','"+jobdesc+"')")
         self.conn.commit()
         
 
@@ -125,9 +125,9 @@ class aCTDBArc(aCTDB):
         s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
         if job:
             s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])
-        s+=" where pandaid="+str(id)
+        s+=" where pandaid="+str(pandaid)
         c=self.conn.cursor()
-        c.execute("select pandaid from arcjobs where pandaid="+str(id))
+        c.execute("select pandaid from arcjobs where pandaid="+str(pandaid))
         row=c.fetchone()
         if row is None:
             self.insertArcJob(id)
@@ -172,13 +172,28 @@ class aCTDBArc(aCTDB):
         c=self.conn.cursor()
         c.execute("SELECT pandaid,"+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
-        # mysql SELECT returns list, we want dict
-        if not isinstance(rows,dict):
-            rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
+        # mysql SELECT returns tuple, we want dict
         d = {}
-        for row in rows:
-            d[row[0]] = self._db2job(dict(zip([col[0] for col in c.description], row[1:])))
+        if isinstance(rows, tuple):
+            rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
+            for row in rows:
+                d[row[0]] = self._db2job(dict(zip([col[0] for col in c.description], row[1:])))
+        # sqlite returns list of dictionaries
+        if isinstance(rows, list):
+            for row in rows:
+                d[row['pandaid']] = self._db2job(row)
+            
         return d
+    
+    def getNArcJobs(self):
+        '''
+        Return the total number of jobs in the table
+        '''
+        c=self.conn.cursor()
+        c.execute("SELECT COUNT(*) FROM arcjobs")
+        row = c.fetchone()
+        return row['COUNT(*)']
+         
     
     def _db2job(self, dbinfo):
         '''
@@ -235,7 +250,7 @@ if __name__ == '__main__':
     import logging
     adb = aCTDBArc(logging.getLogger('test'))
     adb.createTables()
-    
+
     usercfg = arc.UserConfig("", "")
     usercfg.Timeout(10)
     
