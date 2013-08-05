@@ -201,14 +201,20 @@ class aCTDBArc(aCTDB):
         '''
         j = arc.Job()
         for attr in self.jobattrs:
-            if attr not in dbinfo:
+            if attr not in dbinfo or dbinfo[attr] is None:
                 continue
+            # Some object types need special treatment
             if self.jobattrs[attr] == arc.JobState:
                 js = aCTJobState(str(dbinfo[attr]))
                 setattr(j, attr, js)
                 continue
+            if self.jobattrs[attr] == arc.StringList:
+                l = arc.StringList()
+                for item in str(dbinfo[attr]).split('|'):
+                    l.append(item)
+                setattr(j, attr, l)
+                continue
             if self.jobattrs[attr] == arc.StringStringMap:
-                # StringStringMap needs special treatment
                 m = arc.StringStringMap()
                 d = eval(dbinfo[attr])
                 if not isinstance(d, dict):
@@ -238,7 +244,8 @@ class aCTDBArc(aCTDB):
             elif self.jobattrs[attr] == arc.Period:
                 d[attr] = str(getattr(job, attr).GetPeriod())
             elif self.jobattrs[attr] == arc.Time:
-                d[attr] = str(getattr(job, attr).GetTime())
+                if getattr(job, attr).GetTime() != -1:
+                    d[attr] = str(getattr(job, attr).str())
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))
@@ -248,7 +255,7 @@ class aCTDBArc(aCTDB):
 
 if __name__ == '__main__':
     import logging
-    adb = aCTDBArc(logging.getLogger('test'))
+    adb = aCTDBArc(logging.getLogger('test'),dbname="aCTjobs.sqlite")
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")

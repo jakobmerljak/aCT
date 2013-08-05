@@ -37,6 +37,19 @@ class aCTStatus:
         self.starttime=time.time()
         self.log.info("Started")
 
+    def resetJobs(self, jobs):
+        '''
+        Empty all StringLists in jobs so that when they are updated they do not
+        contain duplicate values, since ARC always appends to these lists.
+        '''
+        emptylist = arc.StringList()
+        j = arc.Job()
+        attrstoreset = [attr for attr in dir(j) if type(getattr(j, attr)) == arc.StringList]
+                
+        for job in jobs:
+            for attr in attrstoreset:
+                setattr(jobs[job], attr, emptylist)
+        
     def checkJobs(self):
         '''
         Query all running jobs
@@ -64,6 +77,7 @@ class aCTStatus:
         else:
             return
         
+        self.resetJobs(jobs)
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
         job_supervisor.Update()
         jobsupdated = job_supervisor.GetAllJobs()
