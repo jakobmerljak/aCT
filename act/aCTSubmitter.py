@@ -833,6 +833,10 @@ class aCTSubmitter:
                     target.ExecutionEnvironment.CPUClockSpeed = 3000
 
         tlist=[]
+        # check if any queues are available, if not leave and try again next time
+        if not queuelist:
+            self.log.info("No free queues available")
+            return
 
         self.log.info("start submitting")
 
