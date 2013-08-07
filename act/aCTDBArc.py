@@ -55,11 +55,13 @@ class aCTDBArc(aCTDB):
           - tarcstate: time stamp of last arcstate
           - cluster: hostname of the cluster
           - jobdesc: job description added by the application engine
+          - attemptsleft: Number of attempts left to run the job
           - rerunnable:
         '''
         aCTDB.createTables(self)
         create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
-            ", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, rerunable text)"
+            ", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
+            " attemptsleft integer, rerunable text)"
         c=self.conn.cursor()
         try:
             c.execute("drop table arcjobs")
@@ -80,14 +82,14 @@ class aCTDBArc(aCTDB):
         c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ("+str(time.time())+","+str(pandaid)+",'"+"','".join(j.values())+"')")
         self.conn.commit()
         
-    def insertArcJobDescription(self, pandaid, jobdesc, cluster=''):
+    def insertArcJobDescription(self, pandaid, jobdesc, maxattempts=0, cluster=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to the given cluster.
         '''
         c=self.conn.cursor()
-        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc) values ('"
-                  +str(time.time())+"','"+str(pandaid)+"','tosubmit','"+str(time.time())+"','"+cluster+"','"+jobdesc+"')")
+        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
+                  +str(time.time())+"','"+str(pandaid)+"','tosubmit','"+str(time.time())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
         
 
