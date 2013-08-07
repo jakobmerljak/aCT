@@ -9,15 +9,6 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
-# arc.JobState cannot be properly constructed using public API, so use a subclass
-# and manipulate protected members directly
-class aCTJobState(arc.JobState):
-    
-    def __init__(self, statetype):
-        arc.JobState.__init__(self)
-        self.type = self.GetStateType(statetype)
-        self.state = statetype
-
 class aCTDBArc(aCTDB):
     
     def __init__(self,logger,dbname="aCTjobs.db"):
@@ -204,10 +195,6 @@ class aCTDBArc(aCTDB):
             if attr not in dbinfo or dbinfo[attr] is None:
                 continue
             # Some object types need special treatment
-            if self.jobattrs[attr] == arc.JobState:
-                js = aCTJobState(str(dbinfo[attr]))
-                setattr(j, attr, js)
-                continue
             if self.jobattrs[attr] == arc.StringList:
                 l = arc.StringList()
                 for item in str(dbinfo[attr]).split('|'):
@@ -224,6 +211,8 @@ class aCTDBArc(aCTDB):
                 setattr(j, attr, m)
                 continue
 
+            # Note that arc svn revision 28041 or later is needed to construct
+            # JobState objects like this. 3.0.3 does not support it
             setattr(j, attr, self.jobattrs[attr](str(dbinfo[attr])))
         return j
     
@@ -282,7 +271,7 @@ if __name__ == '__main__':
     if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
         logging.error("Failed to submit job")
         exit(1)
-        
+     
     adb.insertArcJob(1, jobs[0])
     dbjob = adb.getArcJob(1)
     print dbjob[1].JobID, dbjob[1].State.GetGeneralState()
