@@ -875,6 +875,33 @@ class aCTSubmitter:
                                                 "tarcstate": time.time()})
 
 
+    def processToResubmit(self):
+        
+        jobs=self.db.getArcJobs("arcstate='toresubmit'")
+ 
+        # Clean up jobs which were submitted
+        jobstoclean = [job for job in jobs.values() if job.JobID]
+        if not jobstoclean:
+            return
+
+        job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+        self.log.info("Cancelling %i jobs", len(jobstoclean))
+        job_supervisor.Cancel()
+
+        # The JobSupervisor removes jobs which were not in a cancellable state
+        # so recreate it to clean all jobs
+        job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+        self.log.info("Cleaning %i jobs", len(jobstoclean))
+        if not job_supervisor.Clean():
+            self.log.error("Failed to clean some jobs")
+        
+        # Empty job to reset DB info
+        j = arc.Job()
+        for (pandaid, job) in jobs.items():
+            self.db.updateArcJob(pandaid, {"arcstate": "tosubmit",
+                                           "tarcstate": time.time()}, j)
+
+
     def run(self):
         """
         Main loop
@@ -883,8 +910,10 @@ class aCTSubmitter:
             while 1:
                 # parse config file
                 self.conf.parse()
-                # TODO handle submitting
-                self.checkFailedSubmissions()        
+                # check jobs which failed to submit the previous loop
+                self.checkFailedSubmissions()
+                # process jobs which have to be resubmitted
+                self.processToResubmit()
                 # submit jobs
                 self.submit()
                 aCTUtils.sleep(1)

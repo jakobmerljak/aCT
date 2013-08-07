@@ -50,6 +50,29 @@ class aCTStatus:
             for attr in attrstoreset:
                 setattr(jobs[job], attr, emptylist)
         
+        
+    def processJobErrors(self, pandaid, failedjob):
+        '''
+        Examine errors of failed job and decide whether to resubmit or not
+        '''
+        newstate = "failed"
+        # Check if any job error matches any error in the toresubmit list
+        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
+        attemptsleft = int(self.dbarc.getArcJobInfo(pandaid, ['attemptsleft'])['attemptsleft']) - 1
+        if attemptsleft < 0:
+            attemptsleft = 0
+        self.dbarc.updateArcJob(pandaid, {'attemptsleft': str(attemptsleft)})
+        if resub:
+            if not attemptsleft:
+                self.log.info("Job %s out of retries", failedjob.JobID)
+            else:
+                self.log.info("Will resubmit job %s, %i attempts left", failedjob.JobID, attemptsleft)
+                newstate = "toresubmit"
+        
+        else:
+            self.log.info("Job %s has fatal errors, cannot resubmit", failedjob.JobID)
+        return newstate
+        
     def checkJobs(self):
         '''
         Query all running jobs
@@ -104,7 +127,7 @@ class aCTStatus:
                 arcstate = 'finished'
             elif updatedjob.State == arc.JobState.FINISHED or \
                  updatedjob.State == arc.JobState.FAILED:
-                arcstate = 'failed'
+                arcstate = self.processJobErrors(pandaid, updatedjob)
             elif updatedjob.State == arc.JobState.KILLED:
                 arcstate = 'cancelled'
             elif updatedjob.State == arc.JobState.RUNNING:
