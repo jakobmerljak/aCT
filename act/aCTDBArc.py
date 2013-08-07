@@ -49,9 +49,10 @@ class aCTDBArc(aCTDB):
         arcjobs: columns are attributes of arc.Job plus the following:
           - pandaid:
           - tstamp: timestamp of last record update
-          - arcstate: tosubmit, submitting, submitted, toresubmit, running, tocancel,
-                      cancelling, cancelled, finished, failed, todelete
-            "to" states are set by application engine
+          - arcstate: tosubmit, submitting, submitted, running, tocancel,
+                      cancelling, cancelled, finished, failed, torerun,
+                      toresubmit, todelete
+            "to" states are set by application engine or ARC engine for retries
           - tarcstate: time stamp of last arcstate
           - cluster: hostname of the cluster
           - jobdesc: job description added by the application engine
