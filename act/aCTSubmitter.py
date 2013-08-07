@@ -877,7 +877,7 @@ class aCTSubmitter:
 
     def processToResubmit(self):
         
-        jobs=self.db.getArcJobs("arcstate='toresubmit'")
+        jobs = self.db.getArcJobs("arcstate='toresubmit'")
  
         # Clean up jobs which were submitted
         jobstoclean = [job for job in jobs.values() if job.JobID]
@@ -901,6 +901,30 @@ class aCTSubmitter:
             self.db.updateArcJob(pandaid, {"arcstate": "tosubmit",
                                            "tarcstate": time.time()}, j)
 
+    def processToRerun(self):
+        
+        jobs = self.db.getArcJobs("arcstate='torerun'")
+        if not jobs:
+            return
+
+        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        # Renew proxy to be safe
+        job_supervisor.Renew()
+        self.log.info("Resuming %i jobs", len(jobs.values()))
+        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Resume()
+        
+        notresumed = job_supervisor.GetIDsNotProcessed()
+
+        for (pandaid, job) in jobs.items():
+            if job.JobID in notresumed:
+                self.log.error("Could not resume job %s", job.JobID)
+                self.db.updateArcJob(pandaid, {"arcstate": "failed",
+                                               "tarcstate": time.time()})
+            else:
+                self.db.updateArcJob(pandaid, {"arcstate": "submitted",
+                                               "tarcstate": time.time()})
+
 
     def run(self):
         """
@@ -914,7 +938,9 @@ class aCTSubmitter:
                 self.checkFailedSubmissions()
                 # process jobs which have to be resubmitted
                 self.processToResubmit()
-                # submit jobs
+                # process jobs which have to be rerun
+                self.processToRerun()
+                # submit new jobs
                 self.submit()
                 aCTUtils.sleep(1)
                 # restart periodicaly for gsiftp crash

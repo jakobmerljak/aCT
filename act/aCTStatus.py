@@ -55,8 +55,14 @@ class aCTStatus:
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
+        # First check if it was a data staging problem
+        if failedjob.RestartState == arc.JobState.PREPARING or \
+           failedjob.RestartState == arc.JobState.FINISHING:
+            self.log.info("Will rerun job %s", failedjob.JobID)
+            return "torerun"
+        
         newstate = "failed"
-        # Check if any job error matches any error in the toresubmit list
+        # Check if any job runtime error matches any error in the toresubmit list
         resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
         attemptsleft = int(self.dbarc.getArcJobInfo(pandaid, ['attemptsleft'])['attemptsleft']) - 1
         if attemptsleft < 0:
