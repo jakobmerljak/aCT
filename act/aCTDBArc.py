@@ -188,6 +188,14 @@ class aCTDBArc(aCTDB):
         row = c.fetchone()
         return row['COUNT(*)']
          
+    def getActiveClusters(self):
+        '''
+        Return a list and count of clusters
+        '''
+        c=self.conn.cursor()
+        c.execute("SELECT cluster, COUNT(*) FROM arcjobs GROUP BY cluster")
+        rows=c.fetchall()
+        return rows
     
     def _db2job(self, dbinfo):
         '''
