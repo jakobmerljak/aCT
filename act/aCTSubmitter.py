@@ -874,6 +874,31 @@ class aCTSubmitter:
             self.db.updateArcJob(j['pandaid'], {"arcstate": "toresubmit",
                                                 "tarcstate": time.time()})
 
+    def processToCancel(self):
+        
+        jobs = self.db.getArcJobs("arcstate='tocancel'")
+        if not jobs:
+            return
+        
+        self.log.info("Cancelling %i jobs", len(jobs.values()))
+        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Cancel()
+        
+        notcancelled = job_supervisor.GetIDsNotProcessed()
+
+        for (pandaid, job) in jobs.items():
+            if job.JobID in notcancelled:
+                if job.State == arc.JobState.UNDEFINED:
+                    # Job has not yet reached info system
+                    self.log.error("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+                else:
+                    self.log.error("Could not cancel job %s", job.JobID)
+                # Just to mark as cancelled so it can be cleaned
+                self.db.updateArcJob(pandaid, {"arcstate": "cancelled",
+                                               "tarcstate": time.time()})
+            else:
+                self.db.updateArcJob(pandaid, {"arcstate": "cancelling",
+                                               "tarcstate": time.time()})
 
     def processToResubmit(self):
         
@@ -936,6 +961,8 @@ class aCTSubmitter:
                 self.conf.parse()
                 # check jobs which failed to submit the previous loop
                 self.checkFailedSubmissions()
+                # process jobs which have to be cancelled
+                self.processToCancel()
                 # process jobs which have to be resubmitted
                 self.processToResubmit()
                 # process jobs which have to be rerun
