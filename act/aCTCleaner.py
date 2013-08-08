@@ -1,44 +1,22 @@
-import os
+# aCTCleaner.py
+#
+# Cleans jobs from CE and ARC DB
+#
+
 import time
-import aCTDBPanda
-from arclib import *
+import os
+import arc
+
 import aCTConfig
-import re
-import commands
-from xml.dom import minidom
-from xml.sax import SAXParseException
-import LFCTools
-import shutil
-import aCTLogger
-import aCTSignal
 import aCTUtils
-import cgi
-import pickle
-from threading import Thread,enumerate
-
-
-class CleanerThr(Thread):
-    """
-    Helper function to be used in jobs downloading threads
-    """
-    def __init__ (self,func,job,ajob,dataset,turls):
-        Thread.__init__(self)
-        self.func=func
-        self.job = job
-        self.ajob = ajob
-        self.dataset = dataset
-        self.turls = turls
-        self.status={}
-    def run(self):
-        self.status=self.func(self.job,self.ajob,self.dataset,self.turls)
-
+import aCTSignal
+import aCTLogger
+import aCTDBArc
 
 class aCTCleaner:
-    """
-    Class to handle job checking and job downloading/retreival.
-    """
-
+  
     def __init__(self):
+        
         # logger
         self.logger=aCTLogger.aCTLogger("cleaner")
         self.log=self.logger()
@@ -46,81 +24,38 @@ class aCTCleaner:
         # config
         self.conf=aCTConfig.aCTConfig()
         # database
-        self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
-        # ARC FTPControl
-        self.ftpcontrol=FTPControl()
+        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         
-        
-    def processCompleted(self,pstatus='done',trfstatus='toremove'):
-        """
-        Remove completed jobs from database and clean the jobs on clusters.
-        """
-        jobs=self.db.getJobs("pstatus like '"+pstatus+"' and trfstatus='"+trfstatus+"'")
-        if len(jobs):
-            self.log.info("%d" % len(jobs))
-        else:
-            return
-        c=JobFTPControl()
-        # TODO threaded
-        for j in jobs:
-            self.log.info("Removing job %d %s" % (j['pandaid'],j['arcjobid']))
-            try:
-	        try:
-                  jl=[]
-                  jl.append(str(j['arcjobid']))
-                  if trfstatus == 'tokill':
-                      c.Cancel(str(j['arcjobid']))
-                  print "Removing",j['pandaid'],j['arcjobid']
-		except URLError:
-		    pass
-		except:
-		  pass
-                #try:
-                #    c.Cancel(str(j['arcjobid']))
-                #except:
-                #    pass
-                try:
-		    if j['arcjobid'] is not None:
-                      c.Clean(str(j['arcjobid']))
-		except URLError:
-		    pass
-                except:
-                    pass
-                try:
-		    if j['arcjobid'] is not None:
-                      RemoveJobID(str(j['arcjobid']))
-		except URLError:
-		    pass
-                except:
-                    pass
-                self.db.removeJobs(j['pandaid'])
-                # clean xml and pickle
-                try:
-                    os.unlink(self.conf.get(['tmp','dir'])+"/xml/"+str(j['pandaid'])+".xml")
-                except:
-                    pass
-                try:
-                    os.unlink(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle")
-                except:
-                    pass
-                try:
-		    jid=str(j['arcjobid'])
-                    #reg=re.search('.+/([0-9]+)',jid)
-		    reg=re.match('gsiftp://(.+):2811/jobs/(\w+)',jid)
-                    sessionid=reg.group(2)
-        	    outd=self.conf.get(['tmp','dir'])+"/"+sessionid
-                    shutil.rmtree(outd)
-                except:
-                    pass
-            except FTPControlError,x:
-                self.log.error(x)
-                continue
-            except Exception,x:
-                self.log.error("%s" % x )
-                continue
-            
-            
+        # ARC Configuration
+        self.uc = arc.UserConfig()
+        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
+        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
+        timeout=int(self.conf.get(['atlasgiis','timeout']))
+        self.uc.Timeout(timeout)
 
+        # start time for periodic restart
+        self.starttime=time.time()
+        self.log.info("Started")
+  
+    def processToClean(self):
+        
+        jobs = self.db.getArcJobs("arcstate='toclean'")
+        
+        if not jobs:
+            return
+
+        self.log.info("Cleaning %i jobs", len(jobs.values()))
+        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Clean()
+        
+        notcleaned = job_supervisor.GetIDsNotProcessed()
+
+        for (pandaid, job) in jobs.items():
+            if job.JobID in notcleaned:
+                self.log.error("Could not clean job %s", job.JobID)
+
+            self.db.removeJobs(pandaid)  
+  
     def run(self):
         """
         Main loop
@@ -130,20 +65,25 @@ class aCTCleaner:
             while 1:
                 # reparse config file
                 self.conf.parse()
-                self.processCompleted('%','toremove')
+                # clean jobs
+                self.processToClean()
                 aCTUtils.sleep(10)
+                # restart periodically
+                ip=int(self.conf.get(['periodicrestart','cleaner']))
+                if time.time()-self.starttime > ip and ip != 0 :
+                    self.log.info("Cleaner exited for periodic restart")
+                    return
         except aCTSignal.ExceptInterrupt,x:
             self.log.error( x )
-        
-            
+
+
     def finish(self):
         """
         clean termination handled by signal
         """
-        self.log.info("Cleanup")
+        self.log.info("Cleanup")      
 
 if __name__ == '__main__':
-    ad=aCTCleaner()
-    ad.run()
-    ad.finish()
-
+    st=aCTCleaner()
+    st.run()
+    st.finish()
