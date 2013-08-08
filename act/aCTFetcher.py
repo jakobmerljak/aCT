@@ -47,7 +47,6 @@ class aCTFetcher:
         self.log.info("Fetching %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
         dirs = arc.StringList()
-        print self.conf.get(['tmp','dir'])
         job_supervisor.Retrieve(str(self.conf.get(['tmp','dir'])), False, False, dirs)
         
         notfetched = job_supervisor.GetIDsNotProcessed()
