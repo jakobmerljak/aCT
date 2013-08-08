@@ -51,7 +51,7 @@ class aCTDBArc(aCTDB):
           - tstamp: timestamp of last record update
           - arcstate: tosubmit, submitting, submitted, running, tocancel,
                       cancelling, cancelled, finished, failed, torerun,
-                      toresubmit, todelete
+                      toresubmit, done, donefailed, toclean
             "to" states are set by application engine or ARC engine for retries
           - tarcstate: time stamp of last arcstate
           - cluster: hostname of the cluster
