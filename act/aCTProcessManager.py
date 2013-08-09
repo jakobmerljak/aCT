@@ -58,7 +58,7 @@ class aCTProcessManager:
                                                        [c['COUNT(*)'] for c in clusters]))
         print activeclusters
         # First check for processes to kill
-        for cluster in self.running:
+        for cluster in self.running.keys():
             if cluster not in activeclusters:
                 self.log.info("Stopping processes for %s", cluster)
                 del self.running[cluster]
@@ -68,10 +68,12 @@ class aCTProcessManager:
             if cluster not in self.running.keys():
                 self.running[cluster] = []
                 for proc in self.processes:
-                    self.log.info("Starting process %s for %s", proc, cluster)
-                    ph = self.aCTProcessHandler(proc, cluster)
-                    ph.start()
-                    self.running[cluster].append(ph)
+                    # For empty cluster value only submitter should be started
+                    if cluster or proc == 'aCTSubmitter':
+                        self.log.info("Starting process %s for %s", proc, cluster)
+                        ph = self.aCTProcessHandler(proc, cluster)
+                        ph.start()
+                        self.running[cluster].append(ph)
                     
                 
     class aCTProcessHandler:
