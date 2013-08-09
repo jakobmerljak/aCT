@@ -1,8 +1,10 @@
 import os
+import sys
 import time
 from aCTDBArc import aCTDBArc
 import arc
 import cgi
+from urlparse import urlparse
 import lfcthr as lfc
 import LFCTools
 import aCTConfig
@@ -119,10 +121,11 @@ class aCTSubmitter:
             return cmp(a,b)
 
 
-    def __init__(self):
+    def __init__(self, cluster):
         self.logger=aCTLogger.aCTLogger("submitter")
         self.log=self.logger()
 
+        self.cluster = cluster
         self.conf=aCTConfig.aCTConfig()
         self.db=aCTDBArc(self.log,self.conf.get(["db","file"]))
 
@@ -135,7 +138,7 @@ class aCTSubmitter:
         # Set random broker (it is the default but set here anyway)
         self.uc.Broker("Random")
 
-        self.log.info("Started")
+        self.log.info("Started for cluster %s", self.cluster)
 
         # start time for periodic restart
         self.starttime=time.time()
@@ -170,6 +173,9 @@ class aCTSubmitter:
                 jd['arcstate']='submitted'
                 # initial offset to 1 minute to force first status check
                 jd['tarcstate']=time.time()-int(self.conf.get(['jobs','checkinterval']))+300
+                # extract hostname of cluster (depends on JobID being a URL)
+                self.log.info("job id %s", t.job.JobID)
+                jd['cluster']=urlparse(t.job.JobID).hostname
                 self.db.updateArcJob(t.pandaid,jd,t.job)
             if errfl:
                 exit(1)
@@ -774,7 +780,7 @@ class aCTSubmitter:
         if self.conf.get(['downtime','stopsubmission']) == "true":
             return 0
 
-        jobs=self.db.getArcJobsInfo("arcstate='tosubmit' limit 1", ["pandaid", "jobdesc"])
+        jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster='"+self.cluster+"' limit 1", ["pandaid", "jobdesc"])
         if len(jobs) == 0:
             #self.log.debug("No jobs to submit")
             return 0
@@ -865,7 +871,7 @@ class aCTSubmitter:
 
     def checkFailedSubmissions(self):
 
-        jobs=self.db.getArcJobsInfo("arcstate='submitting'", ["pandaid"])
+        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["pandaid"])
 
         # TODO query GIIS for job name specified in description to see if job
         # was really submitted or not
@@ -876,7 +882,7 @@ class aCTSubmitter:
 
     def processToCancel(self):
         
-        jobs = self.db.getArcJobs("arcstate='tocancel'")
+        jobs = self.db.getArcJobs("arcstate='tocancel' and cluster='"+self.cluster+"'")
         if not jobs:
             return
         
@@ -902,23 +908,22 @@ class aCTSubmitter:
 
     def processToResubmit(self):
         
-        jobs = self.db.getArcJobs("arcstate='toresubmit'")
+        jobs = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
  
         # Clean up jobs which were submitted
         jobstoclean = [job for job in jobs.values() if job.JobID]
-        if not jobstoclean:
-            return
-
-        job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
-        self.log.info("Cancelling %i jobs", len(jobstoclean))
-        job_supervisor.Cancel()
-
-        # The JobSupervisor removes jobs which were not in a cancellable state
-        # so recreate it to clean all jobs
-        job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
-        self.log.info("Cleaning %i jobs", len(jobstoclean))
-        if not job_supervisor.Clean():
-            self.log.error("Failed to clean some jobs")
+        
+        if jobstoclean:
+            job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+            self.log.info("Cancelling %i jobs", len(jobstoclean))
+            job_supervisor.Cancel()
+    
+            # The JobSupervisor removes jobs which were not in a cancellable state
+            # so recreate it to clean all jobs
+            job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+            self.log.info("Cleaning %i jobs", len(jobstoclean))
+            if not job_supervisor.Clean():
+                self.log.error("Failed to clean some jobs")
         
         # Empty job to reset DB info
         j = arc.Job()
@@ -928,7 +933,7 @@ class aCTSubmitter:
 
     def processToRerun(self):
         
-        jobs = self.db.getArcJobs("arcstate='torerun'")
+        jobs = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
         if not jobs:
             return
 
@@ -980,11 +985,11 @@ class aCTSubmitter:
             return
 
     def finish(self):
-        self.log.info("Cleanup")
+        self.log.info("Cleanup for cluster %s", self.cluster)
 
 # Main
 if __name__ == '__main__':
-    asb=aCTSubmitter()
+    asb=aCTSubmitter(sys.argv[1])
     asb.run()
     asb.finish()
     
