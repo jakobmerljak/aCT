@@ -4,42 +4,19 @@
 #
 
 import time
-import os
+import sys
 import arc
 
-import aCTConfig
-import aCTUtils
-import aCTSignal
-import aCTLogger
-import aCTDBArc
+from aCTProcess import aCTProcess
 
-class aCTFetcher:
-  
-    def __init__(self):
-        
-        # logger
-        self.logger=aCTLogger.aCTLogger("fetcher")
-        self.log=self.logger()
-
-        # config
-        self.conf=aCTConfig.aCTConfig()
-        # database
-        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        
-        # ARC Configuration
-        self.uc = arc.UserConfig()
-        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
-        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        self.uc.Timeout(timeout)
-
-        # start time for periodic restart
-        self.starttime=time.time()
-        self.log.info("Started")
+class aCTFetcher(aCTProcess):
+    '''
+    Downloads output data for finished ARC jobs.
+    '''
   
     def fetchFailed(self):
         
-        jobs = self.db.getArcJobs("arcstate='failed'")
+        jobs = self.db.getArcJobs("arcstate='failed' and cluster='"+self.cluster+"'")
         
         if not jobs:
             return
@@ -61,7 +38,7 @@ class aCTFetcher:
   
     def fetchFinished(self):
         
-        jobs = self.db.getArcJobs("arcstate='finished'")
+        jobs = self.db.getArcJobs("arcstate='finished' and cluster='"+self.cluster+"'")
         
         if not jobs:
             return
@@ -82,36 +59,15 @@ class aCTFetcher:
                                            "tarcstate": time.time()})
   
   
-    def run(self):
-        """
-        Main loop
-        """
-        self.log.info("Start")
-        try:
-            while 1:
-                # reparse config file
-                self.conf.parse()
-                # download failed job outputs
-                self.fetchFailed()
-                # download finished job outputs
-                self.fetchFinished()
-                aCTUtils.sleep(10)
-                # restart periodically
-                ip=int(self.conf.get(['periodicrestart','fetcher']))
-                if time.time()-self.starttime > ip and ip != 0 :
-                    self.log.info("Fetcher exited for periodic restart")
-                    return
-        except aCTSignal.ExceptInterrupt,x:
-            self.log.error( x )
+    def process(self):
 
+        # download failed job outputs
+        self.fetchFailed()
+        # download finished job outputs
+        self.fetchFinished()
 
-    def finish(self):
-        """
-        clean termination handled by signal
-        """
-        self.log.info("Cleanup")      
 
 if __name__ == '__main__':
-    st=aCTFetcher()
+    st=aCTFetcher('fetcher', sys.argv[1])
     st.run()
     st.finish()

@@ -3,43 +3,16 @@
 # Cleans jobs from CE and ARC DB
 #
 
-import time
-import os
+import sys
 import arc
 
-import aCTConfig
-import aCTUtils
-import aCTSignal
-import aCTLogger
-import aCTDBArc
+from aCTProcess import aCTProcess
 
-class aCTCleaner:
-  
-    def __init__(self):
-        
-        # logger
-        self.logger=aCTLogger.aCTLogger("cleaner")
-        self.log=self.logger()
-
-        # config
-        self.conf=aCTConfig.aCTConfig()
-        # database
-        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        
-        # ARC Configuration
-        self.uc = arc.UserConfig()
-        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
-        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        self.uc.Timeout(timeout)
-
-        # start time for periodic restart
-        self.starttime=time.time()
-        self.log.info("Started")
-  
+class aCTCleaner(aCTProcess):
+    
     def processToClean(self):
         
-        jobs = self.db.getArcJobs("arcstate='toclean'")
+        jobs = self.db.getArcJobs("arcstate='toclean' and cluster='"+self.cluster+"'")
         
         if not jobs:
             return
@@ -56,34 +29,13 @@ class aCTCleaner:
 
             self.db.removeJobs(pandaid)  
   
-    def run(self):
-        """
-        Main loop
-        """
-        self.log.info("Start")
-        try:
-            while 1:
-                # reparse config file
-                self.conf.parse()
-                # clean jobs
-                self.processToClean()
-                aCTUtils.sleep(10)
-                # restart periodically
-                ip=int(self.conf.get(['periodicrestart','cleaner']))
-                if time.time()-self.starttime > ip and ip != 0 :
-                    self.log.info("Cleaner exited for periodic restart")
-                    return
-        except aCTSignal.ExceptInterrupt,x:
-            self.log.error( x )
+    def process(self):
 
+        # clean jobs
+        self.processToClean()
 
-    def finish(self):
-        """
-        clean termination handled by signal
-        """
-        self.log.info("Cleanup")      
 
 if __name__ == '__main__':
-    st=aCTCleaner()
+    st=aCTCleaner('cleaner', sys.argv[1])
     st.run()
     st.finish()

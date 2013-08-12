@@ -1,41 +1,18 @@
-#!/usr/bin/python
-
-import os
+# aCTStatus.py
+#
+# Process to check the status of running ARC jobs
+#
+import sys
 import time
 import arc
 
-import aCTDBArc
-import aCTConfig
-import aCTLogger
-import aCTUtils
-import aCTSignal
+from aCTProcess import aCTProcess
 
-class aCTStatus:
-    
-    def __init__(self):
-        
-        # logger
-        self.logger=aCTLogger.aCTLogger("status")
-        self.log=self.logger()
-
-        # config
-        self.conf=aCTConfig.aCTConfig()
-        # database
-        self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        
-        # ARC Configuration
-        self.uc = arc.UserConfig()
-        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
-        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        self.uc.Timeout(timeout)
-
-        # store the last checkJobs time to avoid overloading of GIIS
-        self.checktime=time.time()
-        self.checktimep=time.time()
-        # start time for periodic restart
-        self.starttime=time.time()
-        self.log.info("Started")
+class aCTStatus(aCTProcess):
+    '''
+    Class for checking the status of submitted ARC jobs and updating their
+    status in the DB.
+    '''
 
     def resetJobs(self, jobs):
         '''
@@ -91,7 +68,9 @@ class aCTStatus:
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobs=self.dbarc.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and tarcstate<strftime('%s','now')-"+str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
+        jobs=self.dbarc.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+                                   "cluster='"+self.cluster+"' and tarcstate<strftime('%s','now')-"+ \
+                                   str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
 
         # TODO: make function for this in aCTDBPanda
         # number of total jobs
@@ -147,35 +126,12 @@ class aCTStatus:
                 
         self.log.info('Done')
     
-    def run(self):
-        """
-        Main loop
-        """
-        self.log.info("Start")
-        try:
-            while 1:
-                # reparse config file
-                self.conf.parse()
-                # check job status
-                # more frequent checks for panda update
-                self.checkJobs()
-                aCTUtils.sleep(10)
-                # restart periodically
-                ip=int(self.conf.get(['periodicrestart','status']))
-                if time.time()-self.starttime > ip and ip != 0 :
-                    self.log.info("Status exited for periodic restart")
-                    return
-        except aCTSignal.ExceptInterrupt,x:
-            self.log.error( x )
+    def process(self):
+        # check job status
+        self.checkJobs()
 
-
-    def finish(self):
-        """
-        clean termination handled by signal
-        """
-        self.log.info("Cleanup")      
 
 if __name__ == '__main__':
-    st=aCTStatus()
+    st=aCTStatus('status', sys.argv[1])
     st.run()
     st.finish()

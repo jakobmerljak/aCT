@@ -1,16 +1,12 @@
 import os
 import sys
 import time
-from aCTDBArc import aCTDBArc
 import arc
 import cgi
 from urlparse import urlparse
 import lfcthr as lfc
 import LFCTools
-import aCTConfig
-import aCTLogger
-import aCTSignal
-import aCTUtils
+from aCTProcess import aCTProcess
 from threading import Thread
 
 class SubmitThr(Thread):
@@ -103,7 +99,7 @@ def GetSRMurlOld (dataset,lfn,token=None,attempt=100):
 
 
 
-class aCTSubmitter:
+class aCTSubmitter(aCTProcess):
 
     class BrokerQueued:
         """
@@ -119,29 +115,6 @@ class aCTSubmitter:
             a = target1.grid_queued
             b = target2.grid_queued
             return cmp(a,b)
-
-
-    def __init__(self, cluster):
-        self.logger=aCTLogger.aCTLogger("submitter")
-        self.log=self.logger()
-
-        self.cluster = cluster
-        self.conf=aCTConfig.aCTConfig()
-        self.db=aCTDBArc(self.log,self.conf.get(["db","file"]))
-
-        # ARC Configuration
-        self.uc = arc.UserConfig()
-        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
-        self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
-        timeout=int(self.conf.get(['atlasgiis','timeout']))
-        self.uc.Timeout(timeout)
-        # Set random broker (it is the default but set here anyway)
-        self.uc.Broker("Random")
-
-        self.log.info("Started for cluster %s", self.cluster)
-
-        # start time for periodic restart
-        self.starttime=time.time()
 
 
     def RunThreadsSplit(self,plist,nthreads=1):
@@ -956,40 +929,23 @@ class aCTSubmitter:
                                                "tarcstate": time.time()})
 
 
-    def run(self):
-        """
-        Main loop
-        """
-        try:
-            while 1:
-                # parse config file
-                self.conf.parse()
-                # check jobs which failed to submit the previous loop
-                self.checkFailedSubmissions()
-                # process jobs which have to be cancelled
-                self.processToCancel()
-                # process jobs which have to be resubmitted
-                self.processToResubmit()
-                # process jobs which have to be rerun
-                self.processToRerun()
-                # submit new jobs
-                self.submit()
-                aCTUtils.sleep(1)
-                # restart periodicaly for gsiftp crash
-                ip=int(self.conf.get(['periodicrestart','submitter']))
-                if time.time()-self.starttime > ip and ip != 0 :
-                    self.log.info("Submitter exited for periodic restart")
-                    return
-        except aCTSignal.ExceptInterrupt,x:
-            print x
-            return
+    def process(self):
 
-    def finish(self):
-        self.log.info("Cleanup for cluster %s", self.cluster)
+        # check jobs which failed to submit the previous loop
+        self.checkFailedSubmissions()
+        # process jobs which have to be cancelled
+        self.processToCancel()
+        # process jobs which have to be resubmitted
+        self.processToResubmit()
+        # process jobs which have to be rerun
+        self.processToRerun()
+        # submit new jobs
+        self.submit()
+
 
 # Main
 if __name__ == '__main__':
-    asb=aCTSubmitter(sys.argv[1])
+    asb=aCTSubmitter('submitter', sys.argv[1])
     asb.run()
     asb.finish()
     
