@@ -133,11 +133,27 @@ class aCTStatus(aCTProcess):
             self.db.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': time.time()}, updatedjob)
                 
         self.log.info('Done')
+        
+    def checkLostJobs(self):
+        '''
+        Move jobs with a long time since status update to lost
+        '''
+
+        # 2 hours limit. TODO: configurable?
+        jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+                                    "cluster='"+self.cluster+"' and tarcstate<strftime('%s','now')-7200",
+                                    ['pandaid', 'JobId'])
+        
+        for job in jobs:
+            self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
+            self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': time.time()})
+            
     
     def process(self):
         # check job status
         self.checkJobs()
-
+        # check for lost jobs
+        self.checkLostJobs()
 
 if __name__ == '__main__':
     st=aCTStatus('status', sys.argv[1])
