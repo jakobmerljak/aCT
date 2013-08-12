@@ -56,8 +56,10 @@ class aCTProcess:
             while 1:
                 # parse config file
                 self.conf.parse()
-                # do class-specific things
-                self.process()
+                # Check if the site is in downtime
+                if self.cluster not in self.conf.getList(['downtime', 'item']):
+                    # do class-specific things
+                    self.process()
                 # sleep
                 aCTUtils.sleep(1)
                 # restart periodically for gsiftp crash
