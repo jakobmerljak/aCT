@@ -13,6 +13,14 @@ class aCTStatus(aCTProcess):
     Class for checking the status of submitted ARC jobs and updating their
     status in the DB.
     '''
+    
+    def __init__(self, name, cluster):
+        
+        aCTProcess.__init__(self, name, cluster) 
+
+        # store the last checkJobs time to avoid overloading of GIIS
+        self.checktime=time.time()
+
 
     def resetJobs(self, jobs):
         '''
@@ -41,10 +49,10 @@ class aCTStatus(aCTProcess):
         newstate = "failed"
         # Check if any job runtime error matches any error in the toresubmit list
         resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
-        attemptsleft = int(self.dbarc.getArcJobInfo(pandaid, ['attemptsleft'])['attemptsleft']) - 1
+        attemptsleft = int(self.db.getArcJobInfo(pandaid, ['attemptsleft'])['attemptsleft']) - 1
         if attemptsleft < 0:
             attemptsleft = 0
-        self.dbarc.updateArcJob(pandaid, {'attemptsleft': str(attemptsleft)})
+        self.db.updateArcJob(pandaid, {'attemptsleft': str(attemptsleft)})
         if resub:
             if not attemptsleft:
                 self.log.info("Job %s out of retries", failedjob.JobID)
@@ -68,13 +76,13 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobs=self.dbarc.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+        jobs=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
                                    "cluster='"+self.cluster+"' and tarcstate<strftime('%s','now')-"+ \
                                    str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
 
         # TODO: make function for this in aCTDBPanda
         # number of total jobs
-        njobs=self.dbarc.getNArcJobs()
+        njobs=self.db.getNArcJobs()
 
         # Do not check too little jobs at once (at least 1% of running jobs)
         if len(jobs) < njobs/1000:
@@ -102,7 +110,7 @@ class aCTStatus(aCTProcess):
             # compare strings here to get around limitations of JobState API
             if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
                 # just update timestamp
-                self.dbarc.updateArcJob(pandaid, {'tarcstate': time.time()})
+                self.db.updateArcJob(pandaid, {'tarcstate': time.time()})
                 continue
             
             self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
@@ -122,7 +130,7 @@ class aCTStatus(aCTProcess):
                 # unexpected
                 arcstate = 'failed'
                 
-            self.dbarc.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': time.time()}, updatedjob)
+            self.db.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': time.time()}, updatedjob)
                 
         self.log.info('Done')
     
