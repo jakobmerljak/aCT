@@ -774,10 +774,11 @@ class aCTSubmitter(aCTProcess):
         # target.ComputingShare.Name is the queue name
         targets = retriever.GetExecutionTargets()
         
-        # block rejected queues and clusters
-        # TODO: When Submitter runs per site filter only sites for this process
+        # Filter only sites for this process
         queuelist=[]
         for target in targets:
+            if target.ComputingService.Name != self.cluster:
+                continue
             s = self.db.getSchedconfig(target.ComputingService.Name)
             status = 'online'
             if s is not None:
