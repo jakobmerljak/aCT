@@ -1,75 +1,44 @@
 import aCTConfig
 
+supported_dbms={}
+
 try:
-    import sqlite3 as sqlite
+    from aCTDBSqlite import aCTDBSqlite
+    supported_dbms['sqlite']=aCTDBSqlite
 except:
     pass
 try:
-    import mysql.connector as mysql
+    from aCTDBMySQL import aCTDBMySQL
+    supported_dbms['mysql']=aCTDBMySQL
+except:
+    pass
+try:
+    from aCTDBOracle import aCTDBOracle
+    supported_dbms['oracle']=aCTDBOracle
 except:
     pass
 
+config=aCTConfig.aCTConfig()
+dbtype=config.get(('db', 'type')).lower()
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
-class aCTDBSqlite:
-    """Class for Sqlite specific db operations."""
-    
-    def __init__(self,logger):
-        try:
-            self.conn=sqlite.connect(self.dbname,1800)
-        except Exception, x:
-            raise Exception, "Could not connect to sqlite: " + str(x)
-        self.conn.row_factory=dict_factory
-        self.conn.execute('''PRAGMA synchronous=OFF''')
-        self.log.info("initialized aCTDBSqlite")
-
-class aCTDBMySQL:
-    """Class for MySQL specific db operations."""
-
-    def __init__(self,logger):
-        try:
-            print self.socket, self.dbname
-            self.conn=mysql.connect(unix_socket=self.socket,db=self.dbname)
-        except Exception, x:
-            print Exception, x
-            # if db doesnt exist, create it
-            if x.errno==1049:
-                self.conn=mysql.connect(unix_socket=self.socket)
-                c=self.conn.cursor()
-                c.execute("CREATE DATABASE "+self.dbname)
-            else:
-                raise "Could not connect to db "+self.dbname
-        self.log.info("initialized aCTDBMySQL")
-
-class aCTDBOracle:
-    """Class for Oracle specific db operations."""
-
-    def __init__(self,logger,socket="/tmp/act.mysql.socket",dbname="act"):
-        raise Exception, "Oracle class is not implemented yet"
-
-
-class aCTDBMS(aCTDBSqlite, aCTDBMySQL, aCTDBOracle):
-    """Class for generic DB Mgmt System db operations. Inherit specifics from its speciallized superclasses."""
+class aCTDBMS(supported_dbms[dbtype]):
+    """Class for generic DB Mgmt System db operations. Inherit specifics from its speciallized superclass depending on configured dbtype."""
     
     def __init__(self,logger,dbname="act"):
         self.log=logger
         self.dbname=dbname
-        config = aCTConfig.aCTConfig()
         # TODO: Find more generic way to get db config vars
-        self.dbtype=config.get(('db', 'type')).lower()
-        if self.dbtype.startswith('sqlite'):
+        self.dbtype=dbtype
+        if self.dbtype=='sqlite':
             aCTDBSqlite.__init__(self, logger)
-        elif self.dbtype.startswith('mysql'):
+        elif self.dbtype=='mysql':
             self.socket=str(config.get(('db', 'socket')))
             self.dbname=str(config.get(('db', 'name')))
             aCTDBMySQL.__init__(self, logger)
-        elif self.dbtype.startswith('oracle'):
+        elif self.dbtype=='oracle':
             aCTDBOracle.__init__(self, logger)
         else:
             raise Exception, "DB type %s is not implemented."%self.dbtype
 
+    def getCursor(self):
+        return super(aCTDBMS, self).getCursor()

@@ -38,7 +38,7 @@ class aCTDBPanda(aCTDB):
         #             2. if not -> pstatus=failed, cleanup, logfiles, etc... TODO
         aCTDB.createTables(self)
         str="create table jobs (pandaid integer, tstamp timestamp, pandajob text, arcjobid text, jobname text, arcstatus text, tarcstatus timestamp, arcexitcode integer, pstatus text, theartbeat timestamp, trfstatus text, nrerun integer,lfns text, turls text)"
-        c=self.conn.cursor()
+        c=self.getCursor()
         try:
             c.execute("drop table jobs")
         except:
@@ -56,13 +56,13 @@ class aCTDBPanda(aCTDB):
         k="(pandaid,pandajob,pstatus,"+",".join(['%s' % key for key in desc.keys()])+")"
         v="("+str(pandaid)+",'"+pandajob+"','sent',"+",".join(['"%s"' % val for val in desc.values()])+")"
         s="insert into jobs "+k+" values "+v
-        c=self.conn.cursor()
+        c=self.getCursor()
         #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(time.time())+","+str(pandaid)+",'"+pandajob+"','sent')")
         c.execute(s)
         self.conn.commit()
 
     def deleteJob(self,pandaid):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("delete from jobs where pandaid="+str(pandaid))
         self.conn.commit()
 
@@ -70,7 +70,7 @@ class aCTDBPanda(aCTDB):
         desc['tstamp']=time.time()
         s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute(s)
         self.conn.commit()
 
@@ -78,37 +78,29 @@ class aCTDBPanda(aCTDB):
         desc['tstamp']=time.time()
         s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute(s)
 
     def getJob(self,pandaid,columns=[]):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
-        # mysql SELECT returns list, we want dict
-        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
-        if not isinstance(row,dict):
-            row=dict(zip(c.column_names,row))
         return row
 
     def getJobs(self,select,columns=[]):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE "+select)
         rows=c.fetchall()
-        # mysql SELECT returns list, we want dict
-        # todo: cx_oracle probably has no column_names list. need to figure out a more general approach
-        if not isinstance(rows,dict):
-            rows=dict(zip(c.column_names, zip(*[list(row) for row in rows])))
         return rows
 
     def getNJobs(self):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("select count(*) from jobs")
         njobs=c.fetchone()['count(*)']
         return njobs
 
     def getJobReport(self):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("select arcjobid,arcstatus from jobs")
         rows=c.fetchall()
         return rows

@@ -63,7 +63,7 @@ class aCTDBArc(aCTDB):
         create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
             ", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
             " attemptsleft integer, rerunable text)"
-        c=self.conn.cursor()
+        c=self.getCursor()
         try:
             c.execute("drop table arcjobs")
         except:
@@ -78,7 +78,7 @@ class aCTDBArc(aCTDB):
         '''
         Add new arc Job object. Only used for testing and recreating db.
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         j = self._job2db(job)
         c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ("+str(time.time())+","+str(pandaid)+",'"+"','".join(j.values())+"')")
         self.conn.commit()
@@ -88,7 +88,7 @@ class aCTDBArc(aCTDB):
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to the given cluster.
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
                   +str(time.time())+"','"+str(pandaid)+"','tosubmit','"+str(time.time())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
@@ -98,7 +98,7 @@ class aCTDBArc(aCTDB):
         '''
         Delete job from ARC table.
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("delete from arcjobs where pandaid="+str(pandaid))
         self.conn.commit()
 
@@ -120,7 +120,7 @@ class aCTDBArc(aCTDB):
         if job:
             s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])
         s+=" where pandaid="+str(pandaid)
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("select pandaid from arcjobs where pandaid="+str(pandaid))
         row=c.fetchone()
         if row is None:
@@ -131,7 +131,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a dictionary of column name: value for the given id and columns
         ''' 
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
         # mysql SELECT returns list, we want dict
@@ -143,7 +143,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a dictionary of pandaid: arc.Job.
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE pandaid="+str(pandaid))
         row = c.fetchone()
         if not isinstance(row,dict):
@@ -154,7 +154,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a list of column: value dictionaries for jobs matching select
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         return rows
@@ -163,10 +163,9 @@ class aCTDBArc(aCTDB):
         '''
         Return a dictionary of pandaid: arc.Job for jobs matching select
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT pandaid,"+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
-        # mysql SELECT returns tuple, we want dict
         d = {}
         if isinstance(rows, tuple):
             rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
@@ -183,7 +182,7 @@ class aCTDBArc(aCTDB):
         '''
         Return the total number of jobs in the table
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT COUNT(*) FROM arcjobs")
         row = c.fetchone()
         return row['COUNT(*)']
@@ -192,9 +191,10 @@ class aCTDBArc(aCTDB):
         '''
         Return a list and count of clusters
         '''
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("SELECT cluster, COUNT(*) FROM arcjobs GROUP BY cluster")
         rows=c.fetchall()
+        print "getActiveClusters", rows
         return rows
     
     def _db2job(self, dbinfo):
@@ -255,7 +255,7 @@ class aCTDBArc(aCTDB):
 
 if __name__ == '__main__':
     import logging
-    adb = aCTDBArc(logging.getLogger('test'),dbname="aCTjobs.sqlite")
+    adb = aCTDBArc(logging.getLogger('test'),dbname="act")
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")
@@ -279,6 +279,7 @@ if __name__ == '__main__':
     # Do the submission
     jobs = arc.JobList()
     submitter = arc.Submitter(usercfg)
+    print len(jobs)
     if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
         logging.error("Failed to submit job")
         exit(1)

@@ -64,7 +64,7 @@ class aCTDB(aCTDBMS):
         #             1. rerunable -> arcstatus=submitted
         #             2. if not -> pstatus=failed, cleanup, logfiles, etc... TODO
         str="create table schedconfig (cluster text, status text)"
-        c=self.conn.cursor()
+        c=self.getCursor()
         try:
             c.execute("drop table schedconfig")
         except:
@@ -78,17 +78,17 @@ class aCTDB(aCTDBMS):
             pass
 
     def insertSchedconfig(self,cluster,status):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("insert into schedconfig (cluster,status) values ('%s','%s')" % (cluster,status))
         self.conn.commit()
 
     def updateSchedconfig(self,cluster,status):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("update schedconfig set status='%s' where cluster='%s'" % (status,cluster))
         self.conn.commit()
 
     def getSchedconfig(self,cluster):
-        c=self.conn.cursor()
+        c=self.getCursor()
         c.execute("select status from schedconfig where cluster='%s'" % cluster)
         row=c.fetchone()
         return row
@@ -97,7 +97,7 @@ class aCTDB(aCTDBMS):
         self.conn.commit()
 
     def removeJobs(self,pandaid):
-        c=self.conn.cursor()
+        c=self.getCursor()
         try:
             c.execute("delete from jobs where pandaid="+str(pandaid))
             c.execute("delete from arcjobs where pandaid="+str(pandaid))
