@@ -777,7 +777,7 @@ class aCTSubmitter(aCTProcess):
         # Filter only sites for this process
         queuelist=[]
         for target in targets:
-            if target.ComputingService.Name != self.cluster:
+            if self.cluster and target.ComputingService.Name != self.cluster:
                 continue
             s = self.db.getSchedconfig(target.ComputingService.Name)
             status = 'online'
