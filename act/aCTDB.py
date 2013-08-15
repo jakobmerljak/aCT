@@ -20,7 +20,7 @@ class aCTDB(aCTDBMS):
         return s
     
     
-    def getTimeStamp(seconds=None):
+    def getTimeStamp(self, seconds=None):
         if seconds:
             return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
         else:
