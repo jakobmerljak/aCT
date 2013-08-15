@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 from aCTDBMS import aCTDBMS
 
 class aCTDB(aCTDBMS):
@@ -17,6 +18,14 @@ class aCTDB(aCTDBMS):
         else:
             s="*"
         return s
+    
+    
+    def getTimeStamp(seconds=None):
+        if seconds:
+            return datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     
     def createTables(self):
         # jobs (see aCTDBPanda.py):

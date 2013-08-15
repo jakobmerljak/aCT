@@ -130,7 +130,7 @@ class aCTDownloader:
         endtime = jobinfo.completion_time.GetTime()
         if endtime == -1:
             endtime = None
-
+    
         submissiontime = jobinfo.submission_time.GetTime()
         if submissiontime == -1:
             submissiontime = None
@@ -151,7 +151,7 @@ class aCTDownloader:
             endtime = None
 
         #print "status ",jobinfo.status,"| ,submission,end,wall,cpu ",submissiontime,endtime,walltime,cputime,"| starttime,endtime,walltime:",starttime,endtime,walltime
-        return starttime,endtime
+        return self.dbpanda.getTimeStamp(starttime), self.dbpanda.getTimeStamp(endtime)
 
 
 
@@ -291,9 +291,9 @@ class aCTDownloader:
                 jd={}
                 jd['pstatus']=pstatus
                 # expire heartbeat
-                jd['theartbeat']=time.time()-2*int(self.conf.get(['panda','heartbeattime']))
+                jd['theartbeat']=self.dbpanda.getTimeStamp(time.time()-2*int(self.conf.get(['panda','heartbeattime'])))
                 # expire check time
-                jd['tarcstatus']=time.time()-2*int(self.conf.get(['jobs','checkinterval']))
+                jd['tarcstatus']=self.dbpanda.getTimeStamp(time.time()-2*int(self.conf.get(['jobs','checkinterval'])))
                 self.dbpanda.updateJob(job['pandaid'],jd)
         #self.dbpanda.Commit()
         self.log.info("updated %d jobs" % count)
@@ -350,7 +350,7 @@ class aCTDownloader:
             # do this check always (True)
             if job['arcstatus'] != ji.status or True:
                 jd['arcstatus']=ji.status
-                jd['tarcstatus']=time.time()
+                jd['tarcstatus']=self.db.getTimeStamp()
                 # finished jobs
                 if ji.status == "FINISHED" and ji.exitcode <= 0:
                     jd['trfstatus']="tofinished"
@@ -374,7 +374,7 @@ class aCTDownloader:
                 elif ji.status == "FAILED" :
                     jd['trfstatus']='tofailed'
             else:
-                jd['tarcstatus']=time.time() 
+                jd['tarcstatus']=self.dbpanda.getTimeStamp()
 
             # update the database
             if jd['arcstatus'] == "INLRMS:R" :
@@ -399,8 +399,8 @@ class aCTDownloader:
                 jd['tarcstatus']=job['tarcstatus']
                 jd['cluster']=ji.cluster
 		try:
-                  jd['submissiontime']=ji.submission_time.GetTime()
-                  jd['completiontime']=ji.completion_time.GetTime()
+                  jd['submissiontime']=ji.submission_time.str()
+                  jd['completiontime']=ji.completion_time.str()
                   jd['usedcputime']=ji.used_cpu_time
                   jd['usedwalltime']=ji.used_wall_time
 		except TimeError,x:
@@ -412,7 +412,7 @@ class aCTDownloader:
 		# self.log.error(str(ji.proxy_expire_time))
 		# Bug in arclib for time : 1970-01-01 00:59:59
 		if str(ji.proxy_expire_time).find("1970") == -1 :
-                  jd['proxyexpiretime']=Time(str(ji.proxy_expire_time)).GetTime()
+                  jd['proxyexpiretime']=Time(str(ji.proxy_expire_time)).str()
                 jd['rerunable']=ji.rerunable
 
                 # get proper start/end time 
@@ -470,7 +470,7 @@ class aCTDownloader:
                     c.RenewCreds(str(j['arcjobid']))
                     c.Resume(str(j['arcjobid']))
                     jd['arcstatus']='rerunned'
-                    jd['tarcstatus']=time.time()+300
+                    jd['tarcstatus']=self.dbpanda.getTimeStamp(time.time()+300)
                     jd['trfstatus']='inarc'
                     self.log.info("%s reruned " % j['pandaid'])
                 self.dbpanda.updateJob(j['pandaid'],jd)
@@ -479,7 +479,7 @@ class aCTDownloader:
 		if str(x).find("Server responded: Job can't be restarted") != -1:
 		  self.log.info("handling rerunning")
 		  jd['arcstatus']='rerunned'
-		  jd['tarcstatus']=time.time()
+		  jd['tarcstatus']=self.dbpanda.getTimeStamp()
 		  jd['trfstatus']='inarc'
 		  self.log.info("%s moved back to inarc " % j['pandaid'])
 		  self.dbpanda.updateJob(j['pandaid'],jd)
@@ -518,7 +518,7 @@ class aCTDownloader:
                     pass
                 jd={}
                 jd['pstatus']='sent'
-                jd['tarcstatus']=time.time()
+                jd['tarcstatus']=self.dbpanda.getTimeStamp()
                 jd['trfstatus']='tosubmit'
                 self.log.info("%s resubmitted " % j['pandaid'])
                 self.dbpanda.updateJob(j['pandaid'],jd)

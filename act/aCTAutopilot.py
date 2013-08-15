@@ -2,6 +2,7 @@ import ssl
 import os
 import subprocess
 import time
+import datetime
 import aCTPanda
 import aCTDBPanda
 import sys
@@ -95,7 +96,7 @@ class aCTAutopilot:
           #self.log.info("response: %s" % t.status )
           jd={}
           jd['trfstatus']='tolfclfns'
-          jd['theartbeat']=time.time()
+          jd['theartbeat']=self.db.getTimeStamp()
           self.db.updateJob(t.id,jd)
           
        #self.db.Commit()
@@ -133,7 +134,7 @@ class aCTAutopilot:
              continue
           jd={}
           jd['pstatus']='starting'
-          jd['theartbeat']=time.time()
+          jd['theartbeat']=self.db.getTimeStamp()
           self.db.updateJob(t.id,jd)
           
        if len(jobs):
@@ -169,7 +170,7 @@ class aCTAutopilot:
           #AF   pstatus = t.status['command'][0] 
           jd={}
           jd['pstatus']=pstatus
-          jd['theartbeat']=time.time()
+          jd['theartbeat']=self.db.getTimeStamp()
 	  if (t.status['command'][0] == "tobekilled"):
 	    jd['trfstatus']="tobekilled"
 	  if (t.status['command'][0] == "badattemptnr"):
@@ -216,7 +217,7 @@ class aCTAutopilot:
            jd={}
            jd['trfstatus']='toremove'
            jd['pstatus']='done'
-           jd['theartbeat']=time.time()
+           jd['theartbeat']=self.db.getTimeStamp()
            self.db.updateJob(t.id,jd)
            
         #self.db.Commit()

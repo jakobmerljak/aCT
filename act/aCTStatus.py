@@ -110,7 +110,7 @@ class aCTStatus(aCTProcess):
             # compare strings here to get around limitations of JobState API
             if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
                 # just update timestamp
-                self.db.updateArcJob(pandaid, {'tarcstate': time.time()})
+                self.db.updateArcJob(pandaid, {'tarcstate': self.db.getTimeStamp()})
                 continue
             
             self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
@@ -130,7 +130,7 @@ class aCTStatus(aCTProcess):
                 # unexpected
                 arcstate = 'failed'
                 
-            self.db.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': time.time()}, updatedjob)
+            self.db.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
                 
         self.log.info('Done')
         
@@ -146,7 +146,7 @@ class aCTStatus(aCTProcess):
         
         for job in jobs:
             self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
-            self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': time.time()})
+            self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
     def process(self):

@@ -45,12 +45,12 @@ class aCTDBPanda(aCTDB):
             pass
 
     def insertJob(self,pandaid,pandajob,desc={}):
-        desc['tstamp']=time.time()
+        desc['tstamp']=self.getTimeStamp()
         k="(pandaid,pandajob,pstatus,"+",".join(['%s' % key for key in desc.keys()])+")"
         v="("+str(pandaid)+",'"+pandajob+"','sent',"+",".join(['"%s"' % val for val in desc.values()])+")"
         s="insert into jobs "+k+" values "+v
         c=self.getCursor()
-        #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(time.time())+","+str(pandaid)+",'"+pandajob+"','sent')")
+        #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(self.getTimeStamp())+","+str(pandaid)+",'"+pandajob+"','sent')")
         c.execute(s)
         self.conn.commit()
 
@@ -60,7 +60,7 @@ class aCTDBPanda(aCTDB):
         self.conn.commit()
 
     def updateJob(self,id,desc):
-        desc['tstamp']=time.time()
+        desc['tstamp']=self.getTimeStamp()
         s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
         c=self.getCursor()
@@ -68,7 +68,7 @@ class aCTDBPanda(aCTDB):
         self.conn.commit()
 
     def updateJobLazy(self,id,desc):
-        desc['tstamp']=time.time()
+        desc['tstamp']=self.getTimeStamp()
         s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
         c=self.getCursor()

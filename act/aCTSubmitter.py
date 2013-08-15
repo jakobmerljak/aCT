@@ -145,7 +145,7 @@ class aCTSubmitter(aCTProcess):
                 jd={}
                 jd['arcstate']='submitted'
                 # initial offset to 1 minute to force first status check
-                jd['tarcstate']=time.time()-int(self.conf.get(['jobs','checkinterval']))+300
+                jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+300)
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("job id %s", t.job.JobID)
                 jd['cluster']=urlparse(t.job.JobID).hostname
@@ -822,7 +822,7 @@ class aCTSubmitter(aCTProcess):
 
         # mark submitting in db
         for j in jobs:
-            jd={'arcstate': 'submitting', 'tarcstate': str(time.time())}
+            jd={'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
             self.db.updateArcJob(j['pandaid'],jd)
 
         for j in jobs:
@@ -852,7 +852,7 @@ class aCTSubmitter(aCTProcess):
         for j in jobs:
             # set to toresubmit and the application should figure out what to do
             self.db.updateArcJob(j['pandaid'], {"arcstate": "toresubmit",
-                                                "tarcstate": time.time()})
+                                                "tarcstate": self.db.getTimeStamp()})
 
     def processToCancel(self):
         
@@ -875,10 +875,10 @@ class aCTSubmitter(aCTProcess):
                     self.log.error("Could not cancel job %s", job.JobID)
                 # Just to mark as cancelled so it can be cleaned
                 self.db.updateArcJob(pandaid, {"arcstate": "cancelled",
-                                               "tarcstate": time.time()})
+                                               "tarcstate": self.db.getTimeStamp()})
             else:
                 self.db.updateArcJob(pandaid, {"arcstate": "cancelling",
-                                               "tarcstate": time.time()})
+                                               "tarcstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
         
@@ -903,7 +903,7 @@ class aCTSubmitter(aCTProcess):
         j = arc.Job()
         for (pandaid, job) in jobs.items():
             self.db.updateArcJob(pandaid, {"arcstate": "tosubmit",
-                                           "tarcstate": time.time()}, j)
+                                           "tarcstate": self.db.getTimeStamp()}, j)
 
     def processToRerun(self):
         
@@ -924,10 +924,10 @@ class aCTSubmitter(aCTProcess):
             if job.JobID in notresumed:
                 self.log.error("Could not resume job %s", job.JobID)
                 self.db.updateArcJob(pandaid, {"arcstate": "failed",
-                                               "tarcstate": time.time()})
+                                               "tarcstate": self.db.getTimeStamp()})
             else:
                 self.db.updateArcJob(pandaid, {"arcstate": "submitted",
-                                               "tarcstate": time.time()})
+                                               "tarcstate": self.db.getTimeStamp()})
 
 
     def process(self):

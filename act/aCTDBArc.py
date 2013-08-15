@@ -74,7 +74,7 @@ class aCTDBArc(aCTDB):
         '''
         c=self.getCursor()
         j = self._job2db(job)
-        c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ("+str(time.time())+","+str(pandaid)+",'"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ("+str(self.getTimeStamp())+","+str(pandaid)+",'"+"','".join(j.values())+"')")
         self.conn.commit()
         
     def insertArcJobDescription(self, pandaid, jobdesc, maxattempts=0, cluster=''):
@@ -84,7 +84,7 @@ class aCTDBArc(aCTDB):
         '''
         c=self.getCursor()
         c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
-                  +str(time.time())+"','"+str(pandaid)+"','tosubmit','"+str(time.time())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
+                  +str(self.getTimeStamp())+"','"+str(pandaid)+"','tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
         
 
@@ -109,7 +109,7 @@ class aCTDBArc(aCTDB):
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified. Does not commit after executing update.
         '''
-        desc['tstamp']=time.time()
+        desc['tstamp']=self.getTimeStamp()
         s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
         if job:
             s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])

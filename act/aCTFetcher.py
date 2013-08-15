@@ -34,7 +34,7 @@ class aCTFetcher(aCTProcess):
                 self.log.error("Could not get output from job %s", job.JobID)
 
             self.db.updateArcJob(pandaid, {"arcstate": "donefailed",
-                                           "tarcstate": time.time()})
+                                           "tarcstate": self.db.getTimeStamp()})
   
     def fetchFinished(self):
         
@@ -56,7 +56,7 @@ class aCTFetcher(aCTProcess):
                 self.log.error("Could not get output from job %s", job.JobID)
 
             self.db.updateArcJob(pandaid, {"arcstate": "done",
-                                           "tarcstate": time.time()})
+                                           "tarcstate": self.dbpanda.getTimeStamp()})
   
   
     def process(self):
