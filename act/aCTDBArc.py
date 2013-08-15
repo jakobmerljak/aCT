@@ -3,12 +3,6 @@ import time
 import arc
 from aCTDB import aCTDB
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
 class aCTDBArc(aCTDB):
     
     def __init__(self,logger,dbname="aCTjobs.db"):

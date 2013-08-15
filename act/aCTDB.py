@@ -2,12 +2,6 @@ import os
 import time
 from aCTDBMS import aCTDBMS
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
 class aCTDB(aCTDBMS):
 
     def __init__(self,logger,dbname="aCTjobs.db"):
