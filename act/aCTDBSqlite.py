@@ -21,3 +21,5 @@ class aCTDBSqlite(object):
     def getCursor(self):
         return self.conn.cursor()
 
+    def getNowStr(self):
+        return "strftime('%s','now')"

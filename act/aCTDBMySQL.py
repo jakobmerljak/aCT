@@ -28,3 +28,6 @@ class aCTDBMySQL(object):
     def getCursor(self):
         return self.conn.cursor(cursor_class=MySQLCursorDict)
 
+    def getNowStr(self):
+        return "NOW()"
+

@@ -7,3 +7,5 @@ class aCTDBOracle(object):
     def getCursor(self):
         return self.conn.cursor()
 
+    def getNowStr(self):
+        return "NOW()"
