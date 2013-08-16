@@ -312,7 +312,7 @@ class aCTDownloader:
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid like 'gsiftp%' and trfstatus like '"+trfstatus+"' and tarcstatus<strftime('%s','now')-"+str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
+        jobs=self.dbpanda.getJobs("( pstatus='running' or pstatus='starting' or pstatus='transferring' ) and arcjobid like 'gsiftp%' and trfstatus like '"+trfstatus+"' and "+self.db.getUnixTimestampStr("tarcstatus")+"<"+self.db.getUnixTimestampStr()+"-"+str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
 
         # TODO: make function for this in aCTDBPanda
         # number of total jobs

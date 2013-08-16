@@ -7,5 +7,6 @@ class aCTDBOracle(object):
     def getCursor(self):
         return self.conn.cursor()
 
-    def getNowStr(self):
-        return "NOW()"
+    def getUnixTimestampStr(self, column=""):
+        # should be tested...
+        return "(SYSDATE - TO_DATE('01-JAN-1970','DD-MON-YYYY')) * (86400)"

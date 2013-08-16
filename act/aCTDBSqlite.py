@@ -21,5 +21,7 @@ class aCTDBSqlite(object):
     def getCursor(self):
         return self.conn.cursor()
 
-    def getNowStr(self):
-        return "strftime('%s','now')"
+    def getUnixTimestampStr(self,column=""):
+        if not column:
+            column="'now'"
+        return "strftime('%s',"+column+")"

@@ -43,5 +43,5 @@ class aCTDBMS(supported_dbms[dbtype]):
     def getCursor(self):
         return super(aCTDBMS, self).getCursor()
 
-    def getNowStr(self):
-        return super(aCTDBMS, self).getNowStr()
+    def getUnixTimestampStr(self,column=""):
+        return super(aCTDBMS, self).getUnixTimestampStr(column)
