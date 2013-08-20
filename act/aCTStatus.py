@@ -145,7 +145,7 @@ class aCTStatus(aCTProcess):
                                     ['pandaid', 'JobId'])
         
         for job in jobs:
-            self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
+            self.log.warn("Job %s lost from information system, marking as lost", job['JobId'])
             self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
