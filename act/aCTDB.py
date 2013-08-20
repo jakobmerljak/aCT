@@ -23,9 +23,9 @@ class aCTDB(aCTDBMS):
     def getTimeStamp(self, seconds=None):
         # todo: move to aCTDBMS and use internal dbms mechanisms for converting
         if seconds:
-            return "'"+datetime.datetime.fromtimestamp(seconds).strftime("%Y-%m-%d %H:%M:%S")+"'"
+            return datetime.datetime.fromtimestamp(seconds).isoformat()
         else:
-            return "'"+datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+"'"
+            return datetime.datetime.now().isoformat()
     
     
     def createTables(self):

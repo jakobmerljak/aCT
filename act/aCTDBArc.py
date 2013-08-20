@@ -74,7 +74,7 @@ class aCTDBArc(aCTDB):
         '''
         c=self.getCursor()
         j = self._job2db(job)
-        c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ("+str(self.getTimeStamp())+","+str(pandaid)+",'"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"',"+str(pandaid)+",'"+"','".join(j.values())+"')")
         self.conn.commit()
         
     def insertArcJobDescription(self, pandaid, jobdesc, maxattempts=0, cluster=''):
@@ -248,8 +248,12 @@ class aCTDBArc(aCTDB):
         return d
 
 if __name__ == '__main__':
+    import random
     import logging
-    adb = aCTDBArc(logging.getLogger('test'),dbname="act")
+    import aCTConfig
+    conf = aCTConfig.aCTConfig()
+    
+    adb = aCTDBArc(logging.getLogger('test'),dbname=conf.get(["db","file"]))
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")
