@@ -32,7 +32,7 @@ class aCTDBMySQL(object):
 
     def timeStampLessThan(self,column,timediff):
         if not column:
-            column="NOW()"
+            column="UTC_TIMESTAMP()"
         return "UNIX_TIMESTAMP("+column+")"
 
     def addLock(self):
