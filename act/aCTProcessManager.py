@@ -29,9 +29,9 @@ class aCTProcessManager:
         for proc in [p for c in self.running for p in self.running[c]]:
             rc = proc.check()
             if rc == None :
-                self.log.debug("process %s is running" % proc.name )
+                self.log.debug("process %s for %s is running", proc.name, proc.cluster )
             else:
-                self.log.info("restarting process %s" % proc.name )
+                self.log.info("restarting process %s for %s", proc.name, proc.cluster )
                 proc.restart()
                 
         for (name, proc) in self.processes_single.items():
@@ -42,9 +42,9 @@ class aCTProcessManager:
             else:
                 rc = proc.check()
                 if rc == None :
-                    self.log.debug("process %s is running" % name)
+                    self.log.debug("process %s is running", name)
                 else:
-                    self.log.info("restarting process %s" % name)
+                    self.log.info("restarting process %s", name)
                 proc.restart()
                 
 
@@ -65,6 +65,9 @@ class aCTProcessManager:
                     
         # Then check for new processes to start
         for cluster in activeclusters:
+            # Lists of clusters should be treated same as empty
+            if not cluster or cluster.find(' ') != -1:
+                cluster = ''
             if cluster not in self.running.keys():
                 self.running[cluster] = []
                 for proc in self.processes:

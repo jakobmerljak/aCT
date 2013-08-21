@@ -7,6 +7,9 @@ class aCTDBOracle(object):
     def getCursor(self):
         return self.conn.cursor()
 
-    def getUnixTimestampStr(self, column=""):
+    def timeStampLessThan(self, column, timediff):
         # should be tested...
         return "(SYSDATE - TO_DATE('01-JAN-1970','DD-MON-YYYY')) * (86400)"
+
+    def addLock(self):
+        return " FOR UPDATE"

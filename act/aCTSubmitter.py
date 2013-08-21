@@ -753,7 +753,13 @@ class aCTSubmitter(aCTProcess):
         if self.conf.get(['downtime','stopsubmission']) == "true":
             return 0
 
-        jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster='"+self.cluster+"' limit 1", ["pandaid", "jobdesc"])
+        if self.cluster:
+            # Lock row for update in case multiple clusters are specified
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster like '%"+self.cluster+"%' limit 1",
+                                        columns=["pandaid", "jobdesc"], lock=True)
+        else:
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster='' limit 1", ["pandaid", "jobdesc"])
+
         if len(jobs) == 0:
             #self.log.debug("No jobs to submit")
             return 0

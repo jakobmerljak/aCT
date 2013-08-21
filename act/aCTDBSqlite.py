@@ -21,7 +21,9 @@ class aCTDBSqlite(object):
     def getCursor(self):
         return self.conn.cursor()
 
-    def getUnixTimestampStr(self,column=""):
-        if not column:
-            column="'now'"
-        return "strftime('%s',"+column+")"
+    def timeStampLessThan(self,column,timediff):
+        return "datetime("+column+") < datetime('now', '-"+str(timediff)+" seconds')"
+
+    def addLock(self):
+        # SQLite does not support row locking
+        return ""

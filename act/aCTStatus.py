@@ -77,11 +77,11 @@ class aCTStatus(aCTProcess):
 
         # check jobs which were last checked more than checkinterval ago
         jobs=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                   "cluster='"+self.cluster+"' and "+self.db.getUnixTimestampStr("tarcstate")+"<"+self.db.getUnixTimestampStr()+"-"+ \
-                                   str(self.conf.get(['jobs','checkinterval'])) + " limit 100000")
+                                   "cluster='"+self.cluster+"' and "+ \
+                                   self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
+                                   " limit 100000")
 
-        # TODO: make function for this in aCTDBPanda
-        # number of total jobs
+        # total number of jobs
         njobs=self.db.getNArcJobs()
 
         # Do not check too little jobs at once (at least 1% of running jobs)
@@ -141,7 +141,7 @@ class aCTStatus(aCTProcess):
 
         # 2 hours limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                    "cluster='"+self.cluster+"' and "+self.db.getUnixTimestampStr("tarcstate")+"<"+self.db.getUnixTimestampStr()+"-7200",
+                                    "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 7200),
                                     ['pandaid', 'JobId'])
         
         for job in jobs:

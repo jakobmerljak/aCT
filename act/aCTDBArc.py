@@ -144,10 +144,13 @@ class aCTDBArc(aCTDB):
             row=dict(zip([col[0] for col in c.description], row))
         return {pandaid: self._db2job(row)}
         
-    def getArcJobsInfo(self, select, columns=[]):
+    def getArcJobsInfo(self, select, columns=[], lock=False):
         '''
-        Return a list of column: value dictionaries for jobs matching select
+        Return a list of column: value dictionaries for jobs matching select.
+        If lock is True the row will be locked if possible.
         '''
+        if lock:
+            select += self.addLock()
         c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()

@@ -147,7 +147,7 @@ class aCTAutopilot:
        Heartbeat status updates.
        """
        nthreads=int(self.conf.get(["panda","threads"]))
-       jobs=self.db.getJobs("pstatus='"+pstatus+"' and "+self.db.getUnixTimestampStr("theartbeat")+"<"+self.db.getUnixTimestampStr()+"-"+self.conf.get(['panda','heartbeattime']))
+       jobs=self.db.getJobs("pstatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])))
        #print "PandaHeartbeat ",len(jobs)
        if len(jobs):
           self.log.info("%d" % len(jobs))

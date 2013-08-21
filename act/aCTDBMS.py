@@ -43,5 +43,8 @@ class aCTDBMS(supported_dbms[dbtype]):
     def getCursor(self):
         return super(aCTDBMS, self).getCursor()
 
-    def getUnixTimestampStr(self,column=""):
-        return super(aCTDBMS, self).getUnixTimestampStr(column)
+    def timeStampLessThan(self,column,timediff):
+        return super(aCTDBMS, self).timeStampLessThan(column,timediff)
+    
+    def addLock(self):
+        return super(aCTDBMS, self).addLock()

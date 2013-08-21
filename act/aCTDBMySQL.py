@@ -30,8 +30,10 @@ class aCTDBMySQL(object):
         self.conn.commit()
         return self.conn.cursor(cursor_class=MySQLCursorDict)
 
-    def getUnixTimestampStr(self,column=""):
+    def timeStampLessThan(self,column,timediff):
         if not column:
             column="NOW()"
         return "UNIX_TIMESTAMP("+column+")"
 
+    def addLock(self):
+        return " FOR UPDATE"
