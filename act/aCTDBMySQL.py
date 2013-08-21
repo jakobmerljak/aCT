@@ -32,6 +32,6 @@ class aCTDBMySQL(object):
 
     def getUnixTimestampStr(self,column=""):
         if not column:
-            column="NOW()"
+            column="UTC_TIMESTAMP()"
         return "UNIX_TIMESTAMP("+column+")"
 
