@@ -26,8 +26,12 @@ class aCTDBMySQL(object):
         self.log.info("initialized aCTDBMySQL")
 
     def getCursor(self):
+        # make sure cursor reads newest db state
+        self.conn.commit()
         return self.conn.cursor(cursor_class=MySQLCursorDict)
 
-    def getNowStr(self):
-        return "NOW()"
+    def getUnixTimestampStr(self,column=""):
+        if not column:
+            column="NOW()"
+        return "UNIX_TIMESTAMP("+column+")"
 

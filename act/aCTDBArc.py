@@ -248,8 +248,12 @@ class aCTDBArc(aCTDB):
         return d
 
 if __name__ == '__main__':
+    import random
     import logging
-    adb = aCTDBArc(logging.getLogger('test'),dbname="act")
+    import aCTConfig
+    conf = aCTConfig.aCTConfig()
+    
+    adb = aCTDBArc(logging.getLogger('test'),dbname=conf.get(["db","file"]))
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")
