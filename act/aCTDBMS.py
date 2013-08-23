@@ -34,6 +34,8 @@ class aCTDBMS(supported_dbms[dbtype]):
         elif self.dbtype=='mysql':
             self.socket=str(config.get(('db', 'socket')))
             self.dbname=str(config.get(('db', 'name')))
+            self.user=str(config.get(('db', 'user')))
+            self.passwd=str(config.get(('db', 'password')))
             aCTDBMySQL.__init__(self, logger)
         elif self.dbtype=='oracle':
             aCTDBOracle.__init__(self, logger)

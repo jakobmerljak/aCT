@@ -33,6 +33,8 @@
   <socket>/tmp/act.mysql.socket</socket>
   <file>/tmp/act.mysql.socket</file>
   <name>act</name>
+  <user>user</user>
+  <password>password</password>
 </db>
  </!-->
 

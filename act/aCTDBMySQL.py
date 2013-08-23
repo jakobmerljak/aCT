@@ -13,18 +13,24 @@ class aCTDBMySQL(object):
     def __init__(self,logger):
         try:
             print self.socket, self.dbname
-            self.conn=mysql.connect(unix_socket=self.socket,db=self.dbname)
+            self._connect(self.dbname)
         except Exception, x:
             print Exception, x
             # if db doesnt exist, create it
-            if x.errno==1049:
-                self.conn=mysql.connect(unix_socket=self.socket)
-                c=self.conn.cursor()
-                c.execute("CREATE DATABASE "+self.dbname)
-            else:
-                raise "Could not connect to db "+self.dbname
-        self.log.info("initialized aCTDBMySQL")
+            if x.errno!=1049:
+                raise x
+            self._connect()
+            c=self.conn.cursor()
+            c.execute("CREATE DATABASE "+self.dbname)
 
+        self.log.info("initialized aCTDBMySQL")
+    
+    def _connect(self, dbname=None):
+        if self.socket != 'None':
+            self.conn=mysql.connect(unix_socket=self.socket,db=dbname)
+        elif self.user and self.passwd:
+            self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)
+        
     def getCursor(self):
         # make sure cursor reads newest db state
         self.conn.commit()
