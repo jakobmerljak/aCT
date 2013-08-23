@@ -139,9 +139,9 @@ class aCTStatus(aCTProcess):
         Move jobs with a long time since status update to lost
         '''
 
-        # 2 hours limit. TODO: configurable?
+        # 2 days limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                    "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 7200),
+                                    "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
                                     ['pandaid', 'JobID'])
         
         for job in jobs:
