@@ -256,7 +256,7 @@ if __name__ == '__main__':
     import aCTConfig
     conf = aCTConfig.aCTConfig()
     
-    adb = aCTDBArc(logging.getLogger('test'),dbname=conf.get(["db","file"]))
+    adb = aCTDBArc(logging.getLogger(),dbname=conf.get(["db","file"]))
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")
