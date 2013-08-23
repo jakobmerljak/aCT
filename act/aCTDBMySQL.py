@@ -31,9 +31,7 @@ class aCTDBMySQL(object):
         return self.conn.cursor(cursor_class=MySQLCursorDict)
 
     def timeStampLessThan(self,column,timediff):
-        if not column:
-            column="UTC_TIMESTAMP()"
-        return "UNIX_TIMESTAMP("+column+")"
-
+        return "UNIX_TIMESTAMP("+column+") < UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
+    
     def addLock(self):
         return " FOR UPDATE"

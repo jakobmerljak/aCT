@@ -31,7 +31,7 @@ class aCTProcess:
         
         # ARC Configuration
         self.uc = arc.UserConfig()
-        self.uc.ProxyPath("/tmp/x509up_u%s" % os.getuid())
+        self.uc.ProxyPath(str(self.conf.get(["voms", "proxypath"])))
         self.uc.CACertificatesDirectory("/etc/grid-security/certificates")
         timeout=int(self.conf.get(['atlasgiis','timeout']))
         self.uc.Timeout(timeout)

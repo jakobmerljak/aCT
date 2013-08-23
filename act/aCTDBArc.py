@@ -237,7 +237,7 @@ class aCTDBArc(aCTDB):
             elif self.jobattrs[attr] == arc.StringList:
                 d[attr] = '|'.join(getattr(job, attr))
             elif self.jobattrs[attr] == arc.URL:
-                d[attr] = getattr(job, attr).str()
+                d[attr] = getattr(job, attr).str().replace(r'\2f',r'/')
             elif self.jobattrs[attr] == arc.Period:
                 d[attr] = str(getattr(job, attr).GetPeriod())
             elif self.jobattrs[attr] == arc.Time:
