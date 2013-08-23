@@ -23,7 +23,7 @@
 </executable>
 
 <db>
-  <type>sqlite3</type>
+  <type>sqlite</type>
   <file>/home/act01/aCTjobs.sqlite</file>
 </db>
  
