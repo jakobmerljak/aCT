@@ -142,10 +142,10 @@ class aCTStatus(aCTProcess):
         # 2 hours limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 7200),
-                                    ['pandaid', 'JobId'])
+                                    ['pandaid', 'JobID'])
         
         for job in jobs:
-            self.log.warn("Job %s lost from information system, marking as lost", job['JobId'])
+            self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
             self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
