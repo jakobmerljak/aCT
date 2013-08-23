@@ -280,7 +280,6 @@ if __name__ == '__main__':
     # Do the submission
     jobs = arc.JobList()
     submitter = arc.Submitter(usercfg)
-    print len(jobs)
     if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
         logging.error("Failed to submit job")
         exit(1)
