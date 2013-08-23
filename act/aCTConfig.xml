@@ -39,22 +39,25 @@
 <loop>
   <time>
     <main>10</main>
-    <downloader>10</downloader>
     <submitter>10</submitter>
-    <resolver>10</resolver>
+    <status>10</status>
+    <fetcher>10</fetcher>
+    <cleaner>10</cleaner>    
   </time>
   <maxjobs>
-    <downloader>1000</downloader>
     <submitter>100</submitter>
-    <resolver>100</resolver>
+    <status>100</status>
+    <fetcher>1000</fetcher>
+    <cleaner>100</cleaner>    
   </maxjobs>
   <threads>
-    <downloader>10</downloader>
+    <fetcher>10</fetcher>
   </threads>
   <periodicrestart>
-    <downloader>600</downloader>
     <submitter>120</submitter>
-    <resolver>600</resolver>
+    <status>600</status>
+    <fetcher>600</fetcher>
+    <cleaner>600</cleaner>    
   </periodicrestart>
 </loop>
 
@@ -67,8 +70,8 @@
   <main>/home/act01/log/aCTMain.log</main>
   <autopilot>/home/act01/log/aCTAutopilot.log</autopilot>
   <submitter>/home/act01/log/aCTSubmitter.log</submitter>
-  <resolver>/home/act01/log/aCTResolver.log</resolver>
-  <downloader>/home/act01/log/aCTDownloader.log</downloader>
+  <status>/home/act01/log/aCTStatus.log</status>
+  <fetcher>/home/act01/log/aCTFetcher.log</fetcher>
   <cleaner>/home/act01/log/aCTCleaner.log</cleaner>
   <size>10000000</size>
   <rotate>25</rotate>
@@ -222,6 +225,7 @@
   <proxylifetime>192:00</proxylifetime>
   <minlifetime>432000</minlifetime>
   <proxypath>/tmp/x509up_u501</proxypath>
+  <cacertdir>/etc/grid-security/certificates</cacertdir>
 </voms>
 
 <lfc>
