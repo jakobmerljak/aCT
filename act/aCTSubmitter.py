@@ -136,6 +136,7 @@ class aCTSubmitter(aCTProcess):
                     # abort due to timeout and try again
                     self.log.error("submission timeout: exit and try again")
                     errfl=True
+                    continue
                 # updatedb
                 if t.job is None:
                     #self.log.error("no jobname")
@@ -151,7 +152,7 @@ class aCTSubmitter(aCTProcess):
                 jd['cluster']=urlparse(t.job.JobID).hostname
                 self.db.updateArcJob(t.pandaid,jd,t.job)
             if errfl:
-                exit(1)
+                break
 
 
     ## To move to Panda code ##
