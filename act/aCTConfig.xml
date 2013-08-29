@@ -36,7 +36,7 @@
   <user>user</user>
   <password>password</password>
 </db>
- </!-->
+</!-->
 
 <loop>
   <time>
@@ -69,6 +69,7 @@
 
 <logger>
   <level>info</level>
+  <arclevel>verbose</arclevel>
   <main>/home/act01/log/aCTMain.log</main>
   <autopilot>/home/act01/log/aCTAutopilot.log</autopilot>
   <submitter>/home/act01/log/aCTSubmitter.log</submitter>
