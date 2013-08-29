@@ -40,6 +40,8 @@ class aCTStatus(aCTProcess):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
+        self.log.info("Job failure for %s: %s", failedjob.JobID, ";".join([joberr for joberr in failedjob.Error]))
+        
         # First check if it was a data staging problem
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
