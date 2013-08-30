@@ -83,6 +83,15 @@ class aCTStatus(aCTProcess):
                                    self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                    " limit 100000")
 
+        # get JobState string to work around JobState API until revision 28041 is released
+        jobstates = self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+                                           "cluster='"+self.cluster+"' and "+ \
+                                           self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
+                                           " limit 100000",
+                                           ['pandaid', 'State'])
+        
+        jobstates = dict((row['pandaid'], row['State']) for row in jobstates)
+
         # total number of jobs
         njobs=self.db.getNArcJobs()
 
@@ -110,12 +119,15 @@ class aCTStatus(aCTProcess):
                 self.log.warn("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
                 continue
             # compare strings here to get around limitations of JobState API
-            if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
+            #if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
+            if jobstates[pandaid] == updatedjob.State.GetGeneralState():
                 # just update timestamp
                 self.db.updateArcJob(pandaid, {'tarcstate': self.db.getTimeStamp()})
                 continue
             
-            self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
+            #self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
+            self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[pandaid], updatedjob.State.GetGeneralState())
+            
             # state changed, update whole Job object
             arcstate = 'submitted'
             if updatedjob.State == arc.JobState.FINISHED and updatedjob.ExitCode == 0:
@@ -125,7 +137,8 @@ class aCTStatus(aCTProcess):
                 arcstate = self.processJobErrors(pandaid, updatedjob)
             elif updatedjob.State == arc.JobState.KILLED:
                 arcstate = 'cancelled'
-            elif updatedjob.State == arc.JobState.RUNNING:
+            elif updatedjob.State == arc.JobState.RUNNING or \
+                 updatedjob.State == arc.JobState.FINISHING:
                 arcstate = 'running'
             elif updatedjob.State == arc.JobState.DELETED or \
                  updatedjob.State == arc.JobState.OTHER:
