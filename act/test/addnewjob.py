@@ -13,4 +13,4 @@ xrsl = '''&(executable=/bin/sleep)
            (gmlog=gmlog)
            '''
 
-db.insertArcJobDescription(random.randint(1, 999999999), xrsl, maxattempts=5)
+db.insertArcJobDescription(xrsl, maxattempts=5)
