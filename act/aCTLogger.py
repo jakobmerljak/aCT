@@ -14,7 +14,7 @@ LEVELS = {'debug': logging.DEBUG,
 class aCTLogger:
 
     def __init__(self,name):
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigARC()
         self.logger=logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
         level = LEVELS.get(self.conf.get(["logger","level"]), logging.NOTSET)

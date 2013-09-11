@@ -21,7 +21,7 @@ class aCTPanda:
 
 
     def __init__(self,logger):
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigATLAS()
         #self.srv='https://pandasrv.usatlas.bnl.gov:25443/server/panda/'
         #self.siteName='ARC'
         self.srv=self.conf.get(['panda','server'])

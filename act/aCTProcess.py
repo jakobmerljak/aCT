@@ -25,7 +25,7 @@ class aCTProcess:
         self.log=self.logger()
 
         # config
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigARC()
         # database
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         

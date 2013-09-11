@@ -18,7 +18,7 @@ class aCTResolver:
         self.logger=aCTLogger.aCTLogger("resolver")
         self.log=self.logger()
 
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigARC()
         self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
 
         self.log.info("Started")

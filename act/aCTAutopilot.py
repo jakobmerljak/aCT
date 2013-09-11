@@ -53,14 +53,15 @@ class aCTAutopilot:
     def __init__(self):
 
         # xml config file
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigATLAS()
+        self.arcconf=aCTConfig.aCTConfigARC()
         # logger
         self.logger=aCTLogger.aCTLogger("autopilot")
         self.log=self.logger()
         self.log.info("Start")
 
         # database
-        self.db=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBPanda.aCTDBPanda(self.log,self.arcconf.get(["db","file"]))
         # panda
         # proxy path?????
         self.panda=aCTPanda.aCTPanda(self.log)

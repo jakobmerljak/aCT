@@ -6,7 +6,7 @@ import subprocess
 
 class aCTProxy:
     def __init__(self,Interval=3600):
-        self.conf=aCTConfig.aCTConfig()
+        self.conf=aCTConfig.aCTConfigARC()
         self.cmd=self.conf.get(["voms","bindir"])+"/voms-proxy-init -rfc -voms atlas:/atlas/Role=production -pwstdin -valid "+self.conf.get(["voms","proxylifetime"])
         self.passwd=getpass.getpass("VOMS Password: ")
         self.__vomsinit__()

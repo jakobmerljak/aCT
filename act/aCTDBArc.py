@@ -259,7 +259,7 @@ if __name__ == '__main__':
     import random
     import logging
     import aCTConfig
-    conf = aCTConfig.aCTConfig()
+    conf = aCTConfig.aCTConfigARC()
     
     adb = aCTDBArc(logging.getLogger(),dbname=conf.get(["db","file"]))
     adb.createTables()

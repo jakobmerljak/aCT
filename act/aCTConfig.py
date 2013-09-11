@@ -7,16 +7,15 @@ class aCTConfig:
 
     def __init__(self):
         self.top=[]
-        self.log="aCTConfig.log"
         self.tparse=0
         self.parse()
 
     def parse(self):
         try:
-            mtime=os.stat("aCTConfig.xml")[8]
+            mtime=os.stat(self.configfile)[8]
             if mtime<=self.tparse:
                 return
-            xml=minidom.parse("aCTConfig.xml")
+            xml=minidom.parse(self.configfile)
             self.top=xml.getElementsByTagName('config')
             self.tparse=mtime
             #fd=open(self.log,"a")
@@ -46,6 +45,21 @@ class aCTConfig:
         if l:
             return l[0]
         return None
+
+class aCTConfigARC(aCTConfig):
+
+    def __init__(self):
+        self.log="aCTConfigARC.log"
+        self.configfile="aCTConfigARC.xml"
+        aCTConfig.__init__(self)
+
+class aCTConfigATLAS(aCTConfig):
+    
+    def __init__(self):
+        self.log="aCTConfigATLAS.log"
+        self.configfile="aCTConfigATLAS.xml"
+        aCTConfig.__init__(self)
+
 
 if __name__ == '__main__':
 

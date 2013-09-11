@@ -14,7 +14,7 @@ class aCTMain:
     def __init__(self):
 
         # xml config file
-        self.conf = aCTConfig.aCTConfig()
+        self.conf = aCTConfig.aCTConfigARC()
         # create log dirs
         try:
             os.mkdir(self.conf.get(["tmp","dir"]))

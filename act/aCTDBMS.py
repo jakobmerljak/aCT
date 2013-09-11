@@ -18,7 +18,7 @@ try:
 except:
     pass
 
-config=aCTConfig.aCTConfig()
+config=aCTConfig.aCTConfigARC()
 dbtype=config.get(('db', 'type')).lower()
 
 class aCTDBMS(supported_dbms[dbtype]):
