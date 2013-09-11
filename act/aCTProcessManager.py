@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import os
 
 import aCTUtils
 import aCTDBArc
@@ -13,6 +14,7 @@ class aCTProcessManager:
         
         # logger
         self.log = log
+        self.actlocation = conf.get(["actlocation","dir"])
         # DB connection
         self.db = aCTDBArc.aCTDBArc(self.log, conf.get(["db","file"]))
         # list of processes to run per cluster
@@ -36,7 +38,7 @@ class aCTProcessManager:
                 
         for (name, proc) in self.processes_single.items():
             if not proc:
-                proc = self.aCTProcessHandler(name)
+                proc = self.aCTProcessHandler(name,actlocation=self.actlocation)
                 proc.start()
                 self.processes_single[name] = proc
             else:
@@ -74,7 +76,7 @@ class aCTProcessManager:
                     # For empty cluster value only submitter should be started
                     if cluster or proc == 'aCTSubmitter':
                         self.log.info("Starting process %s for %s", proc, cluster)
-                        ph = self.aCTProcessHandler(proc, cluster)
+                        ph = self.aCTProcessHandler(proc, cluster, actlocation=self.actlocation)
                         ph.start()
                         self.running[cluster].append(ph)
                     
@@ -83,16 +85,17 @@ class aCTProcessManager:
         """
         Internal process control class wrapping Popen
         """
-        def __init__(self, name, cluster=''):
+        def __init__(self, name, cluster='', actlocation=''):
             self.name = name
             self.cluster = cluster
             self.child = None
             self.fdout = open(name+".log","a")
             self.fderr = open(name+".err","a")
+            self.actlocation = actlocation
         def __del__(self):
             self.kill()
         def start(self):
-            self.child = subprocess.Popen([sys.executable, self.name+".py", self.cluster], stdout=self.fdout, stderr=self.fderr)
+            self.child = subprocess.Popen([sys.executable, os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=self.fderr)
         def check(self):
             return self.child.poll()
         def restart(self):
