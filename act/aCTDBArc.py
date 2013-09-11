@@ -42,7 +42,8 @@ class aCTDBArc(aCTDB):
         '''
         arcjobs: columns are attributes of arc.Job plus the following:
           - pandaid:
-          - tstamp: timestamp of last record update
+          - created: timestamp of creation of the record
+          - modified: timestamp of last record update
           - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
                       cancelling, cancelled, finished, failed, torerun,
                       toresubmit, done, donefailed, lost, toclean
@@ -54,9 +55,20 @@ class aCTDBArc(aCTDB):
           - rerunnable:
         '''
         aCTDB.createTables(self)
-        create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
-            ", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
-            " attemptsleft integer, rerunable text)"
+            #create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
+            #", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
+            #" attemptsleft integer, rerunable text)"
+        create="""CREATE TABLE arcjobs (
+            pandaid INTEGER,
+            created TIMESTAMP,
+            modified TIMESTAMP,
+            arcstate VARCHAR(255),
+            tarcstate TIMESTAMP,
+            cluster TEXT,
+            jobdesc TEXT,
+            attemptsleft INTEGER,
+            rerunable TEXT,
+            """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
         c=self.getCursor()
         try:
             c.execute("drop table arcjobs")
@@ -74,7 +86,7 @@ class aCTDBArc(aCTDB):
         '''
         c=self.getCursor()
         j = self._job2db(job)
-        c.execute("insert into arcjobs (tstamp,pandaid,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"',"+str(pandaid)+",'"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (modified,created,pandaid,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"',"+str(pandaid)+",'"+"','".join(j.values())+"')")
         self.conn.commit()
         
     def insertArcJobDescription(self, pandaid, jobdesc, maxattempts=0, cluster=''):
@@ -83,8 +95,8 @@ class aCTDBArc(aCTDB):
         the job will be sent to the given cluster.
         '''
         c=self.getCursor()
-        c.execute("insert into arcjobs (tstamp,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
-                  +str(self.getTimeStamp())+"','"+str(pandaid)+"','tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
+        c.execute("insert into arcjobs (modified,created,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
+                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"',"+str(pandaid)+",'tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
         
 
@@ -109,7 +121,7 @@ class aCTDBArc(aCTDB):
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified. Does not commit after executing update.
         '''
-        desc['tstamp']=self.getTimeStamp()
+        desc['modified']=self.getTimeStamp()
         s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
         if job:
             s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])
