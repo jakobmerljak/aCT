@@ -28,12 +28,12 @@ class aCTFetcher(aCTProcess):
         
         notfetched = job_supervisor.GetIDsNotProcessed()
 
-        for (pandaid, job) in jobs.items():
+        for (id, job) in jobs.items():
             if job.JobID in notfetched:
                 # TODO: Try again?
                 self.log.error("Could not get output from job %s", job.JobID)
 
-            self.db.updateArcJob(pandaid, {"arcstate": "donefailed",
+            self.db.updateArcJob(id, {"arcstate": "donefailed",
                                            "tarcstate": self.db.getTimeStamp()})
   
     def fetchFinished(self):
@@ -50,12 +50,12 @@ class aCTFetcher(aCTProcess):
         
         notfetched = job_supervisor.GetIDsNotProcessed()
 
-        for (pandaid, job) in jobs.items():
+        for (id, job) in jobs.items():
             if job.JobID in notfetched:
                 # TODO: Try again?
                 self.log.error("Could not get output from job %s", job.JobID)
 
-            self.db.updateArcJob(pandaid, {"arcstate": "done",
+            self.db.updateArcJob(id, {"arcstate": "done",
                                            "tarcstate": self.db.getTimeStamp()})
   
   

@@ -10,10 +10,10 @@ from aCTProcess import aCTProcess
 from threading import Thread
 
 class SubmitThr(Thread):
-    def __init__ (self,func,pandaid,jobdescs,uc,logger):
+    def __init__ (self,func,id,jobdescs,uc,logger):
         Thread.__init__(self)
         self.func=func
-        self.pandaid=pandaid
+        self.id=id
         self.jobdescs = jobdescs
         self.uc = uc
         self.log=logger
@@ -140,7 +140,7 @@ class aCTSubmitter(aCTProcess):
                 # updatedb
                 if t.job is None:
                     #self.log.error("no jobname")
-                    self.log.error("no job defined for %d" % t.pandaid)
+                    self.log.error("no job defined for %d" % t.id)
                     errfl=True
                     continue
                 jd={}
@@ -150,17 +150,17 @@ class aCTSubmitter(aCTProcess):
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("job id %s", t.job.JobID)
                 jd['cluster']=urlparse(t.job.JobID).hostname
-                self.db.updateArcJob(t.pandaid,jd,t.job)
+                self.db.updateArcJob(t.id,jd,t.job)
             if errfl:
                 break
 
 
     ## To move to Panda code ##
-    def GetLFN(self,guid,pandaid):
+    def GetLFN(self,guid,id):
         """
         retrieve lfn from the database
         """
-        j=self.db.getJob(pandaid)
+        j=self.db.getJob(id)
         l={}
         for f in j['lfns'].split(","):
             (k,v)=f.split("=",1)
@@ -213,7 +213,7 @@ class aCTSubmitter(aCTProcess):
 
 
     ## To move to Panda code ##
-    def panda2xrsl(self,pjobdef,pandaid):
+    def panda2xrsl(self,pjobdef,id):
         """
         Translate panda job description to xrsl format
         """
@@ -572,14 +572,14 @@ class aCTSubmitter(aCTProcess):
                 xrsl += '(pilotcode.tar.gz '+str(self.conf.get(['executable',wrapper]))+')'
     
             #for f,g in zip (jobdesc['inFiles'][0].split(","),jobdesc['GUID'][0].split(",")):
-            #    lfn=self.GetLFN(g,pandaid)
+            #    lfn=self.GetLFN(g,id)
             #    if lfn is None:
             #        return None
             #    xrsl += "(" + f + " " +lfn + ")"
             if(jobdesc.has_key('inFiles')):
                 inf={}
                 for f,g in zip (jobdesc['inFiles'][0].split(","),jobdesc['GUID'][0].split(",")):
-                    lfn=self.GetLFN(g,pandaid)
+                    lfn=self.GetLFN(g,id)
                     if lfn is None:
                         return None
                     inf[f]=lfn
@@ -740,7 +740,7 @@ class aCTSubmitter(aCTProcess):
             n={}
             n['trfstatus']='tosubmit'
             n['lfns']=dlfns
-            self.db.updateJob(j['pandaid'],n)
+            self.db.updateJob(j['id'],n)
 
 
     def submit(self):
@@ -757,9 +757,9 @@ class aCTSubmitter(aCTProcess):
         if self.cluster:
             # Lock row for update in case multiple clusters are specified
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster like '%"+self.cluster+"%' limit 1",
-                                        columns=["pandaid", "jobdesc"], lock=True)
+                                        columns=["id", "jobdesc"], lock=True)
         else:
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster='' limit 1", ["pandaid", "jobdesc"])
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and cluster='' limit 1", ["id", "jobdesc"])
 
         if len(jobs) == 0:
             #self.log.debug("No jobs to submit")
@@ -803,8 +803,8 @@ class aCTSubmitter(aCTProcess):
                 target.ComputingShare.LocalWaitingJobs = 0
                 target.ComputingShare.PreLRMSWaitingJobs = 0
                 target.ExecutionEnvironment.CPUClockSpeed = 2000
-                qjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='submitted'", ['pandaid'])
-                rjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='running'", ['pandaid'])
+                qjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='submitted'", ['id'])
+                rjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='running'", ['id'])
                 #jlimit = max ( len(rjobs)*0.20, 50)
                 #jlimit = len(rjobs)*0.15 + 30
                 jlimit = len(rjobs)*0.15 + 20
@@ -830,16 +830,16 @@ class aCTSubmitter(aCTProcess):
         # mark submitting in db
         for j in jobs:
             jd={'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-            self.db.updateArcJob(j['pandaid'],jd)
+            self.db.updateArcJob(j['id'],jd)
 
         for j in jobs:
-            self.log.debug("preparing: %s" % j['pandaid'])
+            self.log.debug("preparing: %s" % j['id'])
             jobdescstr = str(j['jobdesc'])
             jobdescs = arc.JobDescriptionList()
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
-                self.log.error("Failed to prepare job description %d" % j['pandaid'])
+                self.log.error("Failed to prepare job description %d" % j['id'])
                 continue
-            t=SubmitThr(Submit,j['pandaid'],jobdescs,self.uc,self.log)
+            t=SubmitThr(Submit,j['id'],jobdescs,self.uc,self.log)
             tlist.append(t)
             #t.start()
 
@@ -852,13 +852,13 @@ class aCTSubmitter(aCTProcess):
 
     def checkFailedSubmissions(self):
 
-        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["pandaid"])
+        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["id"])
 
         # TODO query GIIS for job name specified in description to see if job
         # was really submitted or not
         for j in jobs:
             # set to toresubmit and the application should figure out what to do
-            self.db.updateArcJob(j['pandaid'], {"arcstate": "toresubmit",
+            self.db.updateArcJob(j['id'], {"arcstate": "toresubmit",
                                                 "tarcstate": self.db.getTimeStamp()})
 
     def processToCancel(self):
@@ -873,7 +873,7 @@ class aCTSubmitter(aCTProcess):
         
         notcancelled = job_supervisor.GetIDsNotProcessed()
 
-        for (pandaid, job) in jobs.items():
+        for (id, job) in jobs.items():
             if job.JobID in notcancelled:
                 if job.State == arc.JobState.UNDEFINED:
                     # Job has not yet reached info system
@@ -881,10 +881,10 @@ class aCTSubmitter(aCTProcess):
                 else:
                     self.log.error("Could not cancel job %s", job.JobID)
                 # Just to mark as cancelled so it can be cleaned
-                self.db.updateArcJob(pandaid, {"arcstate": "cancelled",
+                self.db.updateArcJob(id, {"arcstate": "cancelled",
                                                "tarcstate": self.db.getTimeStamp()})
             else:
-                self.db.updateArcJob(pandaid, {"arcstate": "cancelling",
+                self.db.updateArcJob(id, {"arcstate": "cancelling",
                                                "tarcstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
@@ -908,8 +908,8 @@ class aCTSubmitter(aCTProcess):
         
         # Empty job to reset DB info
         j = arc.Job()
-        for (pandaid, job) in jobs.items():
-            self.db.updateArcJob(pandaid, {"arcstate": "tosubmit",
+        for (id, job) in jobs.items():
+            self.db.updateArcJob(id, {"arcstate": "tosubmit",
                                            "tarcstate": self.db.getTimeStamp()}, j)
 
     def processToRerun(self):
@@ -927,13 +927,13 @@ class aCTSubmitter(aCTProcess):
         
         notresumed = job_supervisor.GetIDsNotProcessed()
 
-        for (pandaid, job) in jobs.items():
+        for (id, job) in jobs.items():
             if job.JobID in notresumed:
                 self.log.error("Could not resume job %s", job.JobID)
-                self.db.updateArcJob(pandaid, {"arcstate": "failed",
+                self.db.updateArcJob(id, {"arcstate": "failed",
                                                "tarcstate": self.db.getTimeStamp()})
             else:
-                self.db.updateArcJob(pandaid, {"arcstate": "submitted",
+                self.db.updateArcJob(id, {"arcstate": "submitted",
                                                "tarcstate": self.db.getTimeStamp()})
 
 

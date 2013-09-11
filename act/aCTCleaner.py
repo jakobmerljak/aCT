@@ -23,11 +23,11 @@ class aCTCleaner(aCTProcess):
         
         notcleaned = job_supervisor.GetIDsNotProcessed()
 
-        for (pandaid, job) in jobs.items():
+        for (id, job) in jobs.items():
             if job.JobID in notcleaned:
                 self.log.error("Could not clean job %s", job.JobID)
 
-            self.db.deleteArcJob(pandaid)  
+            self.db.deleteArcJob(id)  
   
     def process(self):
 

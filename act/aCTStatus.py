@@ -36,7 +36,7 @@ class aCTStatus(aCTProcess):
                 setattr(jobs[job], attr, emptylist)
         
         
-    def processJobErrors(self, pandaid, failedjob):
+    def processJobErrors(self, id, failedjob):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
@@ -51,10 +51,10 @@ class aCTStatus(aCTProcess):
         newstate = "failed"
         # Check if any job runtime error matches any error in the toresubmit list
         resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
-        attemptsleft = int(self.db.getArcJobInfo(pandaid, ['attemptsleft'])['attemptsleft']) - 1
+        attemptsleft = int(self.db.getArcJobInfo(id, ['attemptsleft'])['attemptsleft']) - 1
         if attemptsleft < 0:
             attemptsleft = 0
-        self.db.updateArcJob(pandaid, {'attemptsleft': str(attemptsleft)})
+        self.db.updateArcJob(id, {'attemptsleft': str(attemptsleft)})
         if resub:
             if not attemptsleft:
                 self.log.info("Job %s out of retries", failedjob.JobID)
@@ -88,9 +88,9 @@ class aCTStatus(aCTProcess):
                                            "cluster='"+self.cluster+"' and "+ \
                                            self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                            " limit 100000",
-                                           ['pandaid', 'State'])
+                                           ['id', 'State'])
         
-        jobstates = dict((row['pandaid'], row['State']) for row in jobstates)
+        jobstates = dict((row['id'], row['State']) for row in jobstates)
 
         # total number of jobs
         njobs=self.db.getNArcJobs()
@@ -110,7 +110,7 @@ class aCTStatus(aCTProcess):
         jobsupdated = job_supervisor.GetAllJobs()
         jobsnotupdated = job_supervisor.GetIDsNotProcessed()
         
-        for (pandaid, originaljob, updatedjob) in zip(jobs.keys(), jobs.values(), jobsupdated):
+        for (id, originaljob, updatedjob) in zip(jobs.keys(), jobs.values(), jobsupdated):
             if updatedjob.JobID in jobsnotupdated:
                 self.log.error("Failed to find information on %s", updatedjob.JobID)
                 continue
@@ -120,13 +120,13 @@ class aCTStatus(aCTProcess):
                 continue
             # compare strings here to get around limitations of JobState API
             #if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
-            if jobstates[pandaid] == updatedjob.State.GetGeneralState():
+            if jobstates[id] == updatedjob.State.GetGeneralState():
                 # just update timestamp
-                self.db.updateArcJob(pandaid, {'tarcstate': self.db.getTimeStamp()})
+                self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                 continue
             
             #self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
-            self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[pandaid], updatedjob.State.GetGeneralState())
+            self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[id], updatedjob.State.GetGeneralState())
             
             # state changed, update whole Job object
             arcstate = 'submitted'
@@ -134,7 +134,7 @@ class aCTStatus(aCTProcess):
                 arcstate = 'finished'
             elif updatedjob.State == arc.JobState.FINISHED or \
                  updatedjob.State == arc.JobState.FAILED:
-                arcstate = self.processJobErrors(pandaid, updatedjob)
+                arcstate = self.processJobErrors(id, updatedjob)
             elif updatedjob.State == arc.JobState.KILLED:
                 arcstate = 'cancelled'
             elif updatedjob.State == arc.JobState.RUNNING or \
@@ -145,7 +145,7 @@ class aCTStatus(aCTProcess):
                 # unexpected
                 arcstate = 'failed'
                 
-            self.db.updateArcJob(pandaid, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
+            self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
                 
         self.log.info('Done')
         
@@ -157,11 +157,11 @@ class aCTStatus(aCTProcess):
         # 2 days limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
-                                    ['pandaid', 'JobID'])
+                                    ['id', 'JobID'])
         
         for job in jobs:
             self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
-            self.db.updateArcJob(job['pandaid'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
+            self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
     def process(self):

@@ -41,7 +41,7 @@ class aCTDBArc(aCTDB):
     def createTables(self):
         '''
         arcjobs: columns are attributes of arc.Job plus the following:
-          - pandaid:
+          - id:
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
           - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
@@ -59,7 +59,7 @@ class aCTDBArc(aCTDB):
             #", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
             #" attemptsleft integer, rerunable text)"
         create="""CREATE TABLE arcjobs (
-            pandaid INTEGER,
+            id INTEGER PRIMARY KEY AUTO_INCREMENT,
             created TIMESTAMP,
             modified TIMESTAMP,
             arcstate VARCHAR(255),
@@ -80,43 +80,43 @@ class aCTDBArc(aCTDB):
         except Exception,x:
             self.log.error("failed create table %s" %x)
 
-    def insertArcJob(self, pandaid, job):
+    def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
         '''
         c=self.getCursor()
         j = self._job2db(job)
-        c.execute("insert into arcjobs (modified,created,pandaid,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"',"+str(pandaid)+",'"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (modified,created,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+"','".join(j.values())+"')")
         self.conn.commit()
         
-    def insertArcJobDescription(self, pandaid, jobdesc, maxattempts=0, cluster=''):
+    def insertArcJobDescription(self, jobdesc, maxattempts=0, cluster=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to the given cluster.
         '''
         c=self.getCursor()
-        c.execute("insert into arcjobs (modified,created,pandaid,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
-                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"',"+str(pandaid)+",'tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
+        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
+                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
         
 
-    def deleteArcJob(self, pandaid):
+    def deleteArcJob(self, id):
         '''
         Delete job from ARC table.
         '''
         c=self.getCursor()
-        c.execute("delete from arcjobs where pandaid="+str(pandaid))
+        c.execute("delete from arcjobs where id="+str(id))
         self.conn.commit()
 
-    def updateArcJob(self, pandaid, desc, job=None):
+    def updateArcJob(self, id, desc, job=None):
         '''
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified.
         '''
-        self.updateArcJobLazy(pandaid, desc, job)
+        self.updateArcJobLazy(id, desc, job)
         self.conn.commit()
 
-    def updateArcJobLazy(self, pandaid, desc, job=None):
+    def updateArcJobLazy(self, id, desc, job=None):
         '''
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified. Does not commit after executing update.
@@ -125,36 +125,36 @@ class aCTDBArc(aCTDB):
         s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
         if job:
             s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])
-        s+=" where pandaid="+str(pandaid)
+        s+=" where id="+str(id)
         c=self.getCursor()
-        c.execute("select pandaid from arcjobs where pandaid="+str(pandaid))
+        c.execute("select id from arcjobs where id="+str(id))
         row=c.fetchone()
         if row is None:
             self.insertArcJob(id)
         c.execute(s)
 
-    def getArcJobInfo(self,pandaid,columns=[]):
+    def getArcJobInfo(self,id,columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
         ''' 
         c=self.getCursor()
-        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE pandaid="+str(pandaid))
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE id="+str(id))
         row=c.fetchone()
         # mysql SELECT returns list, we want dict
         if not isinstance(row,dict):
             row=dict(zip([col[0] for col in c.description], row))
         return row
 
-    def getArcJob(self, pandaid):
+    def getArcJob(self, id):
         '''
-        Return a dictionary of pandaid: arc.Job.
+        Return a dictionary of id: arc.Job.
         '''
         c=self.getCursor()
-        c.execute("SELECT "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE pandaid="+str(pandaid))
+        c.execute("SELECT "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE id="+str(id))
         row = c.fetchone()
         if not isinstance(row,dict):
             row=dict(zip([col[0] for col in c.description], row))
-        return {pandaid: self._db2job(row)}
+        return {id: self._db2job(row)}
         
     def getArcJobsInfo(self, select, columns=[], lock=False):
         '''
@@ -170,10 +170,10 @@ class aCTDBArc(aCTDB):
 
     def getArcJobs(self,select):
         '''
-        Return a dictionary of pandaid: arc.Job for jobs matching select
+        Return a dictionary of id: arc.Job for jobs matching select
         '''
         c=self.getCursor()
-        c.execute("SELECT pandaid,"+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT id,"+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
@@ -183,7 +183,7 @@ class aCTDBArc(aCTDB):
         # sqlite returns list of dictionaries
         if isinstance(rows, list):
             for row in rows:
-                d[row['pandaid']] = self._db2job(row)
+                d[row['id']] = self._db2job(row)
             
         return d
     
@@ -295,12 +295,12 @@ if __name__ == '__main__':
     services = arc.EndpointList(1, index)
     
     # Do the submission
-    jobs = arc.JobList()
-    submitter = arc.Submitter(usercfg)
-    if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
-        logging.error("Failed to submit job")
-        exit(1)
+    #jobs = arc.JobList()
+    #submitter = arc.Submitter(usercfg)
+    #if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
+    #    logging.error("Failed to submit job")
+    #    exit(1)
      
-    adb.insertArcJob(1, jobs[0])
-    dbjob = adb.getArcJob(1)
-    print dbjob[1].JobID, dbjob[1].State.GetGeneralState()
+    #adb.insertArcJob(1, jobs[0])
+    #dbjob = adb.getArcJob(1)
+    #print dbjob[1].JobID, dbjob[1].State.GetGeneralState()
