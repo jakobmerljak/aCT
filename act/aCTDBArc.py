@@ -55,13 +55,12 @@ class aCTDBArc(aCTDB):
           - rerunnable:
         '''
         aCTDB.createTables(self)
-            #create="create table arcjobs ("+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+ \
-            #", pandaid integer, tstamp timestamp, arcstate varchar(255), tarcstate timestamp, cluster text, jobdesc text, "\
-            #" attemptsleft integer, rerunable text)"
+        # in MySQL the first timestamp specified gets automatically updated to
+        # current time for each change. 
         create="""CREATE TABLE arcjobs (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
-            created TIMESTAMP,
             modified TIMESTAMP,
+            created TIMESTAMP,
             arcstate VARCHAR(255),
             tarcstate TIMESTAMP,
             cluster TEXT,
