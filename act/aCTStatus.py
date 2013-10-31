@@ -155,7 +155,7 @@ class aCTStatus(aCTProcess):
         '''
 
         # 2 days limit. TODO: configurable?
-        jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+        jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='finished') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
                                     ['id', 'JobID'])
         
