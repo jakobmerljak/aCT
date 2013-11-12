@@ -150,7 +150,7 @@ class aCTSubmitter(aCTProcess):
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("job id %s", t.job.JobID)
                 jd['cluster']=urlparse(t.job.JobID).hostname
-                self.db.updateArcJob(t.id,jd,t.job)
+                self.db.updateArcJobLazy(t.id,jd,t.job)
             if errfl:
                 break
 
@@ -823,6 +823,7 @@ class aCTSubmitter(aCTProcess):
         # check if any queues are available, if not leave and try again next time
         if not queuelist:
             self.log.info("No free queues available")
+            self.db.Commit()
             return
 
         self.log.info("start submitting")
@@ -830,7 +831,7 @@ class aCTSubmitter(aCTProcess):
         # mark submitting in db
         for j in jobs:
             jd={'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-            self.db.updateArcJob(j['id'],jd)
+            self.db.updateArcJobLazy(j['id'],jd)
 
         for j in jobs:
             self.log.debug("preparing: %s" % j['id'])
@@ -846,6 +847,8 @@ class aCTSubmitter(aCTProcess):
         #aCTUtils.RunThreadsSplit(tlist,10)
         self.RunThreadsSplit(tlist,1)
         self.log.info("threads finished")
+        # commit transaction to release row locks
+        self.db.Commit()
 
         self.log.info("end submitting")
 

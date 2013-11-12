@@ -82,6 +82,12 @@ class aCTDBArc(aCTDB):
         except Exception,x:
             self.log.error("failed create table %s" %x)
 
+    def Commit(self):
+        '''
+        Commit a transaction after calling a Lazy method.
+        '''
+        self.conn.commit()
+
     def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
