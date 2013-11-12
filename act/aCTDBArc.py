@@ -213,7 +213,9 @@ class aCTDBArc(aCTDB):
         Return a list and count of clusterlists for jobs to submit
         '''
         c=self.getCursor()
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' GROUP BY clusterlist")
+        # submitting state is included here so that a submitter process is not
+        # killed while submitting jobs
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' OR arcstate='submitting' GROUP BY clusterlist")
         rows=c.fetchall()
         print "getClusterLists", rows
         return rows

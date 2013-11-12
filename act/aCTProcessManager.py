@@ -70,9 +70,10 @@ class aCTProcessManager:
         for cluster in clusterlists:
             if not cluster:
                 cluster = ''
-            clusterlist = cluster.split(',')
-            for c in clusterlist:
+            clist = cluster.split(',')
+            for c in clist:
                 if c not in clusterlist:
+                    self.log.info("add cluster %s", c)
                     clusterlist.append(c)
 
         # First check for processes to kill
