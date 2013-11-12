@@ -24,32 +24,35 @@ class aCTProcessManager:
         self.processes_single = {}
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
+        # dictionary of cluster to Submitter processes handlers, there should
+        # be one per unique cluster in clusterlist
+        self.submitters = {}
+        
+        # Start single instance processes
+        for process in self.processes_single:
+            proc = self.aCTProcessHandler(process, actlocation=self.actlocation)
+            proc.start()
+            self.processes_single[process] = proc
         
     def checkRunning(self):
         '''
         Check for crashed processes and respawn
         '''
-        for proc in [p for c in self.running for p in self.running[c]]:
+        
+        # All running per-cluster processes
+        procs = [p for c in self.running for p in self.running[c]]
+        # Submitter processes
+        procs.extend(self.submitters.values())
+        # Single instance processes
+        procs.extend(self.processes_single.values())
+        
+        for proc in procs:
             rc = proc.check()
             if rc == None :
                 self.log.debug("process %s for %s is running", proc.name, proc.cluster )
             else:
                 self.log.info("restarting process %s for %s", proc.name, proc.cluster )
                 proc.restart()
-                
-        for (name, proc) in self.processes_single.items():
-            if not proc:
-                proc = self.aCTProcessHandler(name,actlocation=self.actlocation)
-                proc.start()
-                self.processes_single[name] = proc
-            else:
-                rc = proc.check()
-                if rc == None :
-                    self.log.debug("process %s is running", name)
-                else:
-                    self.log.info("restarting process %s", name)
-                proc.restart()
-                
 
     def checkClusters(self):
         '''
@@ -59,28 +62,51 @@ class aCTProcessManager:
         clusters = self.db.getActiveClusters()
         activeclusters = dict((k, v) for (k, v) in zip([c['cluster'] for c in clusters],
                                                        [c['COUNT(*)'] for c in clusters]))
-        print activeclusters
+        clusters = self.db.getClusterLists()
+        clusterlists = dict((k, v) for (k, v) in zip([c['clusterlist'] for c in clusters],
+                                                     [c['COUNT(*)'] for c in clusters]))
+        
+        clusterlist = [] # unique list of clusters in lists
+        for cluster in clusterlists:
+            if not cluster:
+                cluster = ''
+            clusterlist = cluster.split(',')
+            for c in clusterlist:
+                if c not in clusterlist:
+                    clusterlist.append(c)
+
         # First check for processes to kill
         for cluster in self.running.keys():
             if cluster not in activeclusters:
                 self.log.info("Stopping processes for %s", cluster)
                 del self.running[cluster]
+
+        # Stop submitters no longer needed
+        for cluster in self.submitters.keys():
+            if cluster not in clusterlist:
+                self.log.info("Stopping aCTSubmitter for %s", cluster)
+                del self.submitters[cluster]
                     
-        # Then check for new processes to start
+        # Check for new processes to start
         for cluster in activeclusters:
-            # Lists of clusters should be treated same as empty
-            if not cluster or cluster.find(' ') != -1:
-                cluster = ''
+            if not cluster: # Job not submitted yet
+                continue
             if cluster not in self.running.keys():
                 self.running[cluster] = []
                 for proc in self.processes:
-                    # For empty cluster value only submitter should be started
-                    if cluster or proc == 'aCTSubmitter':
-                        self.log.info("Starting process %s for %s", proc, cluster)
-                        ph = self.aCTProcessHandler(proc, cluster, actlocation=self.actlocation)
-                        ph.start()
-                        self.running[cluster].append(ph)
-                    
+                    self.log.info("Starting process %s for %s", proc, cluster)
+                    ph = self.aCTProcessHandler(proc, cluster, actlocation=self.actlocation)
+                    ph.start()
+                    self.running[cluster].append(ph)
+            
+        # Start any new submitters required
+        for cluster in clusterlist:
+            if cluster not in self.submitters and cluster not in self.running:
+                self.log.info("Starting process aCTSubmitter for %s", cluster)
+                ph = self.aCTProcessHandler('aCTSubmitter', cluster, actlocation=self.actlocation)
+                ph.start()
+                self.submitters[cluster] = ph
+        
                 
     class aCTProcessHandler:
         """

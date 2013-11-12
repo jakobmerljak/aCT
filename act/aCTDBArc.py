@@ -49,7 +49,9 @@ class aCTDBArc(aCTDB):
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
           - tarcstate: time stamp of last arcstate
-          - cluster: hostname of the cluster
+          - cluster: hostname of the cluster chosen for the job
+          - clusterlist: comma separated list of clusters on which the job may
+            run. Can be empty.
           - jobdesc: job description added by the application engine
           - attemptsleft: Number of attempts left to run the job
           - rerunnable:
@@ -64,6 +66,7 @@ class aCTDBArc(aCTDB):
             arcstate VARCHAR(255),
             tarcstate TIMESTAMP,
             cluster TEXT,
+            clusterlist TEXT,
             jobdesc TEXT,
             attemptsleft INTEGER,
             rerunable TEXT,
@@ -88,14 +91,14 @@ class aCTDBArc(aCTDB):
         c.execute("insert into arcjobs (modified,created,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+"','".join(j.values())+"')")
         self.conn.commit()
         
-    def insertArcJobDescription(self, jobdesc, maxattempts=0, cluster=''):
+    def insertArcJobDescription(self, jobdesc, maxattempts=0, clusterlist=''):
         '''
         Add a new job description for the ARC engine to process. If specified
-        the job will be sent to the given cluster.
+        the job will be sent to a cluster in the given list.
         '''
         c=self.getCursor()
-        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,jobdesc,attemptsleft) values ('"
-                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','"+cluster+"','"+jobdesc+"','"+str(maxattempts)+"')")
+        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,clusterlist,jobdesc,attemptsleft) values ('"
+                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','','"+clusterlist+"','"+jobdesc+"','"+str(maxattempts)+"')")
         self.conn.commit()
         
 
@@ -203,6 +206,16 @@ class aCTDBArc(aCTDB):
         c.execute("SELECT cluster, COUNT(*) FROM arcjobs GROUP BY cluster")
         rows=c.fetchall()
         print "getActiveClusters", rows
+        return rows
+    
+    def getClusterLists(self):
+        '''
+        Return a list and count of clusterlists for jobs to submit
+        '''
+        c=self.getCursor()
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' GROUP BY clusterlist")
+        rows=c.fetchall()
+        print "getClusterLists", rows
         return rows
     
     def _db2job(self, dbinfo):
