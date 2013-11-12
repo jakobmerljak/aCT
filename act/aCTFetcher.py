@@ -23,6 +23,7 @@ class aCTFetcher(aCTProcess):
 
         self.log.info("Fetching %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         dirs = arc.StringList()
         job_supervisor.Retrieve(str(self.conf.get(['tmp','dir'])), False, False, dirs)
         
