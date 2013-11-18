@@ -48,7 +48,7 @@ class aCTPanda2Arc:
 		  endpoint=self.sites[job['siteName']]['endpoints'][0]
 		  from urlparse import urlparse
 		  cl=urlparse(endpoint).hostname
-		  aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,cluster=cl)
+		  aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cl)
 		  jd={}
 		  jd['arcjobid']=aid['LAST_INSERT_ID()']
 		  self.dbp.updateJob(job['pandaid'],jd)

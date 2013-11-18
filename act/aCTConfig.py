@@ -39,6 +39,37 @@ class aCTConfig:
         for nn in n0:
             l.append(nn.firstChild.data)
         return l
+
+
+    def getListCond(self,nodesc,cond,nodes):
+        c=cond.split("=")
+        n0=self.top
+        for name in nodesc:
+            tn=[]
+            for n in n0:
+                n1=n.getElementsByTagName(name)
+                tn.extend(n1)
+            n0=tn
+
+        el=[]
+        for t in tn:
+            n1=t.getElementsByTagName(c[0])
+            if( n1[0].firstChild.data == c[1] ):
+                el.append(t)
+
+        n0=el
+        for name in nodes:
+            tn=[]
+            for n in n0:
+                n1=n.getElementsByTagName(name)
+                tn.extend(n1)
+            n0=tn
+
+        l=[]
+        for nn in n0:
+            l.append(nn.firstChild.data)
+        return l
+
         
     def get(self,nodes):
         l = self.getList(nodes)

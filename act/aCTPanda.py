@@ -31,7 +31,7 @@ class aCTPanda:
         self.topdir=res.group(2)
         #self.proxypath=self.conf.get(['voms','proxypath'])
         self.proxypath='/tmp/x509up_u%s' % str(os.getuid())
-        self.siteName=self.conf.get(['panda','site'])
+        #self.siteName=self.conf.get(['panda','site'])
         self.log=logger
         # timeout in seconds
         # TODO checkw
@@ -84,13 +84,12 @@ class aCTPanda:
         return status
         
     
-    def getJob(self):
+    def getJob(self,siteName,prodSourceLabel=None):
         node={}
-        node['siteName']=self.siteName
-	# rc_test
-	r=random.Random()
-	if r.randint(0,100) <= 1:
-	  node['prodSourceLabel']='rc_test'
+        node['siteName']=siteName
+	print siteName
+	if prodSourceLabel is not None:
+	  node['prodSourceLabel']=prodSourceLabel
         pid = None
         urldesc=None
         urldata=self.__HTTPConnect__('getJob',node)

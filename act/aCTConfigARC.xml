@@ -50,10 +50,11 @@
 </actlocation>
 
 <logger>
-  <level>info</level>
-  <arclevel>verbose</arclevel>
+  <level>debug</level>
+  <arclevel>debug</arclevel>
   <main>/data/user/atlact1/act-test1/log/aCTMain.log</main>
   <autopilot>/data/user/atlact1/act-test1/log/aCTAutopilot.log</autopilot>
+  <panda2arc>/data/user/atlact1/act-test1/log/aCTPanda2Arc.log</panda2arc>
   <submitter>/data/user/atlact1/act-test1/log/aCTSubmitter.log</submitter>
   <status>/data/user/atlact1/act-test1/log/aCTStatus.log</status>
   <fetcher>/data/user/atlact1/act-test1/log/aCTFetcher.log</fetcher>
@@ -132,8 +133,8 @@
 </clustersreject>
 
 <jobs>
-  <checkinterval>7200</checkinterval>
-  <checkmintime>30</checkmintime>
+  <checkinterval>30</checkinterval>
+  <checkmintime>20</checkmintime>
 </jobs>
 
 <downtime>

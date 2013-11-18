@@ -95,7 +95,10 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         j = self._job2db(job)
         c.execute("insert into arcjobs (modified,created,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+"','".join(j.values())+"')")
+	c.execute("SELECT LAST_INSERT_ID()")
+	row = c.fetchone()
         self.conn.commit()
+	return row
         
     def insertArcJobDescription(self, jobdesc, maxattempts=0, clusterlist=''):
         '''
@@ -105,7 +108,10 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,clusterlist,jobdesc,attemptsleft) values ('"
                   +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','','"+clusterlist+"','"+jobdesc+"','"+str(maxattempts)+"')")
+	c.execute("SELECT LAST_INSERT_ID()")
+	row = c.fetchone()
         self.conn.commit()
+	return row
         
 
     def deleteArcJob(self, id):

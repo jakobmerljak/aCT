@@ -35,12 +35,14 @@ class PandaGetThr(Thread):
    """
    Similar to previous but for aCTPanda.getJob
    """
-   def __init__ (self,func):
+   def __init__ (self,func,siteName,prodSourceLabel=None):
       Thread.__init__(self)
       self.func=func
+      self.siteName=siteName
+      self.prodSourceLabel=prodSourceLabel
       self.status = (None,None)
    def run(self):
-      self.status=self.func()
+      self.status=self.func(self.siteName,self.prodSourceLabel)
 
 
         
@@ -69,8 +71,17 @@ class aCTAutopilot:
         # queue interval
         self.queuestamp=0
 
+	self.sites={}
+
     def getEndTime(self):
        return time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime())
+
+
+    def setSites(self):
+	for sitename in self.conf.getList(["sites","site","name"]):
+	   self.sites[sitename] = {}
+  	   self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
+	   self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
 
     def updatePandaInitStatus(self,trfstatus='topandainit'):
        """
@@ -148,7 +159,7 @@ class aCTAutopilot:
        Heartbeat status updates.
        """
        nthreads=int(self.conf.get(["panda","threads"]))
-       jobs=self.db.getJobs("pstatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])))
+       jobs=self.db.getJobs("pandastatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])))
        #print "PandaHeartbeat ",len(jobs)
        if len(jobs):
           self.log.info("%d" % len(jobs))
@@ -170,12 +181,15 @@ class aCTAutopilot:
              self.log.info("response: %s %s" % (t.id,t.status) )
           #AF   pstatus = t.status['command'][0] 
           jd={}
-          jd['pstatus']=pstatus
+	  if pstatus == 'sent':
+             jd['pandastatus']='starting'
+	  else:
+             jd['pandastatus']=pstatus
           jd['theartbeat']=self.db.getTimeStamp()
 	  if (t.status['command'][0] == "tobekilled"):
-	    jd['trfstatus']="tobekilled"
+	    jd['pandastatus']="tobekilled"
 	  if (t.status['command'][0] == "badattemptnr"):
-	    jd['trfstatus']="tobekilled"
+	    jd['pandastatus']="tobekilled"
           self.db.updateJob(t.id,jd)
           
        #self.db.Commit()
@@ -228,59 +242,55 @@ class aCTAutopilot:
 
     def getJobs(self,num):
 
-       """
-       Get at most num panda jobs from panda server. Store fetched jobs in database.
-       """
+	"""
+        Get at most num panda jobs from panda server. Store fetched jobs in database.
+        """
        
-       count=0
-       if num == 0:
-          return count
-       # check max running
-       # jobs=self.db.getJobs("pstatus like '%'")
-       jobs=self.db.getJobs("pstatus not like 'transferring' and pstatus not like 'done'")
-       if len(jobs)>int(self.conf.get(['jobs','maxqueued'])):
-          self.log.info("maximum jobs running %d" % len(jobs))
-          return count
+        count=0
+        if num == 0:
+        	return count
 
-       minqueued = len(jobs) > int(self.conf.get(['jobs','minqueued']))
+        # check max running
+        # jobs=self.db.getJobs("pstatus like '%'")
 
-       # TODO
-       # add dynamic maximum jobs here: if <20% queued, get a new batch
-       rjobs=self.db.getJobs("arcstatus like 'INLRMS:R'");
-       queuedratio=float(self.conf.get(['jobs','queuedratio']))
-       if len(rjobs)*queuedratio < len(jobs) and minqueued :
-          queued=len(jobs)-len(rjobs)
-	  ratio = len(jobs)/float(len(rjobs)+1)
-       	  self.log.info("too many queued jobs: %d %f" % (queued, ratio) )
-	  return count
+	for site in self.sites.keys():	
 
-       nthreads=int(self.conf.get(['panda','threads']))
+        	nsubmitting = self.db.getNJobs("pandastatus like 'sent' and pandastatus like 'submitting' and siteName='%s'" %  site )
+		nall = self.db.getNJobs("siteName='%s'" % site)
+		print site,nsubmitting,nall
 
-       # if no jobs available
-       stopflag=False
+		if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
+		   continue
+
+        	nthreads=int(self.conf.get(['panda','threads']))
+
+	        # if no jobs available
+        	stopflag=False
        
-       for nc in range(0,max(int(num/nthreads),1)):
-          if stopflag:
-             continue
+        	for nc in range(0,max(int(num/nthreads),1)):
+          	  if stopflag:
+             	    continue
 
-          tlist=[]
+          	  tlist=[]
 
-          for i in range(0,nthreads):
-             t=PandaGetThr(self.panda.getJob)
-             tlist.append(t)
-             t.start()
-          for t in tlist:
-             t.join()
-             (pandaid,pandajob)=t.status
-             if pandaid == None:
-                stopflag=True
-                continue
-             n={}
+          	  for i in range(0,nthreads):
+             		t=PandaGetThr(self.panda.getJob,site)
+             		tlist.append(t)
+             		t.start()
+          	  for t in tlist:
+             		t.join()
+             		(pandaid,pandajob)=t.status
+			print t.status
+             		if pandaid == None:
+                  	  stopflag=True
+                	  continue
+            	  	n={}
 
-             n['trfstatus']='topandainit'
-             self.db.insertJob(pandaid,pandajob,n)
-             count+=1
-       return count
+             	  	#n['trfstatus']='topandainit'
+			n['siteName']=site
+             	  	self.db.insertJob(pandaid,pandajob,n)
+             	  	count+=1
+        return count
 
 
 
@@ -352,6 +362,33 @@ class aCTAutopilot:
              self.db.updateSchedconfig(cluster,status)
 
     def run(self):
+	"""
+	Main loop
+	"""
+
+	
+        try:
+           self.log.info("Running")
+
+	   while 1:
+		self.conf.parse()
+		self.setSites()
+
+             	# request new jobs
+              	num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
+              	if num:
+                 	self.log.info("GetJobs: %s" % str(num))
+
+                self.updatePandaHeartbeat('sent')
+                self.updatePandaHeartbeat('starting')
+
+                aCTUtils.sleep(100000)
+
+        except aCTSignal.ExceptInterrupt,x:
+           print x
+           return
+
+    def runold(self):
         """
         Main loop
         """
@@ -365,6 +402,7 @@ class aCTAutopilot:
               # request new jobs
               num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
               if num:
+
                  self.log.info("GetJobs: %s" % str(num))
               # panda updates
               self.updatePandaInitStatus()
@@ -394,4 +432,4 @@ class aCTAutopilot:
 if __name__ == '__main__':
     am=aCTAutopilot()
     am.run()
-    am.finish()
+    #am.finish()

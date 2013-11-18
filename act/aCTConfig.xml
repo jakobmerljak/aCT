@@ -68,7 +68,7 @@
 </tmp>
 
 <logger>
-  <level>info</level>
+  <level>debug</level>
   <arclevel>verbose</arclevel>
   <main>/home/act01/log/aCTMain.log</main>
   <autopilot>/home/act01/log/aCTAutopilot.log</autopilot>
@@ -158,7 +158,7 @@
   <maxqueued>13000</maxqueued>
   <minqueued>5500</minqueued>
   <maxrerun>3</maxrerun>
-  <checkinterval>7200</checkinterval>
+  <checkinterval>7</checkinterval>
   <checkmintime>30</checkmintime>
   <queuedratio>1.30</queuedratio>
 </jobs>

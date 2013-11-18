@@ -30,12 +30,25 @@ class aCTDBPanda(aCTDB):
         #             1. rerunable -> arcstatus=submitted
         #             2. if not -> pstatus=failed, cleanup, logfiles, etc... TODO
         aCTDB.createTables(self)
-        str="create table jobs (pandaid integer, tstamp timestamp, pandajob text, arcjobid text, jobname text, arcstatus text, tarcstatus timestamp, arcexitcode integer, pstatus text, theartbeat timestamp, trfstatus text, nrerun integer,lfns text, turls text)"
+        #str="create table jobs (pandaid integer, tstamp timestamp, pandajob text, arcjobid text, jobname text, arcstatus text, tarcstatus timestamp, arcexitcode integer, pstatus text, theartbeat timestamp, trfstatus text, nrerun integer,lfns text, turls text)"
+        str="""create table pandajobs (
+		id INTEGER PRIMARY KEY AUTO_INCREMENT,
+            	modified TIMESTAMP,
+		created TIMESTAMP,
+                pandaid integer, 
+		pandajob text,
+		siteName VARCHAR(255),
+		prodSourceLabel VARCHAR(255),
+		arcjobid integer,
+		pandastatus text, 
+		theartbeat timestamp
+	)
+"""
         c=self.getCursor()
         try:
-            c.execute("drop table jobs")
+            c.execute("drop table pandajobs")
         except:
-            self.log.warning("no jobs table")
+            self.log.warning("no pandajobs table")
             pass
         try:
             c.execute(str)
@@ -45,10 +58,10 @@ class aCTDBPanda(aCTDB):
             pass
 
     def insertJob(self,pandaid,pandajob,desc={}):
-        desc['tstamp']=self.getTimeStamp()
-        k="(pandaid,pandajob,pstatus,"+",".join(['%s' % key for key in desc.keys()])+")"
+        desc['created']=self.getTimeStamp()
+        k="(pandaid,pandajob,pandastatus,"+",".join(['%s' % key for key in desc.keys()])+")"
         v="("+str(pandaid)+",'"+pandajob+"','sent',"+",".join(['"%s"' % val for val in desc.values()])+")"
-        s="insert into jobs "+k+" values "+v
+        s="insert into pandajobs "+k+" values "+v
         c=self.getCursor()
         #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(self.getTimeStamp())+","+str(pandaid)+",'"+pandajob+"','sent')")
         c.execute(s)
@@ -56,56 +69,63 @@ class aCTDBPanda(aCTDB):
 
     def deleteJob(self,pandaid):
         c=self.getCursor()
-        c.execute("delete from jobs where pandaid="+str(pandaid))
+        c.execute("delete from pandajobs where pandaid="+str(pandaid))
         self.conn.commit()
 
     def updateJob(self,id,desc):
-        desc['tstamp']=self.getTimeStamp()
-        s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
+        desc['modified']=self.getTimeStamp()
+        s="update pandajobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
         c=self.getCursor()
         c.execute(s)
+	print s
         self.conn.commit()
 
     def updateJobLazy(self,id,desc):
-        desc['tstamp']=self.getTimeStamp()
-        s="update jobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
+        desc['modified']=self.getTimeStamp()
+        s="update pandajobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
         s+=" where pandaid="+str(id)
         c=self.getCursor()
         c.execute(s)
 
     def getJob(self,pandaid,columns=[]):
         c=self.getCursor()
-        c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE pandaid="+str(pandaid))
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
         return row
 
     def getJobs(self,select,columns=[]):
         c=self.getCursor()
-        c.execute("SELECT "+self._column_list2str(columns)+" FROM jobs WHERE "+select)
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE "+select)
         rows=c.fetchall()
         return rows
 
-    def getNJobs(self):
+    def getNJobs(self,select):
         c=self.getCursor()
-        c.execute("select count(*) from jobs")
+        c.execute("select count(*) from pandajobs where " + select)
         njobs=c.fetchone()['count(*)']
         return njobs
 
     def getJobReport(self):
         c=self.getCursor()
-        c.execute("select arcjobid,arcstatus from jobs")
+        c.execute("select arcjobid,arcstatus from pandajobs")
         rows=c.fetchall()
         return rows
 
 if __name__ == '__main__':
     import logging
+    import aCTConfig
     logging.basicConfig(level=logging.DEBUG)
+
+    conf = aCTConfig.aCTConfigATLAS()
+
+    adb = aCTDBPanda(logging.getLogger(),dbname=conf.get(["db","file"]))
+
     #adb=aCTDB(logging.getLogger('test'),dbname='test.sqlite')
-    adb=aCTDBPanda(logging.getLogger('test'))
+    #adb=aCTDBPanda(logging.getLogger('test'))
     adb.createTables()
     n={}
-    n['trfstatus']='tolfc'
+    #n['trfstatus']='tolfc'
     adb.insertJob(1,"testblanj",n)
     exit(0)
     #adb.insertJob(2,"testbla tepec")
