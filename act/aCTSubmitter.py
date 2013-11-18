@@ -761,6 +761,12 @@ class aCTSubmitter(aCTProcess):
         else:
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 1", ["id", "jobdesc"])
 
+        # mark submitting in db
+        for j in jobs:
+            jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
+            self.db.updateArcJobLazy(j['id'],jd)
+        self.db.Commit()
+
         if len(jobs) == 0:
             #self.log.debug("No jobs to submit")
             return 0
@@ -827,11 +833,6 @@ class aCTSubmitter(aCTProcess):
             return
 
         self.log.info("start submitting")
-
-        # mark submitting in db
-        for j in jobs:
-            jd={'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-            self.db.updateArcJobLazy(j['id'],jd)
 
         for j in jobs:
             self.log.debug("preparing: %s" % j['id'])
