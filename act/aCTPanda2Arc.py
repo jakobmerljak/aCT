@@ -45,10 +45,14 @@ class aCTPanda2Arc:
             xrsl =  parser.getXrsl()
             if xrsl is not None:
                 print xrsl
-                endpoint=self.sites[job['siteName']]['endpoints'][0]
+                #endpoint=self.sites[job['siteName']]['endpoints'][0]
+                endpoints=self.sites[job['siteName']]['endpoints']
                 from urlparse import urlparse
-                cl=urlparse(endpoint).hostname
-                aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cl)
+                cl = []
+                for e in endpoints:
+                    cl.append(urlparse(e).hostname)
+                cls=",".join(cl)
+                aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cls)
                 jd={}
                 jd['arcjobid']=aid['LAST_INSERT_ID()']
                 self.dbp.updateJob(job['pandaid'],jd)

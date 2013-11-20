@@ -152,6 +152,7 @@ class aCTPanda2Xrsl:
     def setGMLog(self):
 
         self.xrsl['gmlog'] = '("gmlog" = "gmlog")'
+        self.xrsl['gmlog'] = '("rerun" = "2")'
 
     def setOutputs(self):
 
