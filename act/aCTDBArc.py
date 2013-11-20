@@ -45,7 +45,7 @@ class aCTDBArc(aCTDB):
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
           - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
-                      cancelling, cancelled, finished, failed, torerun,
+                      cancelling, cancelled, finished, failed, tofetch, torerun,
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
           - tarcstate: time stamp of last arcstate
@@ -54,6 +54,8 @@ class aCTDBArc(aCTDB):
             run. Can be empty.
           - jobdesc: job description added by the application engine
           - attemptsleft: Number of attempts left to run the job
+          - downloadfiles: Comma-separated list of specific files to download
+            after job finished. If empty download all in job desc.
           - rerunnable:
         '''
         aCTDB.createTables(self)
@@ -70,6 +72,7 @@ class aCTDBArc(aCTDB):
             jobdesc TEXT,
             attemptsleft INTEGER,
             rerunable TEXT,
+            downloadfiles TEXT,
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
         c=self.getCursor()
         try:
