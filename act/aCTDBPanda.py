@@ -78,7 +78,7 @@ class aCTDBPanda(aCTDB):
         s+=" where pandaid="+str(id)
         c=self.getCursor()
         c.execute(s)
-	print s
+        print s
         self.conn.commit()
 
     def updateJobLazy(self,id,desc):

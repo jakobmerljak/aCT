@@ -87,9 +87,9 @@ class aCTPanda:
     def getJob(self,siteName,prodSourceLabel=None):
         node={}
         node['siteName']=siteName
-	print siteName
-	if prodSourceLabel is not None:
-	  node['prodSourceLabel']=prodSourceLabel
+        print siteName
+        if prodSourceLabel is not None:
+            node['prodSourceLabel']=prodSourceLabel
         pid = None
         urldesc=None
         urldata=self.__HTTPConnect__('getJob',node)

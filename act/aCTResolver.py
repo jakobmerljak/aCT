@@ -61,7 +61,7 @@ class aCTResolver:
         for g in guids.keys():
             try:
                 #res=arclfc.getlfn(str(g))
-		res=":guid="+str(g)
+                res=":guid="+str(g)
             except Exception,x:
                 self.log.error(x) 
                 #lfc.lfc_endsess()
@@ -85,8 +85,8 @@ class aCTResolver:
         for j in jobs:
             jobdesc = cgi.parse_qs(j['pandajob'])
             if jobdesc.has_key('GUID'):
-              for i in jobdesc['GUID'][0].split(","):
-                  guids[i]=None
+                for i in jobdesc['GUID'][0].split(","):
+                    guids[i]=None
 
         lguids=self.GetLFNs(guids)
         self.log.info("Resolved %d lfns:" % len(lguids))
@@ -96,13 +96,13 @@ class aCTResolver:
             jobdesc = cgi.parse_qs(j['pandajob'])
             ok=True
             if jobdesc.has_key('GUID'):
-              for i in jobdesc['GUID'][0].split(","):
-                  if lguids[i] is None:
-                      ok=False
-		  else:
-                      lfns.append(i+"="+lguids[i])
-              if not ok:
-                  continue
+                for i in jobdesc['GUID'][0].split(","):
+                    if lguids[i] is None:
+                        ok=False
+            else:
+                lfns.append(i+"="+lguids[i])
+            if not ok:
+                continue
             dlfns=",".join(lfns)
             #print dlfns
             n={}
