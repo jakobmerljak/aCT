@@ -221,6 +221,7 @@ class aCTSubmitter(aCTProcess):
         
         self.log.info("Cancelling %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         job_supervisor.Cancel()
         
         notcancelled = job_supervisor.GetIDsNotProcessed()
@@ -229,12 +230,12 @@ class aCTSubmitter(aCTProcess):
             if job.JobID in notcancelled:
                 if job.State == arc.JobState.UNDEFINED:
                     # Job has not yet reached info system
-                    self.log.error("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
                 else:
                     self.log.error("Could not cancel job %s", job.JobID)
-                # Just to mark as cancelled so it can be cleaned
-                self.db.updateArcJob(id, {"arcstate": "cancelled",
-                                               "tarcstate": self.db.getTimeStamp()})
+                    # Just to mark as cancelled so it can be cleaned
+                    self.db.updateArcJob(id, {"arcstate": "cancelled",
+                                              "tarcstate": self.db.getTimeStamp()})
             else:
                 self.db.updateArcJob(id, {"arcstate": "cancelling",
                                                "tarcstate": self.db.getTimeStamp()})
