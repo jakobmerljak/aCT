@@ -41,7 +41,8 @@ class aCTDBPanda(aCTDB):
 		prodSourceLabel VARCHAR(255),
 		arcjobid integer,
 		pandastatus text, 
-		theartbeat timestamp
+		theartbeat timestamp,
+                priority integer
 	)
 """
         c=self.getCursor()
@@ -59,12 +60,11 @@ class aCTDBPanda(aCTDB):
 
     def insertJob(self,pandaid,pandajob,desc={}):
         desc['created']=self.getTimeStamp()
-        k="(pandaid,pandajob,pandastatus,"+",".join(['%s' % key for key in desc.keys()])+")"
-        v="("+str(pandaid)+",'"+pandajob+"','sent',"+",".join(['"%s"' % val for val in desc.values()])+")"
-        s="insert into pandajobs "+k+" values "+v
+        desc['pandaid']=pandaid
+        desc['pandajob']=pandajob
+        s="insert into pandajobs " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         c=self.getCursor()
-        #c.execute("insert into jobs (tstamp,pandaid,pandajob,pstatus) values ("+str(self.getTimeStamp())+","+str(pandaid)+",'"+pandajob+"','sent')")
-        c.execute(s)
+        c.execute(s,desc.values())
         self.conn.commit()
 
     def deleteJob(self,pandaid):
@@ -72,21 +72,16 @@ class aCTDBPanda(aCTDB):
         c.execute("delete from pandajobs where pandaid="+str(pandaid))
         self.conn.commit()
 
-    def updateJob(self,id,desc):
-        desc['modified']=self.getTimeStamp()
-        s="update pandajobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
-        c=self.getCursor()
-        c.execute(s)
-        print s
+    def updateJob(self,pandaid,desc):
+        self.updateJobLazy(pandaid,desc)
         self.conn.commit()
 
-    def updateJobLazy(self,id,desc):
+    def updateJobLazy(self,pandaid,desc):
         desc['modified']=self.getTimeStamp()
-        s="update pandajobs set "+",".join(['%s="%s"' % (k, v) for k, v in desc.items()])
-        s+=" where pandaid="+str(id)
+        s="update pandajobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s+=" where pandaid="+str(pandaid)
         c=self.getCursor()
-        c.execute(s)
+        c.execute(s,desc.values())
 
     def getJob(self,pandaid,columns=[]):
         c=self.getCursor()

@@ -109,8 +109,18 @@ class aCTDBArc(aCTDB):
         the job will be sent to a cluster in the given list.
         '''
         c=self.getCursor()
-        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,clusterlist,jobdesc,attemptsleft) values ('"
-                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','','"+clusterlist+"','"+jobdesc+"','"+str(maxattempts)+"')")
+        desc = {}
+        desc['created'] = self.getTimeStamp()
+        desc['modified'] = desc['created']
+        desc['arcstate'] = "tosubmit"
+        desc['tarcstate']  = desc['created']
+        desc['cluster']  = ''
+        desc['clisterlist'] = clusterlist
+        desc['jobdesc'] = jobdesc
+        desc['attemptsleft'] = maxattempts
+        s="insert info arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
+            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
+        c.execute(s,desc.values())
 	c.execute("SELECT LAST_INSERT_ID()")
 	row = c.fetchone()
         self.conn.commit()
@@ -139,16 +149,19 @@ class aCTDBArc(aCTDB):
         Job if job is specified. Does not commit after executing update.
         '''
         desc['modified']=self.getTimeStamp()
-        s="update arcjobs set "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
+        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         if job:
-            s+=","+",".join(['%s=\'%s\'' % (k, v) for k, v in self._job2db(job).items()])
+            s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
         c=self.getCursor()
         c.execute("select id from arcjobs where id="+str(id))
         row=c.fetchone()
         if row is None:
             self.insertArcJob(id)
-        c.execute(s)
+        if job:
+            c.execute(s,desc.values() + self._job2db(job).values() )
+        else:
+            c.execute(s,desc.values())
 
     def getArcJobInfo(self,id,columns=[]):
         '''
