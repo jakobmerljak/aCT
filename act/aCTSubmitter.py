@@ -248,16 +248,33 @@ class aCTSubmitter(aCTProcess):
         jobstoclean = [job for job in jobs.values() if job.JobID]
         
         if jobstoclean:
+            
+            # Put all jobs to cancel, however the supervisor will only cancel
+            # cancellable jobs and remove the rest so there has to be 2 calls
+            # to Clean()
             job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+            job_supervisor.Update()
             self.log.info("Cancelling %i jobs", len(jobstoclean))
             job_supervisor.Cancel()
-    
-            # The JobSupervisor removes jobs which were not in a cancellable state
-            # so recreate it to clean all jobs
-            job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
-            self.log.info("Cleaning %i jobs", len(jobstoclean))
-            if not job_supervisor.Clean():
-                self.log.error("Failed to clean some jobs")
+            
+            processed = job_supervisor.GetIDsProcessed()
+            notprocessed = job_supervisor.GetIDsNotProcessed()
+            # Clean the successfully cancelled jobs
+            if processed:
+                job_supervisor.SelectByID(processed)
+                self.log.info("Cleaning %i jobs", len(processed))
+                if not job_supervisor.Clean():
+                    self.log.warning("Failed to clean some jobs")
+            
+            # New job supervisor with the uncancellable jobs
+            if notprocessed:
+                notcancellable = [job for job in jobs.values() if job.JobID in notprocessed]
+                job_supervisor = arc.JobSupervisor(self.uc, notcancellable)
+                job_supervisor.Update()
+                
+                self.log.info("Cleaning %i jobs", len(notcancellable))
+                if not job_supervisor.Clean():
+                    self.log.warning("Failed to clean some jobs")
         
         # Empty job to reset DB info
         j = arc.Job()
@@ -272,10 +289,12 @@ class aCTSubmitter(aCTProcess):
             return
 
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         # Renew proxy to be safe
         job_supervisor.Renew()
         self.log.info("Resuming %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         job_supervisor.Resume()
         
         notresumed = job_supervisor.GetIDsNotProcessed()
