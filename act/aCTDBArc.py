@@ -64,6 +64,7 @@ class aCTDBArc(aCTDB):
           - downloadfiles: Comma-separated list of specific files to download
             after job finished. If empty download all in job desc.
           - rerunnable:
+          - proxyid: id of corresponding proxies entry of proxy to use for this job
         proxies: columns are the following:
           - id:
           - proxy:
@@ -88,6 +89,7 @@ class aCTDBArc(aCTDB):
             attemptsleft INTEGER,
             rerunable TEXT,
             downloadfiles TEXT,
+            proxyid INTEGER,
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
         c=self.getCursor()
         try:
@@ -151,13 +153,9 @@ class aCTDBArc(aCTDB):
         desc['clisterlist'] = clusterlist
         desc['jobdesc'] = jobdesc
         desc['attemptsleft'] = maxattempts
-        s="insert info arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
+        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
-        c.execute("SELECT LAST_INSERT_ID()")
-        row = c.fetchone()
-        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,clusterlist,jobdesc,attemptsleft) values ('"
-                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','','"+clusterlist+"','"+jobdesc+"','"+str(maxattempts)+"')")
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.conn.commit()
