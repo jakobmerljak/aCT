@@ -1,13 +1,20 @@
 import re
+import os
 import time
 import arc
 from aCTDB import aCTDB
+import aCTConfig
 
 class aCTDBArc(aCTDB):
     
     def __init__(self,logger,dbname="aCTjobs.db"):
         aCTDB.__init__(self, logger, dbname)
-        
+
+        conf = aCTConfig.aCTConfigARC()
+        self.proxydir=conf.get(["voms","proxystoredir"])
+        if not os.path.isdir(self.proxydir):
+            os.mkdir(self.proxydir)
+                
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
                       str: 'varchar(255)',
@@ -57,6 +64,14 @@ class aCTDBArc(aCTDB):
           - downloadfiles: Comma-separated list of specific files to download
             after job finished. If empty download all in job desc.
           - rerunnable:
+        proxies: columns are the following:
+          - id:
+          - proxy:
+          - proxypath: path to file containing the proxy
+          - dn: dn of the proxy
+          - role: role of the proxy
+          - myproxyid: id from myproxy
+          - expirytime: timestamp for when proxy is expiring
         '''
         aCTDB.createTables(self)
         # in MySQL the first timestamp specified gets automatically updated to
@@ -84,6 +99,24 @@ class aCTDBArc(aCTDB):
             self.conn.commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+        self.log.info("creating proxies table")
+        create="""CREATE TABLE proxies (
+            id INTEGER PRIMARY KEY AUTO_INCREMENT,
+            proxy BLOB,
+            expirytime DATETIME,
+            proxypath TEXT,
+            dn VARCHAR(255),
+            role VARCHAR(255),
+            myproxyid VARCHAR(255) )"""
+        try:
+            c.execute("drop table proxies")
+        except:
+            self.log.warning("no proxies table")
+        try:
+            c.execute(create)
+            self.conn.commit()
+        except Exception,x:
+            self.log.error("failed create table %s" %x)
 
     def Commit(self):
         '''
@@ -98,10 +131,10 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         j = self._job2db(job)
         c.execute("insert into arcjobs (modified,created,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+"','".join(j.values())+"')")
-	c.execute("SELECT LAST_INSERT_ID()")
-	row = c.fetchone()
+        c.execute("SELECT LAST_INSERT_ID()")
+        row = c.fetchone()
         self.conn.commit()
-	return row
+        return row
         
     def insertArcJobDescription(self, jobdesc, maxattempts=0, clusterlist=''):
         '''
@@ -121,10 +154,14 @@ class aCTDBArc(aCTDB):
         s="insert info arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
-	c.execute("SELECT LAST_INSERT_ID()")
-	row = c.fetchone()
+        c.execute("SELECT LAST_INSERT_ID()")
+        row = c.fetchone()
+        c.execute("insert into arcjobs (modified,created,arcstate,tarcstate,cluster,clusterlist,jobdesc,attemptsleft) values ('"
+                  +str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','tosubmit','"+str(self.getTimeStamp())+"','','"+clusterlist+"','"+jobdesc+"','"+str(maxattempts)+"')")
+        c.execute("SELECT LAST_INSERT_ID()")
+        row = c.fetchone()
         self.conn.commit()
-	return row
+        return row
         
 
     def deleteArcJob(self, id):
@@ -308,6 +345,96 @@ class aCTDBArc(aCTDB):
                 d[attr] = str(tmpdict)
 
         return d
+
+    def _writeProxyFile(self, proxypath, proxy):
+        if os.path.isfile(proxypath):
+            os.remove(proxypath)
+        f=open(proxypath,'w')
+        f.write(proxy)
+        f.close()
+        
+    def insertProxy(self, proxy, dn, expirytime, role='', myproxyid=''):
+        '''
+        Add new proxy.
+          - proxy: string representation of proxy file
+          - dn: DN of proxy
+          - expirytime: timestamp for end of life of proxy
+          - role: role of proxy
+          - myproxyid: id from myproxy
+        Returns id of db entrance
+        '''
+        c=self.getCursor()
+        s="INSERT INTO proxies (proxy, dn, role, myproxyid, expirytime) VALUES ('"\
+                  +proxy+"','"+dn+"','"+role+"','"+myproxyid+"','"+expirytime+"')"
+        print s
+        c.execute(s)
+        c.execute("SELECT LAST_INSERT_ID()")
+        row = c.fetchone()
+        id=row['LAST_INSERT_ID()']
+        proxypath=os.path.join(self.proxydir,"proxiesid"+str(id))
+        c.execute("UPDATE proxies SET proxypath='"+proxypath+"' WHERE id="+str(id))
+        self.conn.commit()
+        self._writeProxyFile(proxypath, proxy)
+        return id
+
+    def updateProxy(self, id, desc):
+        '''
+        Update proxy fields specified in desc.
+        '''
+        s="UPDATE proxies SET "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
+        s+=" WHERE id="+str(id)
+        c=self.getCursor()
+        c.execute(s)
+        self.conn.commit()
+        # rewrite proxy file if proxy was updated
+        if 'proxy' in desc:
+            self._writeProxy(self.getProxyPath(id), self.getProxy(id))
+
+    def getProxyPath(self, id):
+        '''
+        Get the path to the proxy file of a proxy
+        '''
+        c=self.getCursor()
+        c.execute("SELECT proxypath FROM proxies WHERE id="+str(id))
+        row = c.fetchone()
+        proxypath=row['proxypath']
+        if not os.path.isfile(proxypath):
+            self._writeProxyFile(proxypath)
+        return proxypath
+
+    def getProxy(self, id):
+        '''
+        Get the string representation a proxy
+        '''
+        c=self.getCursor()
+        c.execute("SELECT proxy FROM proxies WHERE id="+str(id))
+        row = c.fetchone()
+        proxy = row['proxy']
+        return proxy
+        
+    def getProxiesInfo(self, select, columns=[], lock=False):
+        '''
+        Return a list of column: value dictionaries for jobs matching select.
+        If lock is True the row will be locked if possible.
+        '''
+        if lock:
+            select += self.addLock()
+        c=self.getCursor()
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM proxies WHERE "+select)
+        rows=c.fetchall()
+        return rows
+
+    def deleteProxy(self, id):
+        '''
+        Delete proxy from proxies table.
+        '''
+        # remove file first
+        proxypath=self.getProxyPath(id)
+        if os.path.isfile(proxypath):
+            os.remove(proxypath)
+        c=self.getCursor()
+        c.execute("DELETE FROM proxies WHERE id="+str(id))
+        self.conn.commit()
 
 if __name__ == '__main__':
     import random
