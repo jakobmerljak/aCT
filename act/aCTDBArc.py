@@ -150,7 +150,7 @@ class aCTDBArc(aCTDB):
         desc['arcstate'] = "tosubmit"
         desc['tarcstate']  = desc['created']
         desc['cluster']  = ''
-        desc['clisterlist'] = clusterlist
+        desc['clusterlist'] = clusterlist
         desc['jobdesc'] = jobdesc
         desc['attemptsleft'] = maxattempts
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
