@@ -1,0 +1,193 @@
+<config>
+
+<executable>
+  <wrapperurl>http://www-f9.ijs.si;cache=check/grid/ARCpilot-test</wrapperurl>
+  <ptarurl>http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz</ptarurl>
+  <ptarurlrc>"http://project-atlas-gmsb.web.cern.ch;cache=no/project-atlas-gmsb/pilotcode-rc.tar.gz"</ptarurlrc>
+</executable>
+
+
+<db>
+  <type>mysql</type>
+  <socket>/data/user/atlact1/act-mysql/act.mysql.socket</socket>
+  <file>/data/user/atlact1/act-mysql/act.mysql.socket</file>
+  <name>act</name>
+  <user>user</user>
+  <password>password</password>
+</db>
+
+<loop>
+  <time>
+    <main>10</main>
+  </time>
+  <maxjobs>
+    <panda>100</panda>
+  </maxjobs>
+  <threads>
+    <panda>10</panda>
+  </threads>
+  <periodicrestart>
+    <autopilot>120</autopilot>
+  </periodicrestart>
+</loop>
+
+<tmp>
+    <dir>/data/user/atlact1/act-test1/tmp</dir>
+</tmp>
+
+<logger>
+  <level>info</level>
+  <arclevel>verbose</arclevel>
+  <autopilot>/data/user/atlact1/act-test1/log/aCTAutopilot.log</autopilot>
+  <size>10000000</size>
+  <rotate>25</rotate>
+</logger>
+
+<joblog>
+  <urlprefix>http://voatlas403.cern.ch/failedjobs</urlprefix>
+  <dir>/data/user/act/www/failedjobs</dir>
+</joblog>
+
+<clustersreject>
+  <item>nosuchcluster</item>
+  <item>grid.uio.no</item>
+  <item>vm009.gla.scotgrid.ac.uk</item>
+  <item>arctest-ce.smokerings.nsc.liu.se</item>
+  <item>arc.bccs.uib.no</item>
+  <item>grid03.unige.ch</item>
+  <item>pinela.ijs.si</item>
+  <item>arc-ce01.pdc.kth.se</item>
+  <item>gateway01.dcsc.ku.dk</item>
+  <item>barbera.ijs.si</item>
+  <item>arc01.lcg.cscs.ch</item>
+  <item>arc02.lcg.cscs.ch</item>
+  <item>meja.arnes.si</item>
+  <item>ce03.titan.uio.no</item>
+  <item>square.arctur.si</item>
+  <item>cetest01.grid.hep.ph.ic.ac.uk</item>
+  <item>tintin-g.uppmax.uu.se</item>
+  <item>ce01.grid.uio.no</item>
+  <item>ce03.grid.uio.no</item>
+  <item>Xabisko-ce.hpc2n.umu.se</item>
+  <item>ce01.lhep.unibe.ch</item>
+  <item>Xlcg-lrz-ce2.grid.lrz.de</item>
+  <item>Xce01.titan.uio.no</item>
+  <!-->
+  <item>pikolit.ijs.si</item>
+  <item>jost.arnes.si</item>
+  <item>gateway01.dcsc.ku.dk</item>
+  <item>grid.uio.no</item>
+  <item>arc.bccs.uib.no</item>
+  <item>ce01.titan.uio.no</item>
+  <item>ce03.titan.uio.no</item>
+  <item>jeannedarc.hpc2n.umu.se</item>
+  <item>grad.uppmax.uu.se</item>
+  <item>arc-ce01.pdc.kth.se</item>
+  <item>siri.lunarc.lu.se</item>
+  <item>alarik-grid.lunarc.lu.se</item>
+  <item>arc-ce.smokerings.nsc.liu.se</item>
+  <item>arctest-ce.smokerings.nsc.liu.se</item>
+  <item>ce.lhep.unibe.ch</item>
+  <item>ce01.lhep.unibe.ch</item>
+  <item>nordugrid.unibe.ch</item>
+  <item>grid03.unige.ch</item>
+  <item>arc01.lcg.cscs.ch</item>
+  <item>arc02.lcg.cscs.ch</item>
+  <item>vm009.gla.scotgrid.ac.uk</item>
+  <item>lcg-lrz-ce2.grid.lrz.de</item>
+  <item>cetest01.grid.hep.ph.ic.ac.uk</item>
+  <item>tintin-g.uppmax.uu.se</item>
+  <item>abisko-ce.hpc2n.umu.se</item>
+  </!-->
+</clustersreject>
+
+<jobs>
+  <maxqueued>13000</maxqueued>
+  <minqueued>5500</minqueued>
+  <maxrerun>3</maxrerun>
+  <checkinterval>7200</checkinterval>
+  <checkmintime>30</checkmintime>
+  <queuedratio>1.30</queuedratio>
+</jobs>
+
+<downtime>
+  <stopsubmission>false</stopsubmission>
+  <srmdown>false</srmdown>
+  <poolsdown>false</poolsdown>
+  <lfcdown>false</lfcdown>
+  <cluster>
+    <item>nosuchcluster</item>
+  <item>Xjeannedarc.hpc2n.umu.se</item>
+  <item>Xnordugrid.unibe.ch</item>
+  <item>Xlcg-lrz-ce2.grid.lrz.de</item>
+  <item>Xsquare.arctur.si</item>
+  <item>Xarc-ce.smokerings.nsc.liu.se</item>
+  <item>Xtintin-g.uppmax.uu.se</item>
+  <item>Xjost.arnes.si</item>
+  <item>Xce01.titan.uio.no</item>
+  <item>Xce01.lhep.unibe.ch</item>
+  <item>Xabisko-ce.hpc2n.umu.se</item>
+  </cluster>
+</downtime>
+
+<panda>
+  <!-->
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <server>https://voatlas58.cern.ch:25443/server/panda/</server>
+  <server>https://voatlas248.cern.ch:25443/server/panda/</server>
+  </!-->
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <schedconfigurl>http://pandaserver.cern.ch:25085/cache/schedconfig/</schedconfigurl>
+  <!-->
+  <server>https://voatlas249.cern.ch:25443/server/panda/</server>
+  <server>https://pandaserver.cern.ch:25443/server/panda/</server>
+  <server>https://voatlas21.cern.ch:25443/server/panda/</server>
+  <server>https://pandasrv.usatlas.bnl.gov:25443/server/panda/</server>
+  </!-->
+  <heartbeattime>7</heartbeattime>
+  <threads>1</threads>
+  <getjobs>1</getjobs>
+  <schedulerid>aCT-atlact1-1</schedulerid>
+  <timeout>60</timeout>
+  <schedinterval>60</schedinterval>
+  <minjobs>10</minjobs>
+
+
+  <sites>
+
+    <site>
+      <name>LRZ-LMU_C2PAP</name>
+      <schedconfig>LRZ-LMU_C2PAP</schedconfig>
+      <endpoints>
+        <item>gsiftp://pikolit.ijs.si:2811</item>
+      </endpoints>
+      <type>production</type>
+    </site>
+
+    <site>
+      <name>XXXARC</name>
+      <schedconfig>ARC-pikolit.ijs.si</schedconfig>
+      <endpoints>
+        <item>gsiftp://jost.arnes.si:2811</item>
+        <item>gsiftp://c2papdata2.lrz.de:2811</item>
+        <item>gsiftp://pikolit.ijs.si:2811</item>
+      </endpoints>
+      <type>production</type>
+    </site>
+  </sites>
+
+</panda>
+
+<voms>
+  <bindir>/usr/bin</bindir>
+  <proxylifetime>192:00</proxylifetime>
+  <minlifetime>432000</minlifetime>
+  <proxypath>/tmp/x509up_u501</proxypath>
+  <cacertdir>/etc/grid-security/certificates</cacertdir>
+</voms>
+
+<lfc>
+  <host>lfc://;transferprotocol=gsiftp@prod-lfc-atlas.cern.ch/</host>
+</lfc>
+
+</config> 
