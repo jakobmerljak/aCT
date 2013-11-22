@@ -19,6 +19,7 @@ class aCTCleaner(aCTProcess):
 
         self.log.info("Cleaning %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         job_supervisor.Clean()
         
         notcleaned = job_supervisor.GetIDsNotProcessed()
