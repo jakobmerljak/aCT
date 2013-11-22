@@ -120,15 +120,21 @@ class aCTSubmitter(aCTProcess):
             return 0
         self.log.info("Submitting %d jobs:" % len(jobs))
 
-        # GIIS setup
-        giislist=self.conf.getList(['atlasgiis','item'])
-        atlasgiisl=[]
-        for g in giislist:
-            # Specify explicitly EGIIS
-            atlasgiisl.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
+        # Query infosys - either local or index
+        if self.cluster:
+            # Endpoint and type will come from cluster table eventually
+            aris = 'ldap://'+self.cluster+'/mds-vo-name=local,o=grid'
+            infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
+                          
+        else:
+            giises = self.conf.getList(['atlasgiis','item'])
+            infoendpoints = []
+            for g in giises:
+                # Specify explicitly EGIIS
+                infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
 
         # retriever contains a list of CE endpoints
-        retriever = arc.ComputingServiceRetriever(self.uc, atlasgiisl)
+        retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
         retriever.wait()
         # targets is the list of queues
         # target.ComputingService.Name is the CE hostname
