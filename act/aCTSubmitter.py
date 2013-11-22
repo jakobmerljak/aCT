@@ -228,10 +228,11 @@ class aCTSubmitter(aCTProcess):
 
         for (id, job) in jobs.items():
             if job.JobID in notcancelled:
-                if job.State == arc.JobState.UNDEFINED:
-                    # Job has not yet reached info system
-                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
-                else:
+# State comparison only works with ARC 4.0, comment out until this version is used
+#                if job.State == arc.JobState.UNDEFINED:
+#                    # Job has not yet reached info system
+#                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+#                else:
                     self.log.error("Could not cancel job %s", job.JobID)
                     # Just to mark as cancelled so it can be cleaned
                     self.db.updateArcJob(id, {"arcstate": "cancelled",
