@@ -386,7 +386,7 @@ class aCTDBArc(aCTDB):
         self.conn.commit()
         # rewrite proxy file if proxy was updated
         if 'proxy' in desc:
-            self._writeProxy(self.getProxyPath(id), self.getProxy(id))
+            self._writeProxyFile(self.getProxyPath(id), self.getProxy(id))
 
     def getProxyPath(self, id):
         '''
@@ -410,17 +410,20 @@ class aCTDBArc(aCTDB):
         proxy = row['proxy']
         return proxy
         
-    def getProxiesInfo(self, select, columns=[], lock=False):
+    def getProxiesInfo(self, select, columns=[], lock=False, expect_one=False):
         '''
         Return a list of column: value dictionaries for jobs matching select.
-        If lock is True the row will be locked if possible.
+        If lock is True the row will be locked if possible. If expect_one is true
+        only one row will be returned.
         '''
         if lock:
             select += self.addLock()
         c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM proxies WHERE "+select)
-        rows=c.fetchall()
-        return rows
+        if expect_one:
+            return c.fetchone()
+        else:
+            return c.fetchall()
 
     def deleteProxy(self, id):
         '''
