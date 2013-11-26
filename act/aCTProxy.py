@@ -91,7 +91,22 @@ class aCTProxy:
         select = "dn='"+dn+"' and role='"+role+"'"
         ret_columns = self.db.getProxiesInfo(select, columns, expect_one=True)
         return ret_columns
-            
+
+    def getProxyId(self, dn, role):
+        id = self.getProxyInfo(dn, role, ["id"])
+        if id:
+            return id["id"]
+        else:
+            return None
+
+    def getProxyPathFromId(self, id):    
+        select = "id='"+str(id)+"'"
+        ret_columns = self.db.getProxiesInfo(select, ["proxypath"], expect_one=True)
+        if ret_columns:
+            return ret_columns["proxypath"]
+        else:
+            return None
+    
     def timeleft(self, dn, role):
         expirytime = self.getProxyInfo(dn, role, ["expirytime"])
         if "expirytime" in expirytime and expirytime["expirytime"]:
@@ -100,16 +115,21 @@ class aCTProxy:
         else:
             return 0
 
-    def path(self, dn, role):
-        proxypath = self.getProxyInfo(dn, role, columns=["proxypath"])
-        return proxypath["proxypath"]
+    def path(self, dn='', role='', id=''):
+        if id:
+            proxypath = self.getProxyPathFromId(id)
+        else:
+            proxypath = self.getProxyInfo(dn, role, columns=["proxypath"])["proxypath"]
+        return proxypath
+
 
 def test_aCTProxy():
     p=aCTProxy(1)
     proxydir = p.conf.get(["voms","proxydir"])
     proxyprefix = p.conf.get(["voms","proxyprefix"])
     _, dn, _ = p._readProxyFromFile(os.path.join(proxydir, proxyprefix+"prod_x509up.proxy"))
-    print p.path(dn, "production")
+    print p.path(dn=dn, role="production")
+    print p.path(id=p.getProxyId(dn, "pilot"))
     time.sleep(30)
     p.renew()
 
