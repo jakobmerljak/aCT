@@ -13,9 +13,9 @@ class aCTStatus(aCTProcess):
     status in the DB.
     '''
     
-    def __init__(self, name, cluster):
+    def __init__(self):
         
-        aCTProcess.__init__(self, name, cluster) 
+        aCTProcess.__init__(self) 
 
         # store the last checkJobs time to avoid overloading of GIIS
         self.checktime=time.time()
