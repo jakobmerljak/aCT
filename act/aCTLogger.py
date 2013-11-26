@@ -1,4 +1,5 @@
-import logging
+import os
+import errno
 import logging.handlers
 import aCTConfig
 
@@ -18,16 +19,22 @@ class aCTLogger:
         self.logger=logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
         level = LEVELS.get(self.conf.get(["logger","level"]), logging.NOTSET)
+        try:
+            os.makedirs(self.conf.get(["logger", "logdir"]), 0755)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise e
+        logfile = os.path.join(self.conf.get(["logger","logdir"]), name + '.log')
         self.logger.setLevel(level)
         self.handler=logging.handlers.RotatingFileHandler(
-            self.conf.get(["logger",name]),
+            logfile,
             maxBytes=int(self.conf.get(["logger","size"])),
             backupCount=int(self.conf.get(["logger","rotate"])))
         self.formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(filename)s:%(lineno)d:%(funcName)s - %(message)s")
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
 
-        self.arclogfile = arc.LogFile(str(self.conf.get(["logger",name])))
+        self.arclogfile = arc.LogFile(str(logfile))
         self.arclogfile.setFormat(arc.LongFormat)
         arc.Logger_getRootLogger().addDestination(self.arclogfile)
         if self.conf.get(["logger", "arclevel"]):

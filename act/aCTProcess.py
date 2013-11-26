@@ -1,6 +1,8 @@
 import time
 import os
+import sys
 import arc
+import traceback
 
 import aCTLogger
 import aCTConfig
@@ -15,10 +17,13 @@ class aCTProcess:
     environment and provides basic start and stop functionality.
     '''
     
-    def __init__(self, name, cluster):
+    def __init__(self):
         
-        self.name = name
-        self.cluster = cluster
+        # Get agent name from /path/to/aCTAgent.py
+        self.name = os.path.basename(sys.argv[0])[:-3]
+        self.cluster = ''
+        if len(sys.argv) == 2:
+            self.cluster = sys.argv[1]
         
         # logger
         self.logger=aCTLogger.aCTLogger(self.name)
@@ -63,13 +68,16 @@ class aCTProcess:
                 # sleep
                 aCTUtils.sleep(1)
                 # restart periodically for gsiftp crash
-                ip=int(self.conf.get(['periodicrestart', self.name]))
+                ip=int(self.conf.get(['periodicrestart', self.name.lower()]))
                 if time.time()-self.starttime > ip and ip != 0 :
                     self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                     return
         except aCTSignal.ExceptInterrupt,x:
-            print x
-            return
+            self.log.info("Received interrupt %s, exiting", str(x))
+        except:
+            self.log.critical("*** Unexpected exception! ***")
+            self.log.critical(traceback.format_exc())
+            self.log.critical("*** Process exiting ***")
 
     def finish(self):
         '''

@@ -15,6 +15,7 @@ class aCTProcessManager:
         # logger
         self.log = log
         self.actlocation = conf.get(["actlocation","dir"])
+        self.logdir = conf.get(["logger", "logdir"])
         # DB connection
         self.db = aCTDBArc.aCTDBArc(self.log, conf.get(["db","file"]))
         # list of processes to run per cluster
@@ -30,7 +31,7 @@ class aCTProcessManager:
         
         # Start single instance processes
         for process in self.processes_single:
-            proc = self.aCTProcessHandler(process, actlocation=self.actlocation)
+            proc = self.aCTProcessHandler(process, self.logdir, actlocation=self.actlocation)
             proc.start()
             self.processes_single[process] = proc
         
@@ -96,7 +97,7 @@ class aCTProcessManager:
                 self.running[cluster] = []
                 for proc in self.processes:
                     self.log.info("Starting process %s for %s", proc, cluster)
-                    ph = self.aCTProcessHandler(proc, cluster, actlocation=self.actlocation)
+                    ph = self.aCTProcessHandler(proc, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
                     self.running[cluster].append(ph)
             
@@ -104,7 +105,7 @@ class aCTProcessManager:
         for cluster in clusterlist:
             if cluster not in self.submitters and cluster not in self.running:
                 self.log.info("Starting process aCTSubmitter for %s", cluster)
-                ph = self.aCTProcessHandler('aCTSubmitter', cluster, actlocation=self.actlocation)
+                ph = self.aCTProcessHandler('aCTSubmitter', self.logdir, cluster, actlocation=self.actlocation)
                 ph.start()
                 self.submitters[cluster] = ph
         
@@ -113,17 +114,17 @@ class aCTProcessManager:
         """
         Internal process control class wrapping Popen
         """
-        def __init__(self, name, cluster='', actlocation=''):
+        def __init__(self, name, logdir, cluster='', actlocation=''):
             self.name = name
             self.cluster = cluster
             self.child = None
-            self.fdout = open(name+".log","a")
-            self.fderr = open(name+".err","a")
             self.actlocation = actlocation
+            # Redirect stdout and stderr to process log
+            self.fdout = open(os.path.join(logdir, name+'.log'), 'a')            
         def __del__(self):
             self.kill()
         def start(self):
-            self.child = subprocess.Popen([sys.executable, os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=self.fderr)
+            self.child = subprocess.Popen(['/usr/bin/python2.6', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
         def check(self):
             return self.child.poll()
         def restart(self):

@@ -11,20 +11,12 @@ class aCTConfig:
         self.parse()
 
     def parse(self):
-        try:
-            mtime=os.stat(self.configfile)[8]
-            if mtime<=self.tparse:
-                return
-            xml=minidom.parse(self.configfile)
-            self.top=xml.getElementsByTagName('config')
-            self.tparse=mtime
-            #fd=open(self.log,"a")
-            #print >> fd,  "Config reloaded",time.asctime(time.localtime(mtime))
-            #fd.close()
-        except Exception,x:
-            fd=open(self.log,"a")
-            print >> fd,  "parsing failed",x
-            fd.close()
+        mtime=os.stat(self.configfile)[8]
+        if mtime<=self.tparse:
+            return
+        xml=minidom.parse(self.configfile)
+        self.top=xml.getElementsByTagName('config')
+        self.tparse=mtime
 
         
     def getList(self,nodes):

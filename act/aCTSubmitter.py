@@ -1,4 +1,3 @@
-import sys
 import time
 import arc
 from urlparse import urlparse
@@ -120,15 +119,21 @@ class aCTSubmitter(aCTProcess):
             return 0
         self.log.info("Submitting %d jobs:" % len(jobs))
 
-        # GIIS setup
-        giislist=self.conf.getList(['atlasgiis','item'])
-        atlasgiisl=[]
-        for g in giislist:
-            # Specify explicitly EGIIS
-            atlasgiisl.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
+        # Query infosys - either local or index
+        if self.cluster:
+            # Endpoint and type will come from cluster table eventually
+            aris = 'ldap://'+self.cluster+'/mds-vo-name=local,o=grid'
+            infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
+                          
+        else:
+            giises = self.conf.getList(['atlasgiis','item'])
+            infoendpoints = []
+            for g in giises:
+                # Specify explicitly EGIIS
+                infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
 
         # retriever contains a list of CE endpoints
-        retriever = arc.ComputingServiceRetriever(self.uc, atlasgiisl)
+        retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
         retriever.wait()
         # targets is the list of queues
         # target.ComputingService.Name is the CE hostname
@@ -228,10 +233,11 @@ class aCTSubmitter(aCTProcess):
 
         for (id, job) in jobs.items():
             if job.JobID in notcancelled:
-                if job.State == arc.JobState.UNDEFINED:
-                    # Job has not yet reached info system
-                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
-                else:
+# State comparison only works with ARC 4.0, comment out until this version is used
+#                if job.State == arc.JobState.UNDEFINED:
+#                    # Job has not yet reached info system
+#                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+#                else:
                     self.log.error("Could not cancel job %s", job.JobID)
                     # Just to mark as cancelled so it can be cleaned
                     self.db.updateArcJob(id, {"arcstate": "cancelled",
@@ -325,7 +331,7 @@ class aCTSubmitter(aCTProcess):
 
 # Main
 if __name__ == '__main__':
-    asb=aCTSubmitter('submitter', sys.argv[1])
+    asb=aCTSubmitter()
     asb.run()
     asb.finish()
     

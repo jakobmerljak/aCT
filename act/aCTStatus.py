@@ -2,7 +2,6 @@
 #
 # Process to check the status of running ARC jobs
 #
-import sys
 import time
 import arc
 
@@ -14,9 +13,9 @@ class aCTStatus(aCTProcess):
     status in the DB.
     '''
     
-    def __init__(self, name, cluster):
+    def __init__(self):
         
-        aCTProcess.__init__(self, name, cluster) 
+        aCTProcess.__init__(self) 
 
         # store the last checkJobs time to avoid overloading of GIIS
         self.checktime=time.time()
@@ -171,6 +170,6 @@ class aCTStatus(aCTProcess):
         self.checkLostJobs()
 
 if __name__ == '__main__':
-    st=aCTStatus('status', sys.argv[1])
+    st=aCTStatus()
     st.run()
     st.finish()

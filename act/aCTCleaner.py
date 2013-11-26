@@ -3,7 +3,6 @@
 # Cleans jobs from CE and ARC DB
 #
 
-import sys
 import arc
 
 from aCTProcess import aCTProcess
@@ -19,6 +18,7 @@ class aCTCleaner(aCTProcess):
 
         self.log.info("Cleaning %i jobs", len(jobs.values()))
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor.Update()
         job_supervisor.Clean()
         
         notcleaned = job_supervisor.GetIDsNotProcessed()
@@ -36,6 +36,6 @@ class aCTCleaner(aCTProcess):
 
 
 if __name__ == '__main__':
-    st=aCTCleaner('cleaner', sys.argv[1])
+    st=aCTCleaner()
     st.run()
     st.finish()
