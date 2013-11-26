@@ -34,7 +34,7 @@ class aCTLogger:
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
 
-        self.arclogfile = arc.LogFile(str(self.conf.get(["logger",name])))
+        self.arclogfile = arc.LogFile(str(logfile))
         self.arclogfile.setFormat(arc.LongFormat)
         arc.Logger_getRootLogger().addDestination(self.arclogfile)
         if self.conf.get(["logger", "arclevel"]):
