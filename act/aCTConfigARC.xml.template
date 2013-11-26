@@ -162,6 +162,8 @@
   <proxylifetime>192:00</proxylifetime>
   <minlifetime>432000</minlifetime>
   <proxypath>/tmp/x509up_u59175</proxypath>
+  <proxydir>/data/user/atlact1/.globus</proxydir>
+  <proxyprefix>atlact1_20140827_</proxyprefix>
   <cacertdir>/etc/grid-security/certificates</cacertdir>
   <proxystoredir>/data/user/atlact1/act-test1/proxies</proxystoredir>
 </voms>

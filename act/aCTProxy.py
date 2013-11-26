@@ -25,8 +25,10 @@ class aCTProxy:
         come from the same DN.
         '''
         self.proxypaths = {}
-        self.proxypaths["pilot"] = os.path.join(self.conf.get(["voms","proxydir"]), "pilot_x509up.proxy")
-        self.proxypaths["production"]  = os.path.join(self.conf.get(["voms","proxydir"]), "prod_x509up.proxy")
+        proxydir = self.conf.get(["voms","proxydir"])
+        proxyprefix = self.conf.get(["voms","proxyprefix"])
+        self.proxypaths["pilot"] = os.path.join(proxydir, proxyprefix+"pilot_x509up.proxy")
+        self.proxypaths["production"]  = os.path.join(proxydir, proxyprefix+"prod_x509up.proxy")
         
         for role, path in self.proxypaths.items():
             proxy, self.robodn, expirytime = self._readProxyFromFile(path)
@@ -44,8 +46,8 @@ class aCTProxy:
         f.close()
         self.uc.CredentialString(proxy)
         cred=arc.Credential(self.uc)
-        dn = cred.GetDN()
-        expirytime=datetime.datetime.strptime(str(cred.GetEndTime()),"%Y-%m-%d %H:%M:%S")
+        dn = cred.GetIdentityName()
+        expirytime=datetime.datetime.strptime(cred.GetEndTime().str(arc.UTCTime),"%Y-%m-%dT%H:%M:%SZ")
         timeleft = self._timediffSeconds(expirytime, datetime.datetime.utcnow())
         if timeleft <= 0:
             raise Exception("Failed in importing proxy: "+path+" has expired!")
@@ -104,7 +106,9 @@ class aCTProxy:
 
 def test_aCTProxy():
     p=aCTProxy(1)
-    _, dn, expirytime = p._readProxyFromFile(os.path.join(p.conf.get(["voms","proxydir"]), "pilot_x509up.proxy"))
+    proxydir = p.conf.get(["voms","proxydir"])
+    proxyprefix = p.conf.get(["voms","proxyprefix"])
+    _, dn, _ = p._readProxyFromFile(os.path.join(proxydir, proxyprefix+"prod_x509up.proxy"))
     print p.path(dn, "production")
     time.sleep(30)
     p.renew()
