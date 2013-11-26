@@ -22,6 +22,9 @@ class aCTMain:
         # logger
         self.logger = aCTLogger.aCTLogger("aCTMain")
         self.log = self.logger()
+        
+        # proxy extender
+        self.proxy = aCTProxy.aCTProxy(Interval=3600)
  
         # daemon operations
         if len(args) >= 2:
@@ -35,9 +38,6 @@ class aCTMain:
             self.log.critical(traceback.format_exc())
             self.log.critical("*** Process exiting ***")
             raise e
-
-        # proxy extender
-        self.proxy = aCTProxy.aCTProxy(Interval=3600)
 
     def daemon(self, operation):
         """
