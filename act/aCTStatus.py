@@ -2,7 +2,6 @@
 #
 # Process to check the status of running ARC jobs
 #
-import sys
 import time
 import arc
 
@@ -171,6 +170,6 @@ class aCTStatus(aCTProcess):
         self.checkLostJobs()
 
 if __name__ == '__main__':
-    st=aCTStatus('status', sys.argv[1])
+    st=aCTStatus()
     st.run()
     st.finish()

@@ -17,27 +17,11 @@
 </db>
 
 <loop>
-  <time>
-    <main>10</main>
-    <submitter>10</submitter>
-    <status>10</status>
-    <fetcher>10</fetcher>
-    <cleaner>10</cleaner>
-  </time>
-  <maxjobs>
-    <submitter>100</submitter>
-    <status>100</status>
-    <fetcher>1000</fetcher>
-    <cleaner>100</cleaner>
-  </maxjobs>
-  <threads>
-    <fetcher>10</fetcher>
-  </threads>
   <periodicrestart>
-    <submitter>120</submitter>
-    <status>600</status>
-    <fetcher>600</fetcher>
-    <cleaner>600</cleaner>
+    <actsubmitter>120</actsubmitter>
+    <actstatus>600</actstatus>
+    <actfetcher>600</actfetcher>
+    <actcleaner>600</actcleaner>
   </periodicrestart>
 </loop>
 
@@ -46,19 +30,14 @@
 </tmp>
 
 <actlocation>
-  <dir>/afs/cern.ch/user/a/atlact1/aCT/act</dir>
+  <dir>/data/user/atlact1/src/aCT/act</dir>
+  <pidfile>/data/user/atlact1/act-test1/act.pid</pidfile>
 </actlocation>
 
 <logger>
   <level>debug</level>
   <arclevel>debug</arclevel>
-  <main>/data/user/atlact1/act-test1/log/aCTMain.log</main>
-  <autopilot>/data/user/atlact1/act-test1/log/aCTAutopilot.log</autopilot>
-  <panda2arc>/data/user/atlact1/act-test1/log/aCTPanda2Arc.log</panda2arc>
-  <submitter>/data/user/atlact1/act-test1/log/aCTSubmitter.log</submitter>
-  <status>/data/user/atlact1/act-test1/log/aCTStatus.log</status>
-  <fetcher>/data/user/atlact1/act-test1/log/aCTFetcher.log</fetcher>
-  <cleaner>/data/user/atlact1/act-test1/log/aCTCleaner.log</cleaner>
+  <logdir>/data/user/atlact1/act-test1/log</logdir>
   <size>10000000</size>
   <rotate>25</rotate>
 </logger>

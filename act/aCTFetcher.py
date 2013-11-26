@@ -4,7 +4,6 @@
 #
 
 import time
-import sys
 import os
 import errno
 import arc
@@ -131,6 +130,6 @@ class aCTFetcher(aCTProcess):
 
 
 if __name__ == '__main__':
-    st=aCTFetcher('fetcher', sys.argv[1])
+    st=aCTFetcher()
     st.run()
     st.finish()

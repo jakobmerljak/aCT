@@ -1,4 +1,3 @@
-import sys
 import time
 import arc
 from urlparse import urlparse
@@ -332,7 +331,7 @@ class aCTSubmitter(aCTProcess):
 
 # Main
 if __name__ == '__main__':
-    asb=aCTSubmitter('submitter', sys.argv[1])
+    asb=aCTSubmitter()
     asb.run()
     asb.finish()
     
