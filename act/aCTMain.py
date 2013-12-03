@@ -24,7 +24,7 @@ class aCTMain:
         self.log = self.logger()
         
         # proxy extender
-        self.proxy = aCTProxy.aCTProxy(Interval=3600)
+        self.proxy = aCTProxy.aCTProxy(self.log, Interval=3600)
  
         # daemon operations
         if len(args) >= 2:

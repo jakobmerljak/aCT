@@ -7,10 +7,11 @@ import arc
 
 class aCTProxy:
 
-    def __init__(self, Interval=3600):
+    def __init__(self, logger, Interval=3600):
         self.interval = Interval
         self.conf=aCTConfig.aCTConfigARC()
-        self.db=aCTDBArc(logging.getLogger(), self.conf.get(["db","file"]))
+        self.db=aCTDBArc(logger, self.conf.get(["db","file"]))
+        self.log = logger
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
         self.uc=arc.UserConfig(cred_type)
         self.uc.CACertificatesDirectory(str(self.conf.get(["voms", "cacertdir"])))
@@ -32,7 +33,11 @@ class aCTProxy:
         
         for role, path in self.proxypaths.items():
             proxy, self.robodn, expirytime = self._readProxyFromFile(path)
-            self.updateProxy(proxy, self.robodn, role, expirytime)
+            timeleft = self._timediffSeconds(expirytime, datetime.datetime.utcnow())
+            if timeleft > 0:
+                self.updateProxy(proxy, self.robodn, role, expirytime)
+            else:
+                self.log.error("Failed in importing proxy: "+path+" has expired!")
         
     def _timediffSeconds(self, t1, t2):
         '''
@@ -48,9 +53,6 @@ class aCTProxy:
         cred=arc.Credential(self.uc)
         dn = cred.GetIdentityName()
         expirytime=datetime.datetime.strptime(cred.GetEndTime().str(arc.UTCTime),"%Y-%m-%dT%H:%M:%SZ")
-        timeleft = self._timediffSeconds(expirytime, datetime.datetime.utcnow())
-        if timeleft <= 0:
-            raise Exception("Failed in importing proxy: "+path+" has expired!")
         return proxy, dn, expirytime
 
     
@@ -80,8 +82,9 @@ class aCTProxy:
             if tleft <= int(self.conf.get(["voms","minlifetime"])) :
                 proxy, _, expirytime = self._readProxyFromFile(path)
                 self.updateProxy(proxy, self.robodn, role, expirytime)
-                if tleft == 0:
-                    raise Exception("VOMS proxy not extended")
+                tleft = self.timeleft(self.robodn, role)
+                if tleft <= 0:
+                    self.log.error("VOMS proxy not extended")
     
     def getProxyInfo(self, dn, role, columns=[]):
         """
@@ -100,12 +103,7 @@ class aCTProxy:
             return None
 
     def getProxyPathFromId(self, id):    
-        select = "id='"+str(id)+"'"
-        ret_columns = self.db.getProxiesInfo(select, ["proxypath"], expect_one=True)
-        if ret_columns:
-            return ret_columns["proxypath"]
-        else:
-            return None
+        return self.db.getProxyPath(id)
     
     def timeleft(self, dn, role):
         expirytime = self.getProxyInfo(dn, role, ["expirytime"])
@@ -124,7 +122,7 @@ class aCTProxy:
 
 
 def test_aCTProxy():
-    p=aCTProxy(1)
+    p=aCTProxy(logging.getLogger(), 1)
     proxydir = p.conf.get(["voms","proxydir"])
     proxyprefix = p.conf.get(["voms","proxyprefix"])
     _, dn, _ = p._readProxyFromFile(os.path.join(proxydir, proxyprefix+"prod_x509up.proxy"))
