@@ -138,11 +138,12 @@ class aCTDBArc(aCTDB):
         self.conn.commit()
         return row
         
-    def insertArcJobDescription(self, jobdesc, maxattempts=0, clusterlist=''):
+    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
         '''
+        # todo: find some usefull default for proxyid
         c=self.getCursor()
         desc = {}
         desc['created'] = self.getTimeStamp()
@@ -153,6 +154,7 @@ class aCTDBArc(aCTDB):
         desc['clusterlist'] = clusterlist
         desc['jobdesc'] = jobdesc
         desc['attemptsleft'] = maxattempts
+        desc['proxyid'] = proxyid
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
@@ -402,7 +404,7 @@ class aCTDBArc(aCTDB):
 
     def getProxy(self, id):
         '''
-        Get the string representation a proxy
+        Get the string representation of a proxy
         '''
         c=self.getCursor()
         c.execute("SELECT proxy FROM proxies WHERE id="+str(id))
