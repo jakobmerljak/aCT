@@ -11,23 +11,28 @@ class aCTCleaner(aCTProcess):
     
     def processToClean(self):
         
-        jobs = self.db.getArcJobs("arcstate='toclean' and cluster='"+self.cluster+"'")
+        jobstoclean = self.db.getArcJobs("arcstate='toclean' and cluster='"+self.cluster+"'")
         
-        if not jobs:
+        if not jobstoclean:
             return
 
-        self.log.info("Cleaning %i jobs", len(jobs.values()))
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
-        job_supervisor.Update()
-        job_supervisor.Clean()
-        
-        notcleaned = job_supervisor.GetIDsNotProcessed()
+        self.log.info("Cleaning %i jobs", sum(len(v) for v in jobstoclean.values()))
+        for proxyid, jobs in jobstoclean.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
 
-        for (id, job) in jobs.items():
-            if job.JobID in notcleaned:
-                self.log.error("Could not clean job %s", job.JobID)
-
-            self.db.deleteArcJob(id)  
+            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor.Update()
+            job_supervisor.Clean()
+            
+            notcleaned = job_supervisor.GetIDsNotProcessed()
+    
+            for (id, job) in jobs.items():
+                if job.JobID in notcleaned:
+                    self.log.error("Could not clean job %s", job.JobID)
+    
+                self.db.deleteArcJob(id)  
   
     def process(self):
 

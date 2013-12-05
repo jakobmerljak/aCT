@@ -21,7 +21,7 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
 
-    def resetJobs(self, jobs):
+    def resetJobs(self, jobstoreset):
         '''
         Empty all StringLists in jobs so that when they are updated they do not
         contain duplicate values, since ARC always appends to these lists.
@@ -29,10 +29,11 @@ class aCTStatus(aCTProcess):
         emptylist = arc.StringList()
         j = arc.Job()
         attrstoreset = [attr for attr in dir(j) if type(getattr(j, attr)) == arc.StringList]
-                
-        for job in jobs:
-            for attr in attrstoreset:
-                setattr(jobs[job], attr, emptylist)
+             
+        for jobs in jobstoreset.values():   
+            for job in jobs:
+                for attr in attrstoreset:
+                    setattr(jobs[job], attr, emptylist)
         
         
     def processJobErrors(self, id, failedjob):
@@ -77,10 +78,10 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobs=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                   "cluster='"+self.cluster+"' and "+ \
-                                   self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
-                                   " limit 100000")
+        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+                                       "cluster='"+self.cluster+"' and "+ \
+                                       self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
+                                       " limit 100000")
 
         # get JobState string to work around JobState API until revision 28041 is released
         jobstates = self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
@@ -95,57 +96,65 @@ class aCTStatus(aCTProcess):
         njobs=self.db.getNArcJobs()
 
         # Do not check too little jobs at once (at least 1% of running jobs)
-        if len(jobs) < njobs/1000:
+        njobstocheck = sum(len(v) for v in jobstocheck.itervalues())
+        if njobstocheck < njobs/1000:
             #self.log.debug("too few to check %d" % len(jobs))
             return
-        if len(jobs):
-            self.log.info("%d jobs to check" % len(jobs))
+        if njobstocheck:
+            self.log.info("%d jobs to check" % njobstocheck)
         else:
             return
         
-        self.resetJobs(jobs)
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
-        job_supervisor.Update()
-        jobsupdated = job_supervisor.GetAllJobs()
-        jobsnotupdated = job_supervisor.GetIDsNotProcessed()
+        self.resetJobs(jobstocheck)
         
-        for (id, originaljob, updatedjob) in zip(jobs.keys(), jobs.values(), jobsupdated):
-            if updatedjob.JobID in jobsnotupdated:
-                self.log.error("Failed to find information on %s", updatedjob.JobID)
-                continue
-            if updatedjob.JobID != originaljob.JobID:
-                # something went wrong with list order
-                self.log.warn("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
-                continue
-            # compare strings here to get around limitations of JobState API
-            #if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
-            if jobstates[id] == updatedjob.State.GetGeneralState():
-                # just update timestamp
-                self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
-                continue
+        # Loop over proxies
+        for proxyid, jobs in jobstocheck.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
+    
+            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor.Update()
+            jobsupdated = job_supervisor.GetAllJobs()
+            jobsnotupdated = job_supervisor.GetIDsNotProcessed()
             
-            #self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
-            self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[id], updatedjob.State.GetGeneralState())
-            
-            # state changed, update whole Job object
-            arcstate = 'submitted'
-            if updatedjob.State == arc.JobState.FINISHED and updatedjob.ExitCode == 0:
-                arcstate = 'finished'
-            elif updatedjob.State == arc.JobState.FINISHED or \
-                 updatedjob.State == arc.JobState.FAILED:
-                arcstate = self.processJobErrors(id, updatedjob)
-            elif updatedjob.State == arc.JobState.KILLED:
-                arcstate = 'cancelled'
-            elif updatedjob.State == arc.JobState.RUNNING or \
-                 updatedjob.State == arc.JobState.FINISHING:
-                arcstate = 'running'
-            elif updatedjob.State == arc.JobState.DELETED or \
-                 updatedjob.State == arc.JobState.OTHER:
-                # unexpected
-                arcstate = 'failed'
+            for (id, originaljob, updatedjob) in zip(jobs.keys(), jobs.values(), jobsupdated):
+                if updatedjob.JobID in jobsnotupdated:
+                    self.log.error("Failed to find information on %s", updatedjob.JobID)
+                    continue
+                if updatedjob.JobID != originaljob.JobID:
+                    # something went wrong with list order
+                    self.log.warn("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
+                    continue
+                # compare strings here to get around limitations of JobState API
+                #if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
+                if jobstates[id] == updatedjob.State.GetGeneralState():
+                    # just update timestamp
+                    self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
+                    continue
                 
-            self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
+                #self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
+                self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[id], updatedjob.State.GetGeneralState())
                 
+                # state changed, update whole Job object
+                arcstate = 'submitted'
+                if updatedjob.State == arc.JobState.FINISHED and updatedjob.ExitCode == 0:
+                    arcstate = 'finished'
+                elif updatedjob.State == arc.JobState.FINISHED or \
+                     updatedjob.State == arc.JobState.FAILED:
+                    arcstate = self.processJobErrors(id, updatedjob)
+                elif updatedjob.State == arc.JobState.KILLED:
+                    arcstate = 'cancelled'
+                elif updatedjob.State == arc.JobState.RUNNING or \
+                     updatedjob.State == arc.JobState.FINISHING:
+                    arcstate = 'running'
+                elif updatedjob.State == arc.JobState.DELETED or \
+                     updatedjob.State == arc.JobState.OTHER:
+                    # unexpected
+                    arcstate = 'failed'
+                    
+                self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
+                    
         self.log.info('Done')
         
     def checkLostJobs(self):

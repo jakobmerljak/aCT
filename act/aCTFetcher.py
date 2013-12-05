@@ -85,26 +85,33 @@ class aCTFetcher(aCTProcess):
     def fetchJobs(self, arcstate, nextarcstate):
         
         # Get list of jobs in the right state
-        jobs = self.db.getArcJobs("arcstate='"+arcstate+"' and cluster='"+self.cluster+"'")
+        jobstofetch = self.db.getArcJobs("arcstate='"+arcstate+"' and cluster='"+self.cluster+"'")
         
-        if not jobs:
+        if not jobstofetch:
             return
-        self.log.info("Fetching %i jobs", len(jobs.values()))
+        self.log.info("Fetching %i jobs", sum(len(v) for v in jobstofetch.values()))
         
-        # Get list of downloadable files for these jobs
-        filestodl = self.db.getArcJobsInfo("arcstate='"+arcstate+"' and cluster='"+self.cluster+"'", ['id', 'downloadfiles'])
-        # id: downloadfiles
-        downloadfiles = dict((row['id'], row['downloadfiles']) for row in filestodl)
-        # jobs to download all files
-        jobs_downloadall = dict((j, jobs[j]) for j in jobs if not downloadfiles[j])
-        # jobs to download specific files
-        jobs_downloadsome = dict((j, jobs[j]) for j in jobs if downloadfiles[j])
-        
-        (fetched, notfetched) = self.fetchAll(jobs_downloadall)
-        (f, n) = self.fetchSome(jobs_downloadsome, downloadfiles)
+        fetched = notfetched = []
+        for proxyid, jobs in jobstofetch.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
+            # Get list of downloadable files for these jobs
+            filestodl = self.db.getArcJobsInfo("arcstate='"+arcstate+"' and cluster='"+self.cluster+"' and proxyid='"+str(proxyid)+"'", ['id', 'downloadfiles'])
+            # id: downloadfiles
+            downloadfiles = dict((row['id'], row['downloadfiles']) for row in filestodl)
+            # jobs to download all files
+            jobs_downloadall = dict((j, jobs[j]) for j in jobs if not downloadfiles[j])
+            # jobs to download specific files
+            jobs_downloadsome = dict((j, jobs[j]) for j in jobs if downloadfiles[j])
+            
+            (f, n) = self.fetchAll(jobs_downloadall)
+            fetched.extend(f)
+            notfetched.extend(n)
 
-        fetched.extend(f)
-        notfetched.extend(n)
+            (f, n) = self.fetchSome(jobs_downloadsome, downloadfiles)
+            fetched.extend(f)
+            notfetched.extend(n)
 
         # Check for massive failure, and back off before trying again
         # TODO: downtime awareness

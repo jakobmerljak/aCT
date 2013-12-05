@@ -214,7 +214,7 @@ class aCTDBArc(aCTDB):
 
     def getArcJob(self, id):
         '''
-        Return a dictionary of id: arc.Job.
+        Return a dictionary of {proxyid: {id: arc.Job, id: arc.Job}}.
         '''
         c=self.getCursor()
         c.execute("SELECT "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE id="+str(id))
@@ -240,7 +240,7 @@ class aCTDBArc(aCTDB):
         Return a dictionary of id: arc.Job for jobs matching select
         '''
         c=self.getCursor()
-        c.execute("SELECT id,"+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT id, proxyid, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
@@ -250,7 +250,9 @@ class aCTDBArc(aCTDB):
         # sqlite returns list of dictionaries
         if isinstance(rows, list):
             for row in rows:
-                d[row['id']] = self._db2job(row)
+                if not row['proxyid'] in d:
+                    d[row['proxyid']] = {}
+                d[row['proxyid']][row['id']] = self._db2job(row)
             
         return d
     

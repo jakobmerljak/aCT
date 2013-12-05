@@ -104,9 +104,9 @@ class aCTSubmitter(aCTProcess):
         if self.cluster:
             # Lock row for update in case multiple clusters are specified
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' limit 1",
-                                        columns=["id", "jobdesc"], lock=True)
+                                        columns=["id", "jobdesc", "proxyid"], lock=True)
         else:
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 1", ["id", "jobdesc"])
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 1", ["id", "jobdesc", "proxyid"])
 
         # mark submitting in db
         for j in jobs:
@@ -133,6 +133,7 @@ class aCTSubmitter(aCTProcess):
                 infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
 
         # retriever contains a list of CE endpoints
+        # TODO: some future infosys/index may require credentials
         retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
         retriever.wait()
         # targets is the list of queues
@@ -194,7 +195,12 @@ class aCTSubmitter(aCTProcess):
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                 self.log.error("Failed to prepare job description %d" % j['id'])
                 continue
-            t=SubmitThr(Submit,j['id'],jobdescs,self.uc,self.log)
+            # Make a new UserConfig for each proxy
+            usercfg = arc.UserConfig()
+            usercfg.CACertificatesDirectory(self.uc.CACertificatesDirectory())
+            usercfg.Timeout(self.uc.Timeout())
+            usercfg.ProxyPath(str(self.db.getProxyPath(j['proxyid'])))
+            t=SubmitThr(Submit,j['id'],jobdescs,usercfg,self.log)
             tlist.append(t)
             #t.start()
 
@@ -220,99 +226,114 @@ class aCTSubmitter(aCTProcess):
 
     def processToCancel(self):
         
-        jobs = self.db.getArcJobs("arcstate='tocancel' and cluster='"+self.cluster+"'")
-        if not jobs:
+        jobstocancel = self.db.getArcJobs("arcstate='tocancel' and cluster='"+self.cluster+"'")
+        if not jobstocancel:
             return
         
-        self.log.info("Cancelling %i jobs", len(jobs.values()))
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
-        job_supervisor.Update()
-        job_supervisor.Cancel()
-        
-        notcancelled = job_supervisor.GetIDsNotProcessed()
-
-        for (id, job) in jobs.items():
-            if job.JobID in notcancelled:
+        self.log.info("Cancelling %i jobs", sum(len(v) for v in jobstocancel.values()))
+        for proxyid, jobs in jobstocancel.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
+                
+            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor.Update()
+            job_supervisor.Cancel()
+            
+            notcancelled = job_supervisor.GetIDsNotProcessed()
+    
+            for (id, job) in jobs.items():
+                if job.JobID in notcancelled:
 # State comparison only works with ARC 4.0, comment out until this version is used
 #                if job.State == arc.JobState.UNDEFINED:
 #                    # Job has not yet reached info system
 #                    self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
 #                else:
-                    self.log.error("Could not cancel job %s", job.JobID)
-                    # Just to mark as cancelled so it can be cleaned
-                    self.db.updateArcJob(id, {"arcstate": "cancelled",
-                                              "tarcstate": self.db.getTimeStamp()})
-            else:
-                self.db.updateArcJob(id, {"arcstate": "cancelling",
-                                               "tarcstate": self.db.getTimeStamp()})
+                        self.log.error("Could not cancel job %s", job.JobID)
+                        # Just to mark as cancelled so it can be cleaned
+                        self.db.updateArcJob(id, {"arcstate": "cancelled",
+                                                  "tarcstate": self.db.getTimeStamp()})
+                else:
+                    self.db.updateArcJob(id, {"arcstate": "cancelling",
+                                                   "tarcstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
         
-        jobs = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
+        jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
  
-        # Clean up jobs which were submitted
-        jobstoclean = [job for job in jobs.values() if job.JobID]
-        
-        if jobstoclean:
+        for proxyid, jobs in jobstoresubmit.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
             
-            # Put all jobs to cancel, however the supervisor will only cancel
-            # cancellable jobs and remove the rest so there has to be 2 calls
-            # to Clean()
-            job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
-            job_supervisor.Update()
-            self.log.info("Cancelling %i jobs", len(jobstoclean))
-            job_supervisor.Cancel()
+            # Clean up jobs which were submitted
+            jobstoclean = [job for job in jobs.values() if job.JobID]
             
-            processed = job_supervisor.GetIDsProcessed()
-            notprocessed = job_supervisor.GetIDsNotProcessed()
-            # Clean the successfully cancelled jobs
-            if processed:
-                job_supervisor.SelectByID(processed)
-                self.log.info("Cleaning %i jobs", len(processed))
-                if not job_supervisor.Clean():
-                    self.log.warning("Failed to clean some jobs")
-            
-            # New job supervisor with the uncancellable jobs
-            if notprocessed:
-                notcancellable = [job for job in jobs.values() if job.JobID in notprocessed]
-                job_supervisor = arc.JobSupervisor(self.uc, notcancellable)
-                job_supervisor.Update()
+            if jobstoclean:
                 
-                self.log.info("Cleaning %i jobs", len(notcancellable))
-                if not job_supervisor.Clean():
-                    self.log.warning("Failed to clean some jobs")
-        
-        # Empty job to reset DB info
-        j = arc.Job()
-        for (id, job) in jobs.items():
-            self.db.updateArcJob(id, {"arcstate": "tosubmit",
-                                           "tarcstate": self.db.getTimeStamp()}, j)
+                # Put all jobs to cancel, however the supervisor will only cancel
+                # cancellable jobs and remove the rest so there has to be 2 calls
+                # to Clean()
+                job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
+                job_supervisor.Update()
+                self.log.info("Cancelling %i jobs", len(jobstoclean))
+                job_supervisor.Cancel()
+                
+                processed = job_supervisor.GetIDsProcessed()
+                notprocessed = job_supervisor.GetIDsNotProcessed()
+                # Clean the successfully cancelled jobs
+                if processed:
+                    job_supervisor.SelectByID(processed)
+                    self.log.info("Cleaning %i jobs", len(processed))
+                    if not job_supervisor.Clean():
+                        self.log.warning("Failed to clean some jobs")
+                
+                # New job supervisor with the uncancellable jobs
+                if notprocessed:
+                    notcancellable = [job for job in jobs.values() if job.JobID in notprocessed]
+                    job_supervisor = arc.JobSupervisor(self.uc, notcancellable)
+                    job_supervisor.Update()
+                    
+                    self.log.info("Cleaning %i jobs", len(notcancellable))
+                    if not job_supervisor.Clean():
+                        self.log.warning("Failed to clean some jobs")
+            
+            # Empty job to reset DB info
+            j = arc.Job()
+            for (id, job) in jobs.items():
+                self.db.updateArcJob(id, {"arcstate": "tosubmit",
+                                               "tarcstate": self.db.getTimeStamp()}, j)
 
     def processToRerun(self):
         
-        jobs = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
-        if not jobs:
+        jobstorerun = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
+        if not jobstorerun:
             return
 
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
-        job_supervisor.Update()
-        # Renew proxy to be safe
-        job_supervisor.Renew()
-        self.log.info("Resuming %i jobs", len(jobs.values()))
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
-        job_supervisor.Update()
-        job_supervisor.Resume()
-        
-        notresumed = job_supervisor.GetIDsNotProcessed()
-
-        for (id, job) in jobs.items():
-            if job.JobID in notresumed:
-                self.log.error("Could not resume job %s", job.JobID)
-                self.db.updateArcJob(id, {"arcstate": "failed",
-                                               "tarcstate": self.db.getTimeStamp()})
-            else:
-                self.db.updateArcJob(id, {"arcstate": "submitted",
-                                               "tarcstate": self.db.getTimeStamp()})
+        for proxyid, jobs in jobstorerun.items():
+            # TODO: with ARC 4.0 use CredentialString()
+            credentials = self.db.getProxyPath(proxyid)
+            self.uc.ProxyPath(str(credentials))
+    
+            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor.Update()
+            # Renew proxy to be safe
+            job_supervisor.Renew()
+            self.log.info("Resuming %i jobs", len(jobs.values()))
+            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor.Update()
+            job_supervisor.Resume()
+            
+            notresumed = job_supervisor.GetIDsNotProcessed()
+    
+            for (id, job) in jobs.items():
+                if job.JobID in notresumed:
+                    self.log.error("Could not resume job %s", job.JobID)
+                    self.db.updateArcJob(id, {"arcstate": "failed",
+                                                   "tarcstate": self.db.getTimeStamp()})
+                else:
+                    self.db.updateArcJob(id, {"arcstate": "submitted",
+                                                   "tarcstate": self.db.getTimeStamp()})
 
 
     def process(self):
