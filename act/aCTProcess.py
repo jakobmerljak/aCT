@@ -35,7 +35,8 @@ class aCTProcess:
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         
         # ARC Configuration
-        self.uc = arc.UserConfig()
+        cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+        self.uc=arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(self.conf.get(["voms", "proxypath"])))
         self.uc.CACertificatesDirectory(str(self.conf.get(["voms", "cacertdir"])))
         timeout=int(self.conf.get(['atlasgiis','timeout']))

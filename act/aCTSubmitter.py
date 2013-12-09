@@ -196,7 +196,8 @@ class aCTSubmitter(aCTProcess):
                 self.log.error("Failed to prepare job description %d" % j['id'])
                 continue
             # Make a new UserConfig for each proxy
-            usercfg = arc.UserConfig()
+            cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+            usercfg = arc.UserConfig(cred_type)
             usercfg.CACertificatesDirectory(self.uc.CACertificatesDirectory())
             usercfg.Timeout(self.uc.Timeout())
             usercfg.ProxyPath(str(self.db.getProxyPath(j['proxyid'])))
