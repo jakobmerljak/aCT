@@ -401,7 +401,7 @@ class aCTDBArc(aCTDB):
         row = c.fetchone()
         proxypath=row['proxypath']
         if not os.path.isfile(proxypath):
-            self._writeProxyFile(proxypath)
+            self._writeProxyFile(proxypath, self.getProxy(id))
         return proxypath
 
     def getProxy(self, id):
