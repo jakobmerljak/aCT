@@ -12,7 +12,6 @@ class aCTDBMySQL(object):
 
     def __init__(self,logger):
         try:
-            print self.socket, self.dbname
             self._connect(self.dbname)
         except Exception, x:
             print Exception, x
