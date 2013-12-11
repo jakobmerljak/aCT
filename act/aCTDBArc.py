@@ -399,10 +399,13 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("SELECT proxypath FROM proxies WHERE id="+str(id))
         row = c.fetchone()
-        proxypath=row['proxypath']
-        if not os.path.isfile(proxypath):
-            self._writeProxyFile(proxypath, self.getProxy(id))
-        return proxypath
+        try:
+            proxypath=row['proxypath']
+            if not os.path.isfile(proxypath):
+                self._writeProxyFile(proxypath, self.getProxy(id))
+            return proxypath
+        except Exception, x:
+            self.log.error("Could not find proxyid in proxies table. %s", x)
 
     def getProxy(self, id):
         '''
@@ -411,8 +414,11 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("SELECT proxy FROM proxies WHERE id="+str(id))
         row = c.fetchone()
-        proxy = row['proxy']
-        return proxy
+        try:
+            proxy = row['proxy']
+            return proxy
+        except Exception, x:
+            self.log.error("Could not find proxyid in proxies table. %s", x)
         
     def getProxiesInfo(self, select, columns=[], lock=False, expect_one=False):
         '''
