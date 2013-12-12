@@ -91,7 +91,7 @@ class aCTFetcher(aCTProcess):
             return
         self.log.info("Fetching %i jobs", sum(len(v) for v in jobstofetch.values()))
         
-        fetched = notfetched = []
+        fetched = []; notfetched = []
         for proxyid, jobs in jobstofetch.items():
             # TODO: with ARC 4.0 use CredentialString()
             credentials = self.db.getProxyPath(proxyid)
