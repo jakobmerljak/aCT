@@ -167,10 +167,6 @@ class aCTProxy:
             proxypath = self.getProxyInfo(dn, role, columns=["proxypath"])["proxypath"]
         return proxypath
 
-    def process(self):
-        # renew all proxies created through createVOMSRole
-        self.renew()
-
 def test_aCTProxy():
     p=aCTProxy(logging.getLogger(), 1)
     voms="atlas"
