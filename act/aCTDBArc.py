@@ -368,7 +368,6 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         s="INSERT INTO proxies (proxy, dn, role, myproxyid, expirytime) VALUES ('"\
                   +proxy+"','"+dn+"','"+role+"','"+myproxyid+"','"+expirytime+"')"
-        print s
         c.execute(s)
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
