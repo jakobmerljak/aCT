@@ -83,15 +83,6 @@ class aCTStatus(aCTProcess):
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
 
-        # get JobState string to work around JobState API until revision 28041 is released
-        jobstates = self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                           "cluster='"+self.cluster+"' and "+ \
-                                           self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
-                                           " limit 100000",
-                                           ['id', 'State'])
-        
-        jobstates = dict((row['id'], row['State']) for row in jobstates)
-
         # total number of jobs
         njobs=self.db.getNArcJobs()
 
@@ -109,9 +100,7 @@ class aCTStatus(aCTProcess):
         
         # Loop over proxies
         for proxyid, jobs in jobstocheck.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
     
             job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
             job_supervisor.Update()
@@ -127,14 +116,12 @@ class aCTStatus(aCTProcess):
                     self.log.warn("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
                     continue
                 # compare strings here to get around limitations of JobState API
-                #if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
-                if jobstates[id] == updatedjob.State.GetGeneralState():
+                if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
                     # just update timestamp
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
                 
-                #self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
-                self.log.debug("Job %s: %s -> %s", originaljob.JobID, jobstates[id], updatedjob.State.GetGeneralState())
+                self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
                 
                 # state changed, update whole Job object
                 arcstate = 'submitted'
