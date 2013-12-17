@@ -100,9 +100,7 @@ class aCTStatus(aCTProcess):
         
         # Loop over proxies
         for proxyid, jobs in jobstocheck.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
     
             job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
             job_supervisor.Update()

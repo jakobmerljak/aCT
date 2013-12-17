@@ -200,7 +200,7 @@ class aCTSubmitter(aCTProcess):
             usercfg = arc.UserConfig(cred_type)
             usercfg.CACertificatesDirectory(self.uc.CACertificatesDirectory())
             usercfg.Timeout(self.uc.Timeout())
-            usercfg.ProxyPath(str(self.db.getProxyPath(j['proxyid'])))
+            usercfg.CredentialString(self.db.getProxy(j['proxyid']))
             t=SubmitThr(Submit,j['id'],jobdescs,usercfg,self.log)
             tlist.append(t)
             #t.start()
@@ -233,9 +233,7 @@ class aCTSubmitter(aCTProcess):
         
         self.log.info("Cancelling %i jobs", sum(len(v) for v in jobstocancel.values()))
         for proxyid, jobs in jobstocancel.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
                 
             job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
             job_supervisor.Update()
@@ -262,9 +260,7 @@ class aCTSubmitter(aCTProcess):
         jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
  
         for proxyid, jobs in jobstoresubmit.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
             
             # Clean up jobs which were submitted
             jobstoclean = [job for job in jobs.values() if job.JobID]
@@ -311,9 +307,7 @@ class aCTSubmitter(aCTProcess):
             return
 
         for proxyid, jobs in jobstorerun.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
     
             job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
             job_supervisor.Update()
