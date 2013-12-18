@@ -311,13 +311,6 @@ class aCTDBArc(aCTDB):
                     m[k] = v
                 setattr(j, attr, m)
                 continue
-            if self.jobattrs[attr] == arc.JobState:
-                # ARC svn revision 28041 or later is needed to construct
-                # JobState objects with a given state. For using 3.0.3
-                # set an empty job state and workaround using getArcJobInfo()
-                js = arc.JobState()
-                setattr(j, attr, js)
-                continue
             
             setattr(j, attr, self.jobattrs[attr](str(dbinfo[attr])))
         return j

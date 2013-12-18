@@ -15,6 +15,9 @@ class aCTMain:
 
     def __init__(self, args):
 
+        # Check we have the right ARC version
+        self.checkARC()
+
         # xml config file
         self.conf = aCTConfig.aCTConfigARC()
    
@@ -34,6 +37,20 @@ class aCTMain:
             self.log.critical(traceback.format_exc())
             self.log.critical("*** Process exiting ***")
             raise e
+        
+    def checkARC(self):
+        """
+        Check ARC can be used and is correct version
+        """
+        try:
+            import arc
+        except ImportError:
+            print 'Error: failed to import ARC. Are ARC python bindings installed?'
+            sys.exit(1)
+            
+        if arc.ARC_VERSION_MAJOR < 4:
+            print 'Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION
+            sys.exit(1)
 
     def daemon(self, operation):
         """

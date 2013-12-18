@@ -93,9 +93,8 @@ class aCTFetcher(aCTProcess):
         
         fetched = []; notfetched = []
         for proxyid, jobs in jobstofetch.items():
-            # TODO: with ARC 4.0 use CredentialString()
-            credentials = self.db.getProxyPath(proxyid)
-            self.uc.ProxyPath(str(credentials))
+            self.uc.CredentialString(self.db.getProxy(proxyid))
+
             # Get list of downloadable files for these jobs
             filestodl = self.db.getArcJobsInfo("arcstate='"+arcstate+"' and cluster='"+self.cluster+"' and proxyid='"+str(proxyid)+"'", ['id', 'downloadfiles'])
             # id: downloadfiles
