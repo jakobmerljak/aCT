@@ -1,23 +1,52 @@
 #!/usr/bin/python
 
-import aCTDB
 import aCTDBArc
 import aCTConfig
 import re
+import subprocess
 import aCTLogger
 
 class aCTStatus:
     
     def __init__(self):
         self.conf=aCTConfig.aCTConfigARC()
-	self.logger=aCTLogger.aCTLogger("panda2arc")
-	self.log=self.logger()
+        self.logger=aCTLogger.aCTLogger("panda2arc")
+        self.log=self.logger()
 
 
         #self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
-	self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
 
-
+    def ProcessReport(self):
+        actprocscmd = 'ps ax -ww -o args'
+        p = subprocess.Popen(actprocscmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        
+        if err:
+            print 'Error: could not run ps command: %s' % err
+            return
+        
+        # Group processes by cluster
+        cluster_procs = {}
+        for line in out.split('\n'):
+            reg = re.match('.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            if reg:
+                process, cluster = reg.groups()
+                # ignore Main and this process
+                if process == 'aCTReport' or process == 'aCTMain':
+                    continue
+                if cluster == '':
+                    cluster = '(no cluster defined)'
+                if cluster in cluster_procs:
+                    cluster_procs[cluster].append(process)
+                else:
+                    cluster_procs[cluster] = [process]
+        
+        print 'Active processes per cluster:'
+        for cluster, procs in cluster_procs.items():
+            procs.sort()
+            print '%28s: %s' % (cluster, ' '.join(procs))
+        print
 
     def JobReport(self):
         c=self.db.conn.cursor()
@@ -65,4 +94,5 @@ class aCTStatus:
         
 
 acts=aCTStatus()
+acts.ProcessReport()
 acts.JobReport()
