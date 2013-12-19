@@ -98,6 +98,8 @@ class aCTDBArc(aCTDB):
             self.log.warning("no arcjobs table")
         try:
             c.execute(create)
+            # JobDescriptionDocument needs more than varchar(255)
+            c.execute("alter table arcjobs modify JobDescriptionDocument text")
             self.conn.commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
