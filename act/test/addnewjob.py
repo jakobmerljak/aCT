@@ -14,9 +14,9 @@ xrsl = '''&(executable=/bin/sleep)
            '''
 p=aCTProxy(logging.getLogger(), 1)
 voms="atlas"
-role=""
+attribute="" # e.g. attribute="/atlas/Role=production"
 proxypath=p.conf.get(["voms", "proxypath"])
 validHours=5
-proxyid = p.createVOMSRole(voms, role, proxypath, validHours)
+proxyid = p.createVOMSAttribute(voms, attribute, proxypath, validHours)
 
 db.insertArcJobDescription(xrsl, clusterlist='', proxyid=proxyid, maxattempts=5)
