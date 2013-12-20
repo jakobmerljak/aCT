@@ -70,7 +70,7 @@ class aCTDBArc(aCTDB):
           - proxy:
           - proxypath: path to file containing the proxy
           - dn: dn of the proxy
-          - role: role of the proxy
+          - attribute: attribute of the proxy
           - myproxyid: id from myproxy
           - expirytime: timestamp for when proxy is expiring
         '''
@@ -108,7 +108,7 @@ class aCTDBArc(aCTDB):
             expirytime DATETIME,
             proxypath TEXT,
             dn VARCHAR(255),
-            role VARCHAR(255),
+            attribute VARCHAR(255),
             myproxyid VARCHAR(255) )"""
         try:
             c.execute("drop table proxies")
@@ -348,19 +348,19 @@ class aCTDBArc(aCTDB):
         f.write(proxy)
         f.close()
         
-    def insertProxy(self, proxy, dn, expirytime, role='', myproxyid=''):
+    def insertProxy(self, proxy, dn, expirytime, attribute='', myproxyid=''):
         '''
         Add new proxy.
           - proxy: string representation of proxy file
           - dn: DN of proxy
           - expirytime: timestamp for end of life of proxy
-          - role: role of proxy
+          - attribute: attribute of proxy
           - myproxyid: id from myproxy
         Returns id of db entrance
         '''
         c=self.getCursor()
-        s="INSERT INTO proxies (proxy, dn, role, myproxyid, expirytime) VALUES ('"\
-                  +proxy+"','"+dn+"','"+role+"','"+myproxyid+"','"+expirytime+"')"
+        s="INSERT INTO proxies (proxy, dn, attribute, myproxyid, expirytime) VALUES ('"\
+                  +proxy+"','"+dn+"','"+attribute+"','"+myproxyid+"','"+expirytime+"')"
         c.execute(s)
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
