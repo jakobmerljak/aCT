@@ -156,8 +156,6 @@ class aCTSubmitter(aCTProcess):
                 pass
             elif status == "XXXoffline":
                 pass
-            #elif target.ComputingService.Name == "jeannedarc.hpc2n.umu.se" and target.ComputingShare.Name == "atlas-t1-repro":
-            #    pass
             else:
                 # tmp hack
                 target.ComputingShare.LocalWaitingJobs = 0
@@ -165,21 +163,14 @@ class aCTSubmitter(aCTProcess):
                 target.ExecutionEnvironment.CPUClockSpeed = 2000
                 qjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='submitted'", ['id'])
                 rjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='running'", ['id'])
-                #jlimit = max ( len(rjobs)*0.20, 50)
-                #jlimit = len(rjobs)*0.15 + 30
+
+                # Set number of submitted jobs to running * 0.15 + 20
                 jlimit = len(rjobs)*0.15 + 20
-                #jlimit = 30000
                 target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
-                #if ( len(qjobs) < 200 ) :
                 if len(qjobs) < jlimit:
                     queuelist.append(target)
                     self.log.debug("Adding target %s:%s" % (queuelist[-1].ComputingService.Name, target.ComputingShare.Name))
-                #if target.ComputingService.Name == "lcg-lrz-ce2.grid.lrz.de":
-                #   queuelist.append(target)
-                if target.ComputingService.Name == "vm009.gla.scotgrid.ac.uk":
-                    target.ExecutionEnvironment.CPUClockSpeed = 3000
 
-        tlist=[]
         # check if any queues are available, if not leave and try again next time
         if not queuelist:
             self.log.info("No free queues available")
@@ -188,6 +179,8 @@ class aCTSubmitter(aCTProcess):
 
         self.log.info("start submitting")
 
+        # Just run one thread for each job in sequence. Strange things happen
+        # when trying to create a new UserConfig object for each thread.
         for j in jobs:
             self.log.debug("preparing: %s" % j['id'])
             jobdescstr = str(j['jobdesc'])
@@ -195,18 +188,11 @@ class aCTSubmitter(aCTProcess):
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                 self.log.error("Failed to prepare job description %d" % j['id'])
                 continue
-            # Make a new UserConfig for each proxy
-            cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
-            usercfg = arc.UserConfig(cred_type)
-            usercfg.CACertificatesDirectory(self.uc.CACertificatesDirectory())
-            usercfg.Timeout(self.uc.Timeout())
-            usercfg.CredentialString(self.db.getProxy(j['proxyid']))
-            t=SubmitThr(Submit,j['id'],jobdescs,usercfg,self.log)
-            tlist.append(t)
-            #t.start()
+            # Set UserConfig credential for each proxy
+            self.uc.CredentialString(self.db.getProxy(j['proxyid']))
+            t=SubmitThr(Submit,j['id'],jobdescs,self.uc,self.log)
+            self.RunThreadsSplit([t],1)
 
-        #aCTUtils.RunThreadsSplit(tlist,10)
-        self.RunThreadsSplit(tlist,1)
         self.log.info("threads finished")
         # commit transaction to release row locks
         self.db.Commit()
