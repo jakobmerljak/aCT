@@ -7,6 +7,7 @@ import time
 import os
 import errno
 import arc
+import shutil
 
 from aCTProcess import aCTProcess
 
@@ -119,13 +120,17 @@ class aCTFetcher(aCTProcess):
             time.sleep(300)
             return
         
-        for (id, job) in jobs.items():
-            if job.JobID in notfetched:
-                # Try again next time
-                self.log.warning("Could not get output from job %s", job.JobID)
-            else:
-                self.db.updateArcJob(id, {"arcstate": nextarcstate,
-                                          "tarcstate": self.db.getTimeStamp()})
+        for jobs in jobstofetch.values():
+            for (id, job) in jobs.iteritems():
+                if job.JobID in notfetched:
+                    self.log.warning("Could not get output from job %s", job.JobID)
+                    # Try again next time
+                    # Remove download directory to allow retry
+                    shutil.rmtree(self.conf.get(['tmp','dir']) + job.JobID[job.JobID.rfind('/'):], True)
+                else:
+                    self.log.info("Downloaded job %s" % job.JobID)
+                    self.db.updateArcJob(id, {"arcstate": nextarcstate,
+                                              "tarcstate": self.db.getTimeStamp()})
 
     def process(self):
 

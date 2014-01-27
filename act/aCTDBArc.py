@@ -239,7 +239,7 @@ class aCTDBArc(aCTDB):
 
     def getArcJobs(self,select):
         '''
-        Return a dictionary of id: arc.Job for jobs matching select
+        Return a dictionary of {proxyid: {id: arc.Job}} for jobs matching select
         '''
         c=self.getCursor()
         c.execute("SELECT id, proxyid, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
