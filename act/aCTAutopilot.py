@@ -58,7 +58,9 @@ class aCTAutopilot:
         self.conf=aCTConfig.aCTConfigATLAS()
         self.arcconf=aCTConfig.aCTConfigARC()
         # logger
-        self.logger=aCTLogger.aCTLogger("autopilot")
+        # Get agent name from /path/to/aCTAgent.py
+        self.name = os.path.basename(sys.argv[0])[:-3]
+        self.logger=aCTLogger.aCTLogger(self.name)
         self.log=self.logger()
         self.log.info("Start")
 
@@ -286,7 +288,7 @@ class aCTAutopilot:
                         continue
                     n={}
 
-                    #n['trfstatus']='topandainit'
+                    n['pandastatus']='sent'
                     n['siteName']=site
                     self.db.insertJob(pandaid,pandajob,n)
                     count+=1
