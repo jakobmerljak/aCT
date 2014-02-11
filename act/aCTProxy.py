@@ -11,7 +11,7 @@ class aCTProxy:
 
     def __init__(self, logger, Interval=3600):
         self.interval = Interval
-        self.conf=aCTConfig.aCTConfigARC()
+        self.conf=aCTConfig.aCTConfigATLAS()
         self.db=aCTDBArc(logger, self.conf.get(["db","file"]))
         self.log = logger
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
@@ -58,7 +58,7 @@ class aCTProxy:
         '''
         Function to create proxy with voms extensions from proxy.
         Example: To add production attribute to atlas voms, set voms="atlas" and 
-        command="/atlas/Role=production". The proxy file under proxypath will
+        attribute="/atlas/Role=production". The proxy file under proxypath will
         be used to generate/update the proxy.
         If proxyid is None, a new proxy entry will be created.
         After a call to this function, the new proxy will be automatically renewed 
@@ -70,7 +70,7 @@ class aCTProxy:
         # if not given, try to get proxyid using dn and attribute first
         if not proxyid:
             proxyid = self.getProxyId(dn, attribute)
-        # if no proxyid, a new proxies table entry must be created
+        # if still no proxyid, a new proxies table entry must be created
         if not proxyid:
             proxyid = self.updateProxy("", dn, attribute, expirytime)
         dbproxypath = self.db.getProxyPath(proxyid)

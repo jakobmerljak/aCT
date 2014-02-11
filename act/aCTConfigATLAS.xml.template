@@ -179,8 +179,13 @@
 </panda>
 
 <voms>
+  <vo>atlas</vo>
+  <roles>
+    <item>production</item>
+    <item>pilot</item>
+  </roles>
   <bindir>/usr/bin</bindir>
-  <proxylifetime>192:00</proxylifetime>
+  <proxylifetime>192</proxylifetime>
   <minlifetime>432000</minlifetime>
   <proxypath>/tmp/x509up_u501</proxypath>
   <cacertdir>/etc/grid-security/certificates</cacertdir>
