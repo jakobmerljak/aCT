@@ -1,3 +1,4 @@
+import re
 import time
 import arc
 from urlparse import urlparse
@@ -133,26 +134,30 @@ class aCTSubmitter(aCTProcess):
                 infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
 
         # retriever contains a list of CE endpoints
-        # TODO: some future infosys/index may require credentials
+        # TODO: WS info service requires credentials
         retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
         retriever.wait()
         # targets is the list of queues
-        # target.ComputingService.Name is the CE hostname
+        # parse target.ComputingService.ID for the CE hostname
         # target.ComputingShare.Name is the queue name
         targets = retriever.GetExecutionTargets()
         
         # Filter only sites for this process
         queuelist=[]
         for target in targets:
-            if self.cluster and target.ComputingService.Name != self.cluster:
+            if not target.ComputingService.ID:
+                self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
                 continue
-            s = self.db.getSchedconfig(target.ComputingService.Name)
+            clustername = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
+            if self.cluster and clustername != self.cluster:
+                continue
+            s = self.db.getSchedconfig(clustername)
             status = 'online'
             if s is not None:
                 status=s['status']
-            if target.ComputingShare.Name in self.conf.getList(['queuesreject','item']):
+            if clustername in self.conf.getList(['queuesreject','item']):
                 pass
-            elif target.ComputingService.Name in self.conf.getList(['clustersreject','item']):
+            elif clustername in self.conf.getList(['clustersreject','item']):
                 pass
             elif status == "XXXoffline":
                 pass
@@ -161,15 +166,15 @@ class aCTSubmitter(aCTProcess):
                 target.ComputingShare.LocalWaitingJobs = 0
                 target.ComputingShare.PreLRMSWaitingJobs = 0
                 target.ExecutionEnvironment.CPUClockSpeed = 2000
-                qjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='submitted'", ['id'])
-                rjobs=self.db.getArcJobsInfo("cluster='" +str(target.ComputingService.Name)+ "' and  arcstate='running'", ['id'])
+                qjobs=self.db.getArcJobsInfo("cluster='" +str(clustername)+ "' and  arcstate='submitted'", ['id'])
+                rjobs=self.db.getArcJobsInfo("cluster='" +str(clustername)+ "' and  arcstate='running'", ['id'])
 
                 # Set number of submitted jobs to running * 0.15 + 20
                 jlimit = len(rjobs)*0.15 + 20
                 target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
                 if len(qjobs) < jlimit:
                     queuelist.append(target)
-                    self.log.debug("Adding target %s:%s" % (queuelist[-1].ComputingService.Name, target.ComputingShare.Name))
+                    self.log.debug("Adding target %s:%s" % (clustername, target.ComputingShare.Name))
 
         # check if any queues are available, if not leave and try again next time
         if not queuelist:
