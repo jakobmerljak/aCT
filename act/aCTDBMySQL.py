@@ -38,5 +38,8 @@ class aCTDBMySQL(object):
     def timeStampLessThan(self,column,timediff):
         return "UNIX_TIMESTAMP("+column+") < UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
     
+    def timeStampGreaterThan(self,column,timediff):
+        return "UNIX_TIMESTAMP("+column+") > UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
+    
     def addLock(self):
         return " FOR UPDATE"

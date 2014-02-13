@@ -11,5 +11,9 @@ class aCTDBOracle(object):
         # should be tested...
         return "(SYSDATE - TO_DATE('01-JAN-1970','DD-MON-YYYY')) * (86400)"
 
+    def timeStampGreaterThan(self, column, timediff):
+        # should definitely be tested...
+        return "(SYSDATE - TO_DATE('01-JAN-1970','DD-MON-YYYY')) * (86400)"
+
     def addLock(self):
         return " FOR UPDATE"
