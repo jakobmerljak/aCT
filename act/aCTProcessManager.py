@@ -22,7 +22,11 @@ class aCTProcessManager:
         self.processes = ['aCTSubmitter', 'aCTStatus', 'aCTFetcher', 'aCTCleaner']
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         #self.processes_single = {'aCTAutopilot': None}
-        self.processes_single = {}
+        self.processes_single = {'aCTAutopilot':None, 
+                                 'aCTPanda2ARC':None,
+                                 'aCTProxyHandler':None,
+                                 'aCTATLASStatus':None
+                                 }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
         # dictionary of cluster to Submitter processes handlers, there should

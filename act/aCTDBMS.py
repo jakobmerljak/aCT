@@ -48,5 +48,8 @@ class aCTDBMS(supported_dbms[dbtype]):
     def timeStampLessThan(self,column,timediff):
         return super(aCTDBMS, self).timeStampLessThan(column,timediff)
     
+    def timeStampGreaterThan(self,column,timediff):
+        return super(aCTDBMS, self).timeStampGreaterThan(column,timediff)
+
     def addLock(self):
         return super(aCTDBMS, self).addLock()

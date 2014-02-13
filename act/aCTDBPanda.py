@@ -78,11 +78,22 @@ class aCTDBPanda(aCTDB):
 
     def updateJobLazy(self,pandaid,desc):
         desc['modified']=self.getTimeStamp()
-        s="update pandajobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
-        s+=" where pandaid="+str(pandaid)
+        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s+=" WHERE pandaid="+str(pandaid)
         c=self.getCursor()
         c.execute(s,desc.values())
 
+    def updateJobs(self, select, desc):
+        self.updateJobsLazy(select, desc)
+        self.conn.commit()
+
+    def updateJobsLazy(self, select, desc):
+        desc['modified']=self.getTimeStamp()
+        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s+=" WHERE "+select
+        c=self.getCursor()
+        c.execute(s,desc.values())
+        
     def getJob(self,pandaid,columns=[]):
         c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE pandaid="+str(pandaid))

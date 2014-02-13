@@ -71,6 +71,7 @@ class aCTDBArc(aCTDB):
           - proxypath: path to file containing the proxy
           - dn: dn of the proxy
           - attribute: attribute of the proxy
+          - proxytype: type of proxy, e.g., 'local' or 'myproxy'
           - myproxyid: id from myproxy
           - expirytime: timestamp for when proxy is expiring
         '''
@@ -111,6 +112,7 @@ class aCTDBArc(aCTDB):
             proxypath TEXT,
             dn VARCHAR(255),
             attribute VARCHAR(255),
+            proxytype TEXT,
             myproxyid VARCHAR(255) )"""
         try:
             c.execute("drop table proxies")
@@ -350,19 +352,20 @@ class aCTDBArc(aCTDB):
         f.write(proxy)
         f.close()
         
-    def insertProxy(self, proxy, dn, expirytime, attribute='', myproxyid=''):
+    def insertProxy(self, proxy, dn, expirytime, attribute='', proxytype='local', myproxyid=''):
         '''
         Add new proxy.
           - proxy: string representation of proxy file
           - dn: DN of proxy
           - expirytime: timestamp for end of life of proxy
           - attribute: attribute of proxy
+          - proxytype: type of proxy, default 'local'
           - myproxyid: id from myproxy
         Returns id of db entrance
         '''
         c=self.getCursor()
-        s="INSERT INTO proxies (proxy, dn, attribute, myproxyid, expirytime) VALUES ('"\
-                  +proxy+"','"+dn+"','"+attribute+"','"+myproxyid+"','"+expirytime+"')"
+        s="INSERT INTO proxies (proxy, dn, attribute, proxytype, myproxyid, expirytime) VALUES ('"\
+                  +proxy+"','"+dn+"','"+attribute+"','"+proxytype+"','"+myproxyid+"','"+expirytime+"')"
         c.execute(s)
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
@@ -416,7 +419,7 @@ class aCTDBArc(aCTDB):
         
     def getProxiesInfo(self, select, columns=[], lock=False, expect_one=False):
         '''
-        Return a list of column: value dictionaries for jobs matching select.
+        Return a list of column: value dictionaries for proxies matching select.
         If lock is True the row will be locked if possible. If expect_one is true
         only one row will be returned.
         '''
