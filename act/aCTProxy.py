@@ -162,7 +162,11 @@ class aCTProxy:
         if id:
             proxypath = self.db.getProxyPath(id)
         else:
-            proxypath = self.getProxyInfo(dn, attribute, columns=["proxypath"])["proxypath"]
+            proxypath = self.getProxyInfo(dn, attribute, columns=["proxypath"])
+            if not proxypath:
+                self.log.warning("No proxy found for DN %s and attribute %s" % (dn, attribute))
+                return None
+            proxypath = proxypath["proxypath"]
         return proxypath
 
 def test_aCTProxy():
