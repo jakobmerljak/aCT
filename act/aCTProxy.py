@@ -129,7 +129,7 @@ class aCTProxy:
         for (dn, attribute), args in self.voms_proxies.items():
             tleft = self.timeleft(dn, attribute)
             if tleft <= int(self.conf.get(["voms","minlifetime"])) :
-                self.createVOMSRole(*args)
+                self.createVOMSAttribute(*args)
                 tleft = self.timeleft(dn, attribute)
                 if tleft <= 0:
                     self.log.error("VOMS proxy not extended")
@@ -168,11 +168,13 @@ class aCTProxy:
 def test_aCTProxy():
     p=aCTProxy(logging.getLogger(), 1)
     voms="atlas"
-    attribute=""
+    attribute="/atlas/Role=pilot"
     proxypath=p.conf.get(["voms", "proxypath"])
     validHours=12
-    proxyid = p.createVOMSRole(voms, attribute, proxypath, validHours)
+    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=pilot", proxypath, validHours)
+    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=production", proxypath, validHours)
     dn = p.db.getProxiesInfo("id="+str(proxyid), ["dn"], expect_one=True)["dn"]
+    print "dn=", dn
     print "path from dn,attribute lookup matches path from proxyid lookup:", 
     print p.path(dn=dn, attribute=attribute) == p.path(id=p.getProxyId(dn, attribute))
     time.sleep(30)
