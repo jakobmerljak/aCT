@@ -20,7 +20,7 @@ class PThr(Thread):
 class aCTPanda:
 
 
-    def __init__(self,logger):
+    def __init__(self,logger, proxyfile):
         self.conf=aCTConfig.aCTConfigATLAS()
         #self.srv='https://pandasrv.usatlas.bnl.gov:25443/server/panda/'
         #self.siteName='ARC'
@@ -30,7 +30,8 @@ class aCTPanda:
         self.hostport=res.group(1)
         self.topdir=res.group(2)
         #self.proxypath=self.conf.get(['voms','proxypath'])
-        self.proxypath='/tmp/x509up_u%s' % str(os.getuid())
+        #self.proxypath='/tmp/x509up_u%s' % str(os.getuid())
+        self.proxypath=proxyfile
         #self.siteName=self.conf.get(['panda','site'])
         self.log=logger
         # timeout in seconds

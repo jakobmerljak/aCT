@@ -1,15 +1,11 @@
-import ssl
 import os
-import subprocess
+import sys
 import time
-import datetime
 import aCTPanda
 import aCTDBPanda
-import sys
 import aCTConfig
 import aCTProxy
 import aCTLogger
-import sys
 from threading import Thread
 import aCTSignal
 import aCTUtils
@@ -66,9 +62,16 @@ class aCTAutopilot:
 
         # database
         self.db=aCTDBPanda.aCTDBPanda(self.log,self.arcconf.get(["db","file"]))
-        # panda
-        # proxy path?????
-        self.panda=aCTPanda.aCTPanda(self.log)
+        # Keep a panda object per proxy. The site "type" maps to a specific
+        # proxy role
+        self.pandas = {}
+        actp = aCTProxy.aCTProxy(self.log)
+        for role in self.conf.getList(['voms', 'roles', 'item']):
+            proxyfile = actp.path(dn=self.conf.get(['voms', 'dn']), attribute='/atlas/Role='+role)
+            # pilot role is mapped to analysis type
+            if role == 'pilot':
+                role = 'analysis'
+            self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
 
         # queue interval
         self.queuestamp=0
@@ -84,76 +87,12 @@ class aCTAutopilot:
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-
-    def updatePandaInitStatus(self,trfstatus='topandainit'):
-        """
-        Send running status for jobs which have not yet been submitted
-        to avoid possible long delay. sent->running toggle must be done
-        within 30 minutes.
-        """
-        nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.db.getJobs("pstatus='sent' and trfstatus='%s'" % trfstatus)
-
-        if len(jobs):
-            self.log.info("%d" % len(jobs))
-
-        tlist=[]
-        for j in jobs:
-            jd={}
-            #jd['endTime']=self.getEndTime()
-            t=PandaThr(self.panda.updateStatus,j['pandaid'],'starting',jd)
-            tlist.append(t)
-        aCTUtils.RunThreadsSplit(tlist,nthreads)
-        for t in tlist:
-            if t.status == None:
-                continue
-            #self.log.info("response: %s" % t.status )
-            jd={}
-            jd['trfstatus']='tolfclfns'
-            jd['theartbeat']=self.db.getTimeStamp()
-            self.db.updateJob(t.id,jd)
-          
-        #self.db.Commit()
-        if len(jobs):
-            self.log.info("Threads finished")
+            self.sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+        print self.sites
 
 
-
-    def updatePandaSubmitted(self,trfstatus='inarc'):
-        """
-        status update for submitted jobs. computingElement is known and sent
-        """
-        nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.db.getJobs("pstatus='sent' and trfstatus='%s'" % trfstatus)
-
-        if len(jobs):
-            self.log.info("%d" % len(jobs))
-
-        tlist=[]
-        for j in jobs:
-            jd={}
-            #jd['endTime']=self.getEndTime()
-            try:
-                reg=re.search('.+//([^:]+)',str(j['arcjobid']))
-                cluster=reg.group(1)
-                jd['computingElement']=cluster
-            except:
-                pass
-            t=PandaThr(self.panda.updateStatus,j['pandaid'],'starting',jd)
-            tlist.append(t)
-        aCTUtils.RunThreadsSplit(tlist,nthreads)
-        #self.db.Commit()
-        for t in tlist:
-            if t.status == None:
-                continue
-            jd={}
-            jd['pstatus']='starting'
-            jd['theartbeat']=self.db.getTimeStamp()
-            self.db.updateJob(t.id,jd)
-          
-        if len(jobs):
-            self.log.info("Threads finished")
-
+    def getPanda(self, sitename):
+        return self.pandas[self.sites[sitename]['type']]
 
 
     def updatePandaHeartbeat(self,pstatus):
@@ -161,24 +100,25 @@ class aCTAutopilot:
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.db.getJobs("pandastatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])))
+        jobs=self.db.getJobs("pandastatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])),)
         #print "PandaHeartbeat ",len(jobs)
         if len(jobs):
-            self.log.info("%d" % len(jobs))
+            self.log.info("Update heartbeat for %d jobs in state %s" % (len(jobs), pstatus))
         tlist=[]
         for j in jobs:
             jd={}
             if pstatus == 'transferring':
                 jd['endTime']=self.getEndTime()
             if pstatus == 'sent':
-                t=PandaThr(self.panda.updateStatus,j['pandaid'],'starting',jd)
+                t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],'starting',jd)
             else:
-                t=PandaThr(self.panda.updateStatus,j['pandaid'],pstatus,jd)
+                t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
         for t in tlist:
             if t.status == None:
                 continue
+            self.log.debug(t.status)
             if t.status['command'][0] != "NULL":
                 self.log.info("response: %s %s" % (t.id,t.status) )
             #AF   pstatus = t.status['command'][0] 
@@ -224,7 +164,7 @@ class aCTAutopilot:
                 # TODO push back to download (tofinished)
                 continue
 
-            t=PandaThr(self.panda.updateStatus,j['pandaid'],j['pstatus'],jd)
+            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pstatus'],jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
@@ -276,7 +216,7 @@ class aCTAutopilot:
                 tlist=[]
 
                 for i in range(0,nthreads):
-                    t=PandaGetThr(self.panda.getJob,site)
+                    t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                 for t in tlist:
@@ -376,13 +316,14 @@ class aCTAutopilot:
                 self.setSites()
 
                 # request new jobs
-                num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
+                num=0#self.getJobs(int(self.conf.get(['panda','getjobs'])))
                 if num:
                     self.log.info("GetJobs: %s" % str(num))
 
                 self.updatePandaHeartbeat('sent')
                 self.updatePandaHeartbeat('starting')
-
+                self.updatePandaHeartbeat('running')
+                self.updatePandaHeartbeat('cancelled')
                 aCTUtils.sleep(100000)
 
         except aCTSignal.ExceptInterrupt,x:
