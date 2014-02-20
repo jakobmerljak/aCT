@@ -28,9 +28,10 @@ class aCTATLASProcess:
 
         # config
         self.conf=aCTConfig.aCTConfigATLAS()
+        self.arcconf=aCTConfig.aCTConfigARC()
         # database
-        self.adb=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        self.pdb=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
         
         # start time for periodic restart
         self.starttime=time.time()
