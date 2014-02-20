@@ -204,6 +204,24 @@ class aCTDBArc(aCTDB):
         else:
             c.execute(s,desc.values())
 
+    def updateArcJobs(self, desc, select):
+        '''
+        Update arc job fields specified in desc and matching the select statement.
+        '''
+        self.updateArcJobsLazy(desc, select)
+        self.conn.commit()
+
+    def updateArcJobsLazy(self, desc, select):
+        '''
+        Update arc job fields specified in desc and matching the select statement.
+        Does not commit after executing update.
+        '''
+        desc['modified']=self.getTimeStamp()
+        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s+=" where "+select
+        c=self.getCursor()
+        c.execute(s,desc.values())
+
     def getArcJobInfo(self,id,columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
