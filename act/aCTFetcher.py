@@ -120,13 +120,23 @@ class aCTFetcher(aCTProcess):
             time.sleep(300)
             return
         
-        for jobs in jobstofetch.values():
+        for proxyid, jobs in jobstofetch.items():
             for (id, job) in jobs.iteritems():
                 if job.JobID in notfetched:
                     self.log.warning("Could not get output from job %s", job.JobID)
-                    # Try again next time
                     # Remove download directory to allow retry
                     shutil.rmtree(self.conf.get(['tmp','dir']) + job.JobID[job.JobID.rfind('/'):], True)
+                    # Check if job still exists
+                    fileinfo = arc.FileInfo()
+                    self.uc.CredentialString(self.db.getProxy(proxyid))
+                    dp = arc.datapoint_from_url(job.JobID, self.uc)
+                    status = dp.Stat(fileinfo)
+                    # TODO Check other permanent errors
+                    if not status and status.GetErrno() == errno.ENOENT:
+                        self.log.warning("Job %s no longer exists" % job.JobID)
+                        self.db.updateArcJob(id, {"arcstate": "donefailed",
+                                                  "tarcstate": self.db.getTimeStamp()})
+                    # Otherwise try again next time
                 else:
                     self.log.info("Downloaded job %s" % job.JobID)
                     self.db.updateArcJob(id, {"arcstate": nextarcstate,
