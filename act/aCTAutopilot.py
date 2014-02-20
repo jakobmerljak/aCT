@@ -101,42 +101,37 @@ class aCTAutopilot:
         """
         nthreads=int(self.conf.get(["panda","threads"]))
         jobs=self.db.getJobs("pandastatus='"+pstatus+"' and "+self.db.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])),)
-        #print "PandaHeartbeat ",len(jobs)
-        if len(jobs):
-            self.log.info("Update heartbeat for %d jobs in state %s" % (len(jobs), pstatus))
+        if not jobs:
+            return
+        
+        self.log.info("Update heartbeat for %d jobs in state %s" % (len(jobs), pstatus))
+
+        if pstatus == 'sent':
+            pstatus = 'starting'
         tlist=[]
         for j in jobs:
             jd={}
-            if pstatus == 'transferring':
-                jd['endTime']=self.getEndTime()
-            if pstatus == 'sent':
-                t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],'starting',jd)
-            else:
-                t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
+            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
+        
         for t in tlist:
             if t.status == None:
                 continue
             self.log.debug(t.status)
             if t.status['command'][0] != "NULL":
                 self.log.info("response: %s %s" % (t.id,t.status) )
-            #AF   pstatus = t.status['command'][0] 
             jd={}
-            if pstatus == 'sent':
-                jd['pandastatus']='starting'
-            else:
-                jd['pandastatus']=pstatus
+            jd['pandastatus']=pstatus
             jd['theartbeat']=self.db.getTimeStamp()
-            if (t.status['command'][0] == "tobekilled"):
-                jd['pandastatus']="tobekilled"
-            if (t.status['command'][0] == "badattemptnr"):
-                jd['pandastatus']="tobekilled"
+            # If panda tells us to kill the job, set actpandastatus to tobekilled
+            # and remove from heartbeats
+            if (t.status['command'][0] == "tobekilled") or (t.status['command'][0] == "badattemptnr"):
+                jd['actpandastatus']="tobekilled"
+                jd['pandastatus']='NULL'
             self.db.updateJob(t.id,jd)
-          
-        #self.db.Commit()
-        if len(jobs):
-            self.log.info("Threads finished")
+
+        self.log.info("Threads finished")
 
 
     def updatePandaFinishedPilot(self):
@@ -144,10 +139,12 @@ class aCTAutopilot:
         Final status update for completed jobs (finished or failed in athena)
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.db.getJobs("trfstatus='topanda'");
+        jobs=self.db.getJobs("actpandastatus='finished' or actpandastatus='failed'");
 
-        if len(jobs):
-            self.log.info("%d" % len(jobs))
+        if not jobs:
+            return
+        
+        self.log.info("Updating panda for %d finished jobs" % len(jobs))
         
         tlist=[]
         for j in jobs:
@@ -164,7 +161,7 @@ class aCTAutopilot:
                 # TODO push back to download (tofinished)
                 continue
 
-            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pstatus'],jd)
+            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
@@ -172,14 +169,12 @@ class aCTAutopilot:
             if t.status == None:
                 continue
             jd={}
-            jd['trfstatus']='toremove'
-            jd['pstatus']='done'
+            jd['pandastatus']=t.status
+            jd['actpandastatus']='done'
             jd['theartbeat']=self.db.getTimeStamp()
             self.db.updateJob(t.id,jd)
-           
-        #self.db.Commit()
-        if len(jobs):
-            self.log.info("Threads finished")
+
+        self.log.info("Threads finished")
 
 
     def getJobs(self,num):
@@ -188,18 +183,16 @@ class aCTAutopilot:
         Get at most num panda jobs from panda server. Store fetched jobs in database.
         """
        
-        count=0
         if num == 0:
-            return count
+            return 0
 
-        # check max running
-        # jobs=self.db.getJobs("pstatus like '%'")
+        count=0
 
         for site in self.sites.keys():        
 
-            nsubmitting = self.db.getNJobs("pandastatus like 'sent' and pandastatus like 'submitting' and siteName='%s'" %  site )
+            nsubmitting = self.db.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
             nall = self.db.getNJobs("siteName='%s'" % site)
-            print site,nsubmitting,nall
+            self.log.debug("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
                 continue
@@ -229,12 +222,11 @@ class aCTAutopilot:
                     n={}
 
                     n['pandastatus']='sent'
+                    n['actpandastatus'] = 'sent'
                     n['siteName']=site
                     self.db.insertJob(pandaid,pandajob,n)
                     count+=1
         return count
-
-
 
 
     def checkJobs(self):
@@ -243,7 +235,8 @@ class aCTAutopilot:
         Sanity checks when restarting aCT. Check for nonexistent jobs... TODO
         """
         
-        pjobs=self.panda.queryJobInfo()
+        # Does it matter which proxy is used? Assume no
+        pjobs=self.pandas.values()[0].queryJobInfo()
 
         # panda error if [] possible
         if len(pjobs) == 0:
@@ -256,31 +249,32 @@ class aCTAutopilot:
                 pjids.append(j['PandaID'])
         self.log.info("%d" % len(pjids))
 
-        # try to recover lost jobs:
+        # try to recover lost jobs (jobs in aCT but not in Panda)
 
-        jobs=self.db.getJobs("pstatus like '%'")
+        jobs=self.db.getJobs("pandastatus like '%'")
 
         for j in jobs:
             self.log.info("%d" % j['pandaid'])
             if j['pandaid'] in pjids:
                 pass
             else:
-                self.log.info("not in panda -> remove")
+                self.log.info("%d not in panda, cancel and remove from aCT", j['pandaid'])
                 jd={}
-                jd['trfstatus']='toremove'
+                jd['pandastatus'] = 'NULL';
+                jd['actpandastatus']='tobekilled'
                 self.db.updateJob(j['pandaid'],jd)
 
-        # return 
-        # check db (something is wrong with activated)
+        # check db for jobs in Panda but not in aCT
         count=0
         for j in pjobs:
             self.log.debug("checking job %d" % j['PandaID'])
             job=self.db.getJob(j['PandaID'])
-            if job is None and ( j['jobStatus'] == 'running' or j['jobStatus'] == 'transferring' or j['jobStatus'] == 'starting') :
+            if job is None and ( j['pandastatus'] == 'running' or j['pandastatus'] == 'transferring' or j['pandastatus'] == 'starting') :
                 self.log.info("Missing: %d" % j['PandaID'])
                 count+=1
-                self.panda.updateStatus(j['PandaID'],'failed')
+                self.getPanda().updateStatus(j['PandaID'],'failed')
         self.log.info("missing jobs: %d removed" % count)
+            
             
     def checkQueues(self):
         """
@@ -306,69 +300,39 @@ class aCTAutopilot:
         """
         Main loop
         """
-
-        
         try:
             self.log.info("Running")
+            self.checkJobs()
 
             while 1:
                 self.conf.parse()
                 self.setSites()
 
                 # request new jobs
-                num=0#self.getJobs(int(self.conf.get(['panda','getjobs'])))
+                num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
                 if num:
-                    self.log.info("GetJobs: %s" % str(num))
-
+                    self.log.info("Got %i jobs" % num)
+                
+                # Update all jobs currently in the system
                 self.updatePandaHeartbeat('sent')
                 self.updatePandaHeartbeat('starting')
                 self.updatePandaHeartbeat('running')
-                self.updatePandaHeartbeat('cancelled')
+                self.updatePandaHeartbeat('transferring')
+                
+                # Update jobs which finished
+                self.updatePandaFinishedPilot()
                 aCTUtils.sleep(100000)
 
         except aCTSignal.ExceptInterrupt,x:
             print x
             return
 
-    def runold(self):
-        """
-        Main loop
-        """
-        try:
-            self.log.info("Running")
-            ###AF self.checkJobs()
-
-            while 1:
-                # try to reparse config file if it was modified. 
-                self.conf.parse()
-                # request new jobs
-                num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
-                if num:
-
-                    self.log.info("GetJobs: %s" % str(num))
-                # panda updates
-                self.updatePandaInitStatus()
-                self.updatePandaSubmitted()
-                self.updatePandaHeartbeat('sent')
-                self.updatePandaHeartbeat('starting')
-                self.updatePandaHeartbeat('running')
-                self.updatePandaHeartbeat('transferring')
-                self.updatePandaFinishedPilot()
-                ### self.checkQueues()
-                # 
-                aCTUtils.sleep(10)
-
-        except aCTSignal.ExceptInterrupt,x:
-            print x
-            return
-            
 
     def finish(self):
         """
         clean finish handled by signals
         """
         self.log.info("Cleanup")
-
 
         
 if __name__ == '__main__':

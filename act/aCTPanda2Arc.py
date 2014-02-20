@@ -56,6 +56,7 @@ class aCTPanda2Arc:
                 aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cls, proxyid=1)
                 jd={}
                 jd['arcjobid']=aid['LAST_INSERT_ID()']
+                jd['actpandastatus']='starting'
                 self.dbp.updateJob(job['pandaid'],jd)
                 
                 
@@ -64,7 +65,7 @@ class aCTPanda2Arc:
         Check for jobs with pandastatus tobekilled and cancel them in ARC.
         """
         
-        jobs = self.dbp.getJobs("pandastatus='tobekilled'")
+        jobs = self.dbp.getJobs("actpandastatus='tobekilled'")
         if not jobs:
             return
         
@@ -73,7 +74,7 @@ class aCTPanda2Arc:
             self.log.info("Cancelling job %d", job['pandaid'])
             self.dba.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
-        self.dbp.updateJobs("pandastatus='tobekilled'", {'pandastatus': 'cancelled'})
+        self.dbp.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
            
             
     def cleanArcJobs(self):
