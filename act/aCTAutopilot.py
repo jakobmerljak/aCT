@@ -83,7 +83,8 @@ class aCTAutopilot(aCTATLASProcess):
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and "+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])),)
+        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and "+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])), columns)
         if not jobs:
             return
         
@@ -93,7 +94,11 @@ class aCTAutopilot(aCTATLASProcess):
             pstatus = 'starting'
         tlist=[]
         for j in jobs:
-            jd={}
+            jd = {}
+            jd['startTime'] = j['startTime']
+            jd['endTime'] = j['endTime']
+            jd['computingElement'] = j['computingElement']
+            jd['node'] = j['node']
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
@@ -152,7 +157,7 @@ class aCTAutopilot(aCTATLASProcess):
             if t.status == None:
                 continue
             jd={}
-            jd['pandastatus']=t.status
+            jd['pandastatus']=None
             jd['actpandastatus']='done'
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             self.dbpanda.updateJob(t.id,jd)
