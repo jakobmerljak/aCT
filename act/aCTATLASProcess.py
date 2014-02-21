@@ -56,7 +56,7 @@ class aCTATLASProcess:
                 # do class-specific things
                 self.process()
                 # sleep
-                aCTUtils.sleep(1)
+                aCTUtils.sleep(10)
                 # restart periodically in case of hangs
                 #ip=int(self.conf.get(['periodicrestart', self.name.lower()]))
                 #if time.time()-self.starttime > ip and ip != 0 :
