@@ -21,6 +21,24 @@ class aCTATLASStatus(aCTATLASProcess):
         # should be zero first time to check all states
         self.trunning=0.    
  
+                 
+    def checkJobstoKill(self):
+        """
+        Check for jobs with pandastatus tobekilled and cancel them in ARC.
+        """
+        
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'")
+        if not jobs:
+            return
+        
+        self.log.info("Found %d jobs to cancel" % len(jobs))
+        for job in jobs:
+            self.log.info("Cancelling job %d", job['pandaid'])
+            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+        
+        self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
+           
+           
     def updateRunningJobs(self):
         """
         Check for new running jobs and update pandajobs with
@@ -44,6 +62,7 @@ class aCTATLASStatus(aCTATLASProcess):
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
             desc["pandastatus"] = "running"
+            desc["actpandastatus"] = "running"
             desc["node"] = aj["ExecutionNode"]
             desc["computingElement"] = aj["cluster"]
             desc["startTime"] = aj["StartTime"]
@@ -73,7 +92,8 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
-            desc["pandastatus"] = "finished"
+            desc["pandastatus"] = "running" # Will be set to finished by validator
+            desc["actpandastatus"] = "tovalidate"
             desc["startTime"] = aj["StartTime"]
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
@@ -101,7 +121,9 @@ class aCTATLASStatus(aCTATLASProcess):
                 self.log.info("Resubmitting %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
                 select = "arcjobid='"+str(aj["id"])
                 jd={}
-                jd['arcjobid'] = 'NULL'
+                jd['arcjobid'] = None
+                jd['pandastatus'] = 'starting'
+                jd['actpandastatus'] = 'toresubmit'
                 self.dbpanda.updateJobsLazy(select,jd)
                 resubmitting=True
             else:
@@ -279,6 +301,7 @@ class aCTATLASStatus(aCTATLASProcess):
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
             desc["pandastatus"] = "failed"
+            desc["actpandastatus"] = "tovalidate" # to clean up any output
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
 
@@ -286,13 +309,16 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("Resubmitting lost job %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["id"])
             desc={}
-            desc['arcjobid'] = 'NULL'
+            desc['arcjobid'] = None
+            desc['pandastatus'] = 'starting'
+            desc['actpandastatus'] = 'toresubmit'
             self.dbpanda.updateJobsLazy(select,desc)
 
         for aj in cancelledjobs:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
-            desc["pandastatus"] = "cancelled"
+            # TODO: Jobs cancelled unexpectedly - report error to panda
+            desc["actpandastatus"] = "cancelled"
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
         
@@ -312,7 +338,8 @@ class aCTATLASStatus(aCTATLASProcess):
         """        
         try:
             self.log.info("Running")
-    
+            # Check for jobs that panda told us to kill and cancel them in ARC
+            self.checkJobstoKill()
             # Check status of arcjobs
             # Query jobs in running arcstate with tarcstate sooner than last run
             self.updateRunningJobs()

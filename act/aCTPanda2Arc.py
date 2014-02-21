@@ -59,39 +59,6 @@ class aCTPanda2Arc:
                 jd['actpandastatus']='starting'
                 self.dbp.updateJob(job['pandaid'],jd)
                 
-                
-    def cancelArcJobs(self):
-        """
-        Check for jobs with pandastatus tobekilled and cancel them in ARC.
-        """
-        
-        jobs = self.dbp.getJobs("actpandastatus='tobekilled'")
-        if not jobs:
-            return
-        
-        self.log.info("Found %d jobs to cancel" % len(jobs))
-        for job in jobs:
-            self.log.info("Cancelling job %d", job['pandaid'])
-            self.dba.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
-        
-        self.dbp.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
-           
-            
-    def cleanArcJobs(self):
-        """
-        Check for jobs in arc table in done or cancelled state and set to clean
-        """
-        stateselect = "arcstate='done' or arcstate='donefailed' or arcstate='cancelled'"
-        jobstoclean = self.dba.getArcJobsInfo(stateselect, ['id'])
-        
-        if not jobstoclean:
-            return
-        
-        self.log.info("Found %d jobs to clean" % len(jobstoclean))
-        for job in jobstoclean:
-            self.log.info("Cleaning job %d", job['id'])
-            self.dba.updateArcJob(job['id'], {'arcstate': 'toclean'})
-
 
     def Run(self):
         try:
@@ -101,8 +68,6 @@ class aCTPanda2Arc:
                 self.conf.parse()
 
                 self.createArcJobs()
-                self.cancelArcJobs()
-                self.cleanArcJobs()
 
                 aCTUtils.sleep(100000)
 
