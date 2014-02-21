@@ -22,12 +22,19 @@ class aCTDBPanda(aCTDB):
                  failed: job failed (code or grid failure)
            - actpandastatus: aCT internal state of panda jobs
                  In addition to above states:
-                 tovalidate: job has finished and output files should be validated
+                 tovalidate: job has finished or failed and output files should
+                   be validated or cleaned
+                 toresubmit: job will be resubmitted but first output files
+                   should be cleaned
                  done: aCT is finished with this job, nothing more needs to be done
                  tobekilled: panda requests that the job is cancelled
                  cancelled: job was cancelled, nothing more needs to be done
            - theartbeat: Timestamp of last heartbeat (pstatus set)
            - priority: Job priority
+           - node: Worker node on which the job is running
+           - startTime: Job start time
+           - endTime: Job end time
+           - computingElement: CE where the job is running
         '''
         aCTDB.createTables(self)
         str="""
@@ -43,7 +50,11 @@ class aCTDBPanda(aCTDB):
         pandastatus VARCHAR(255),
         actpandastatus VARCHAR(255),
         theartbeat timestamp,
-        priority integer
+        priority integer,
+        node VARCHAR(255),
+        startTime TIMESTAMP,
+        endTime TIMESTAMP,
+        computingElement VARCHAR(255)
     )
 """
         c=self.getCursor()
