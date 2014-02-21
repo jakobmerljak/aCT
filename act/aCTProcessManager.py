@@ -23,7 +23,7 @@ class aCTProcessManager:
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         #self.processes_single = {'aCTAutopilot': None}
         self.processes_single = {'aCTAutopilot':None, 
-                                 'aCTPanda2ARC':None,
+                                 'aCTPanda2Arc':None,
                                  'aCTProxyHandler':None,
                                  'aCTATLASStatus':None
                                  }
