@@ -5,13 +5,13 @@
 
 import aCTConfig
 
-from aCTProcess import aCTProcess
+from aCTATLASProcess import aCTATLASProcess
 from aCTProxy import aCTProxy
 
-class aCTProxyHandler(aCTProcess):
+class aCTProxyHandler(aCTATLASProcess):
     
     def __init__(self):
-        aCTProcess.__init__(self)
+        aCTATLASProcess.__init__(self)
         self.conf=aCTConfig.aCTConfigATLAS()
         self.pm = aCTProxy(self.log)
         if self._updateLocalProxies() == 0:

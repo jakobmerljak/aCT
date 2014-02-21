@@ -28,9 +28,10 @@ class aCTATLASProcess:
 
         # config
         self.conf=aCTConfig.aCTConfigATLAS()
+        self.arcconf=aCTConfig.aCTConfigARC()
         # database
-        self.adb=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        self.pdb=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
         
         # start time for periodic restart
         self.starttime=time.time()
@@ -55,7 +56,7 @@ class aCTATLASProcess:
                 # do class-specific things
                 self.process()
                 # sleep
-                aCTUtils.sleep(1)
+                aCTUtils.sleep(10)
                 # restart periodically in case of hangs
                 #ip=int(self.conf.get(['periodicrestart', self.name.lower()]))
                 #if time.time()-self.starttime > ip and ip != 0 :
