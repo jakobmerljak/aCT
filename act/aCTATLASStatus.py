@@ -62,7 +62,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcstate='done'"
         select += " limit 100000"
 
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "EndTime"])
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "StartTime", "EndTime"])
         
         if len(jobstoupdate) == 0:
             return
