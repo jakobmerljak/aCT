@@ -245,7 +245,7 @@ class aCTDBArc(aCTDB):
             row=dict(zip([col[0] for col in c.description], row))
         return {id: self._db2job(row)}
         
-    def getArcJobsInfo(self, select, columns=[], lock=False):
+    def getArcJobsInfo(self, select, columns=[], tables="arcjobs", lock=False):
         '''
         Return a list of column: value dictionaries for jobs matching select.
         If lock is True the row will be locked if possible.
@@ -253,7 +253,7 @@ class aCTDBArc(aCTDB):
         if lock:
             select += self.addLock()
         c=self.getCursor()
-        c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT "+self._column_list2str(columns)+" FROM "+tables+" WHERE "+select)
         rows=c.fetchall()
         return rows
 
@@ -355,7 +355,7 @@ class aCTDBArc(aCTDB):
                 d[attr] = str(getattr(job, attr).GetPeriod())
             elif self.jobattrs[attr] == arc.Time:
                 if getattr(job, attr).GetTime() != -1:
-                    d[attr] = str(getattr(job, attr).str())
+                    d[attr] = str(getattr(job, attr).str(arc.UTCTime))
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))

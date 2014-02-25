@@ -2,6 +2,7 @@
 # deals with post-processing of jobs and error handling.
 
 import time
+import datetime
 import pickle
 import re
 import os
@@ -12,15 +13,6 @@ import aCTSignal
 from aCTATLASProcess import aCTATLASProcess
 
 class aCTATLASStatus(aCTATLASProcess):
-
-    def __init__(self):
-        
-        aCTATLASProcess.__init__(self) 
-
-        # store the last check time to avoid overloading of DB. 
-        # should be zero first time to check all states
-        self.trunning=0.    
- 
                  
     def checkJobstoKill(self):
         """
@@ -38,6 +30,11 @@ class aCTATLASStatus(aCTATLASProcess):
         
         self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
            
+    def getStartTime(self, endtime, walltime):
+        """
+        Get starttime from endtime-walltime where endtime is datetime.datetime and walltime is in seconds
+        """
+        return endtime-datetime.timedelta(0, walltime)
            
     def updateRunningJobs(self):
         """
@@ -48,10 +45,13 @@ class aCTATLASStatus(aCTATLASProcess):
         - startTime
         """
 
-        select = "arcstate='running' and "+ self.dbarc.timeStampLessThan("tarcstate", self.trunning)
+        # do an inner join to pick up all jobs that should be set to running
+        # todo: pandajobs.starttime will not be updated if a job is resubmitted 
+        # internally by the ARC part.
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
         select += " limit 100000"
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "StartTime", "ExecutionNode", "cluster"])
-        self.trunning=time.time()
+        columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode", "arcjobs.cluster"]
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
@@ -65,7 +65,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["actpandastatus"] = "running"
             desc["node"] = aj["ExecutionNode"]
             desc["computingElement"] = aj["cluster"]
-            desc["startTime"] = aj["StartTime"]
+            desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             self.dbpanda.updateJobsLazy(select, desc)
         if len(jobstoupdate)>0:
             self.dbpanda.Commit()
@@ -81,7 +81,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcstate='done'"
         select += " limit 100000"
 
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "StartTime", "EndTime"])
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "UsedTotalWallTime", "EndTime"])
         
         if len(jobstoupdate) == 0:
             return
@@ -94,7 +94,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "running" # Will be set to finished by validator
             desc["actpandastatus"] = "tovalidate"
-            desc["startTime"] = aj["StartTime"]
+            desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
         if len(jobstoupdate)>0:
@@ -255,7 +255,7 @@ class aCTATLASStatus(aCTATLASProcess):
                     print pupdate['pilotErrorCode'],aj['Error']
             pupdate['pilotErrorDiag']=aj['Error']
             # set start/endtime
-            pupdate['startTime']=aj['StartTime']
+            pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             pupdate['endTime']=aj['EndTime']
             # save the pickle file to be used by aCTMain panda update
             select="arcjobid='"+str(aj["id"])+"'"
