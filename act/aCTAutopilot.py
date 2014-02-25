@@ -2,6 +2,7 @@ from threading import Thread
 import pickle
 import re
 import time
+import arc
 import aCTPanda
 import aCTProxy
 import aCTUtils
@@ -45,17 +46,34 @@ class aCTAutopilot(aCTATLASProcess):
     def __init__(self):
         aCTATLASProcess.__init__(self)
         
+        # Get DN from configured proxy file
+        uc = arc.UserConfig()
+        uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
+        cred = arc.Credential(uc)
+        dn = cred.GetIdentityName()
+        self.log.info("Running under DN %s" % dn)
+
         # Keep a panda object per proxy. The site "type" maps to a specific
         # proxy role
         self.pandas = {}
+        # Map the site type to a proxy id in proxies table
+        # In future for analysis the id will change once the job is picked up
+        self.proxymap = {}
+        
         actp = aCTProxy.aCTProxy(self.log)
         for role in self.conf.getList(['voms', 'roles', 'item']):
-            proxyfile = actp.path(dn=self.conf.get(['voms', 'dn']), attribute='/atlas/Role='+role)
+            attr = '/atlas/Role='+role
+            proxyid = actp.getProxyId(dn, attr)
+            if not proxyid:
+                raise Exception("Proxy with DN "+dn+" and attribute "+attr+" was not found in proxies table")
+
+            proxyfile = actp.path(dn, attribute=attr)
             # pilot role is mapped to analysis type
             if role == 'pilot':
                 role = 'analysis'
             self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
-
+            self.proxymap[role] = proxyid
+            
         # queue interval
         self.queuestamp=0
 
@@ -176,7 +194,7 @@ class aCTAutopilot(aCTATLASProcess):
 
         count=0
 
-        for site in self.sites.keys():        
+        for site, attrs in self.sites.iteritems():        
 
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
             nall = self.dbpanda.getNJobs("siteName='%s'" % site)
@@ -212,6 +230,7 @@ class aCTAutopilot(aCTATLASProcess):
                     n['pandastatus']='sent'
                     n['actpandastatus'] = 'sent'
                     n['siteName']=site
+                    n['proxyid']=self.proxymap[attrs['type']]
                     self.dbpanda.insertJob(pandaid,pandajob,n)
                     count+=1
         return count

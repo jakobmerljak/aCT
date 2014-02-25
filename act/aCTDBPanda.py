@@ -35,6 +35,7 @@ class aCTDBPanda(aCTDB):
            - startTime: Job start time
            - endTime: Job end time
            - computingElement: CE where the job is running
+           - proxyid: ID of proxy in proxies table to use for this job
         '''
         aCTDB.createTables(self)
         str="""
@@ -54,7 +55,8 @@ class aCTDBPanda(aCTDB):
         node VARCHAR(255),
         startTime TIMESTAMP,
         endTime TIMESTAMP,
-        computingElement VARCHAR(255)
+        computingElement VARCHAR(255),
+        proxyid integer
     )
 """
         c=self.getCursor()

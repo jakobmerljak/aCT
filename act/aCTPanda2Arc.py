@@ -52,8 +52,7 @@ class aCTPanda2Arc:
                 for e in endpoints:
                     cl.append(urlparse(e).hostname)
                 cls=",".join(cl)
-                # TODO: proxyid from aCTProxy. Probably need to store proxy dn/role in pandajobs
-                aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cls, proxyid=1)
+                aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cls, proxyid=job['proxyid'])
                 jd={}
                 jd['arcjobid']=aid['LAST_INSERT_ID()']
                 jd['actpandastatus']='starting'
