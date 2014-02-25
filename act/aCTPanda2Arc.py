@@ -1,32 +1,16 @@
-import os
-import sys
-import re
-import aCTUtils
-import aCTSignal
-import aCTPanda2Xrsl
-import aCTDB
-import aCTConfig
-import aCTLogger
-import aCTDBPanda
-import aCTDBArc
+from urlparse import urlparse
+from aCTATLASProcess import aCTATLASProcess
+from aCTPanda2Xrsl import aCTPanda2Xrsl
 
-class aCTPanda2Arc:
+class aCTPanda2Arc(aCTATLASProcess):
+    '''
+    Take new jobs in Panda table and insert then into the arcjobs table.
+    '''
 
     def __init__(self):
-
-        # xml config file
-        self.conf=aCTConfig.aCTConfigATLAS()
-        self.arcconf=aCTConfig.aCTConfigARC()
-        # logger        
-        self.logger=aCTLogger.aCTLogger("panda2arc")
-        self.log=self.logger()
-        self.log.info("Start")
-
-        # database
-        self.dbp=aCTDBPanda.aCTDBPanda(self.log,self.arcconf.get(["db","file"]))
-        self.dba=aCTDBArc.aCTDBArc(self.log,self.arcconf.get(["db","file"]))
-
-        self.sites={}
+        aCTATLASProcess.__init__(self)
+        
+        self.sites = {}
         for sitename in self.conf.getList(["sites","site","name"]):
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
@@ -35,53 +19,34 @@ class aCTPanda2Arc:
 
     def createArcJobs(self):
 
-        jobs=self.dbp.getJobs("arcjobid is NULL")
-
+        jobs = self.dbpanda.getJobs("arcjobid is NULL limit 10000")
 
         for job in jobs:
             print job['pandajob']
-            parser=aCTPanda2Xrsl.aCTPanda2Xrsl(job['pandajob'],self.sites[job['siteName']]['schedconfig'])
+            parser = aCTPanda2Xrsl(job['pandajob'], self.sites[job['siteName']]['schedconfig'])
             parser.parse()
-            xrsl =  parser.getXrsl()
+            xrsl = parser.getXrsl()
             if xrsl is not None:
                 print xrsl
-                #endpoint=self.sites[job['siteName']]['endpoints'][0]
-                endpoints=self.sites[job['siteName']]['endpoints']
-                from urlparse import urlparse
+                endpoints = self.sites[job['siteName']]['endpoints']
                 cl = []
                 for e in endpoints:
                     cl.append(urlparse(e).hostname)
-                cls=",".join(cl)
-                # TODO: proxyid from aCTProxy. Probably need to store proxy dn/role in pandajobs
-                aid = self.dba.insertArcJobDescription(xrsl, maxattempts=5,clusterlist=cls, proxyid=1)
-                jd={}
-                jd['arcjobid']=aid['LAST_INSERT_ID()']
-                jd['actpandastatus']='starting'
-                self.dbp.updateJob(job['pandaid'],jd)
+                cls = ",".join(cl)
+                self.log.info("Inserting job %i with clusterlist %s" % (job['id'], cls))
+                aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls, proxyid=job['proxyid'])
+                jd = {}
+                jd['arcjobid'] = aid['LAST_INSERT_ID()']
+                jd['actpandastatus'] = 'starting'
+                self.dbpanda.updateJob(job['pandaid'], jd)
                 
 
-    def Run(self):
-        try:
-            self.log.info("Running")
-
-            while 1:
-                self.conf.parse()
-
-                self.createArcJobs()
-
-                aCTUtils.sleep(100000)
-
-        except aCTSignal.ExceptInterrupt,x:
-            print x
-            return
-
-    def Finish(self):
-                pass
-
+    def process(self):
+        self.createArcJobs()
 
 
 if __name__ == '__main__':
 
-        am=aCTPanda2Arc()
-        am.Run()
-        am.Finish()
+    am=aCTPanda2Arc()
+    am.run()
+    am.finish()
