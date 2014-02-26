@@ -355,7 +355,9 @@ class aCTDBArc(aCTDB):
                 d[attr] = str(getattr(job, attr).GetPeriod())
             elif self.jobattrs[attr] == arc.Time:
                 if getattr(job, attr).GetTime() != -1:
-                    d[attr] = str(getattr(job, attr).str(arc.UTCTime))
+                    # Use UTC time but strip trailing Z since mysql doesn't like it
+                    t = str(getattr(job, attr).str(arc.UTCTime))
+                    d[attr] = re.sub('Z$', '', t)
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))
