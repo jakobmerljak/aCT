@@ -151,10 +151,15 @@ class aCTValidator(aCTATLASProcess):
             self.removeSRMFiles(surls[se])
         
         for job in jobstoupdate:
+            select = "arcjobid='"+str(job["arcjobid"])+"'"
+            desc = {}
+            desc["actpandastatus"] = "done"
+            self.dbpanda.updateJobsLazy(select, desc)
             desc = {}
             # set arcjobs state toclean
             desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
             self.dbarc.updateArcJobLazy(job["arcjobid"], desc)
+        self.dbpanda.Commit()
         self.dbarc.Commit()
         
 
@@ -187,6 +192,10 @@ class aCTValidator(aCTATLASProcess):
             self.removeSRMFiles(surls[se])
 
         for job in jobstoupdate:
+            select = "arcjobid='"+str(job["arcjobid"])+"'"
+            desc = {}
+            desc["actpandastatus"] = "done"
+            self.dbpanda.updateJobsLazy(select, desc)
             desc = {}
             # set arcjobs state toclean
             desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
