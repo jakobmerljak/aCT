@@ -75,8 +75,8 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         Check for new finished jobs, update pandajobs with
         - pandastatus
+        - startTime
         - endTime
-        Set arcstate to toclean
         """
         select = "arcstate='done'"
         select += " limit 100000"
@@ -99,13 +99,6 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
         if len(jobstoupdate)>0:
             self.dbpanda.Commit()
-            
-        # set arcjobs state toclean
-        desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-        for aj in jobstoupdate:
-            self.dbarc.updateArcJobLazy(aj["id"], desc)
-        if len(jobstoupdate)!=0:
-            self.dbarc.Commit()            
 
 
     def checkFailed(self, arcjobs):
@@ -323,15 +316,16 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["actpandastatus"] = "cancelled"
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
+            
         
         if len(failedjobs)+len(lostjobs)+len(cancelledjobs)!=0:
             self.dbpanda.Commit()
 
-        # set arcjobs state toclean
+        # set arcjobs state toclean for cancelled jobs
         desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-        for aj in jobstoupdate:
+        for aj in cancelledjobs:
             self.dbarc.updateArcJobLazy(aj["id"], desc)
-        if len(jobstoupdate)!=0:
+        if len(cancelledjobs)!=0:
             self.dbarc.Commit()            
     
     def process(self):
