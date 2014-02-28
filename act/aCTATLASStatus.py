@@ -67,8 +67,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["computingElement"] = aj["cluster"]
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             self.dbpanda.updateJobsLazy(select, desc)
-        if len(jobstoupdate)>0:
-            self.dbpanda.Commit()
+        self.dbpanda.Commit()
 
         
     def updateFinishedJobs(self):
@@ -97,8 +96,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
-        if len(jobstoupdate)>0:
-            self.dbpanda.Commit()
+        self.dbpanda.Commit()
 
 
     def checkFailed(self, arcjobs):
