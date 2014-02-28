@@ -179,6 +179,7 @@
 </panda>
 
 <voms>
+  <dn>/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=atlact1/CN=555105/CN=Robot: ATLAS aCT 1</dn>
   <vo>atlas</vo>
   <roles>
     <item>production</item>
