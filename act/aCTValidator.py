@@ -21,7 +21,6 @@ class aCTValidator(aCTATLASProcess):
         try:
             smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
             metadata = smallfiles.extractfile("metadata-surl.xml")
-            smallfiles.close()
         except Exception,x:
             self.log.error("failed to extract metadata file for arcjob %s: %s" %(sessionid, x))
             return []
@@ -29,6 +28,7 @@ class aCTValidator(aCTATLASProcess):
         files = outputxml.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
 
         surls = {}
+        outp = True
         for f in files:
             try:
                 #lfn = f.getElementsByTagName("logical")[0].getElementsByTagName("lfn")[0].getAttribute("name")
