@@ -70,7 +70,7 @@ class aCTValidator(aCTATLASProcess):
                     # rewrite surl in xml
                     if m.getAttribute("att_name") == "surl":
                         surl=v
-                        se = re.search("srm://(.*?)/.*", surl)
+                        se = arc.URL(str(surl)).Host()
             except Exception,x:
                 self.log.error(x)
                 outp = False
@@ -97,7 +97,7 @@ class aCTValidator(aCTATLASProcess):
         bulklimit = 100
         for surl in surls:
             count += 1
-            dp = arc.datapoint_from_url(surl['surl'], self.uc)
+            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
             datapointlist.append(dp)
             surllist.append(surl)
             
@@ -155,7 +155,7 @@ class aCTValidator(aCTATLASProcess):
         
         # As yet there is no bulk remove in ARC
         for surl in surls:
-            dp = arc.datapoint_from_url(surl['surl'], self.uc)
+            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
             status = dp.Remove()
             if not status:
                 if status.Retryable():
