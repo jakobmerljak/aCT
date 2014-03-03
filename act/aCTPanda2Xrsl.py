@@ -163,6 +163,12 @@ class aCTPanda2Xrsl:
         self.xrsl['outputs'] = "(outputfiles = %s )" % x
 
 
+    def setPriority(self):
+        
+        if self.jobdesc.has_key('currentPriority'):
+            self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'])/100) + ')'
+            
+
     def parse(self):
         self.setTime()
         self.setJobname()
@@ -175,6 +181,7 @@ class aCTPanda2Xrsl:
         self.setLog()
         self.setGMLog()
         self.setOutputs()
+        self.setPriority()
 
     def getXrsl(self):
         x="&"
