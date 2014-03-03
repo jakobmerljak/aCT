@@ -301,7 +301,6 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("Resubmitting lost job %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["id"])+"'"
             desc={}
-            desc['arcjobid'] = None
             desc['pandastatus'] = 'starting'
             # Validator processes this state before setting back to starting
             desc['actpandastatus'] = 'toresubmit'
