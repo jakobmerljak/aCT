@@ -151,7 +151,27 @@ class aCTValidator(aCTATLASProcess):
         '''
         Remove SURLs.
         '''
-        pass
+        result = {}
+        
+        # As yet there is no bulk remove in ARC
+        for surl in surls:
+            dp = arc.datapoint_from_url(surl['surl'], self.uc)
+            status = dp.Remove()
+            if not status:
+                if status.Retryable():
+                    self.log.warning("Failed to delete %s, will retry later: %s" % (surl['surl'], str(status)))
+                    result[surl['arcjobid']] = self.retry
+                elif status.GetErrno() == os.errno.ENOENT:
+                    self.log.info("File %s does not exist" % surl['surl'])
+                    result[surl['arcjobid']] = self.ok
+                else:
+                    self.log.error("Failed to delete %s: %s" % (surl['surl'], str(status)))
+                    result[surl['arcjobid']] = self.failed
+            else:
+                self.log.info("Removed %s" % surl['surl'])
+                result[surl['arcjobid']] = self.ok
+                
+        return result                  
 
     def validateFinishedJobs(self):
         '''
@@ -186,18 +206,15 @@ class aCTValidator(aCTATLASProcess):
             for id, result in checkedsurls.items():
                 if result == self.ok:
                     select = "arcjobid='"+str(id)+"'"
-                    desc = {}
-                    desc["pandastatus"] = "finished"
-                    desc["actpandastatus"] = "done"
+                    desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                     self.dbarc.updateArcJobLazy(id, desc)
                 elif result == self.failed:
-                    # todo: output file failed, should clean up output
                     select = "arcjobid='"+str(id)+"'"
-                    desc = {}
-                    desc["actpandastatus"] = "tobekilled"
+                    # output file failed, set to toresubmit to clean up output and resubmit
+                    desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
                     self.dbpanda.updateJobsLazy(select, desc)
                 else:
                     # Retry next time
@@ -233,17 +250,20 @@ class aCTValidator(aCTATLASProcess):
             return
         
         for se in surls:
-            self.removeOutputFiles(surls[se])
-        
-        for job in jobstoupdate:
-            select = "arcjobid='"+str(job["arcjobid"])+"'"
-            desc = {}
-            desc["actpandastatus"] = "done"
-            self.dbpanda.updateJobsLazy(select, desc)
-            desc = {}
-            # set arcjobs state toclean
-            desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-            self.dbarc.updateArcJobLazy(job["arcjobid"], desc)
+            removedsurls = self.removeOutputFiles(surls[se])
+            for id, result in removedsurls.items():
+                # If failed, not much we can do except continue
+                if result == self.ok or result == self.failed:
+                    select = "arcjobid='"+str(id)+"'"
+                    desc = {"actpandastatus": "failed", "pandastatus": "failed"}
+                    self.dbpanda.updateJobsLazy(select, desc)
+                    # set arcjobs state toclean
+                    desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                    self.dbarc.updateArcJobLazy(id, desc)
+                else:
+                    # Retry next time
+                    pass
+                
         self.dbpanda.Commit()
         self.dbarc.Commit()
         
@@ -254,7 +274,7 @@ class aCTValidator(aCTATLASProcess):
         Delete the output files in metadata.xml.
         Move actpandastatus to starting. 
         '''
-        # get all jobs with pandastatus running and actpandastatus tovalidate
+        # get all jobs with pandastatus running and actpandastatus toresubmit
         select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
         columns = ["arcjobid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
@@ -274,17 +294,30 @@ class aCTValidator(aCTATLASProcess):
             return
         
         for se in surls:
-            self.removeOutputFiles(surls[se])
+            removedsurls = self.removeOutputFiles(surls[se])
+            for id, result in removedsurls.items():
+                if result == self.ok:
+                    select = "arcjobid='"+str(id)+"'"
+                    # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
+                    desc = {"actpandastatus": "starting", "pandastate": "starting", "arcjobid": None}
+                    self.dbpanda.updateJobsLazy(select, desc)
+                    # set arcjobs state toclean
+                    desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                    self.dbarc.updateArcJobLazy(id, desc)
+                elif result == self.failed:
+                    # If we couldn't clean outputs the next try of the job will
+                    # also fail. Better to return to panda for an increased
+                    # attempt no. Setting to tovalidate and pandastatus=failed
+                    # means it will be processed by cleanFailedJobs() so don't 
+                    # clean the arc job here
+                    select = "arcjobid='"+str(id)+"'"
+                    desc = {"actpandastatus": "tovalidate", "pandastate": "failed"}
+                    self.dbpanda.updateJobsLazy(select, desc)
+                else:
+                    # Retry next time
+                    pass
 
-        for job in jobstoupdate:
-            select = "arcjobid='"+str(job["arcjobid"])+"'"
-            desc = {}
-            desc["actpandastatus"] = "done"
-            self.dbpanda.updateJobsLazy(select, desc)
-            desc = {}
-            # set arcjobs state toclean
-            desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-            self.dbarc.updateArcJobLazy(job["arcjobid"], desc)
+        self.dbpanda.Commit()
         self.dbarc.Commit()
 
 
