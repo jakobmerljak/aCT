@@ -126,11 +126,11 @@ class aCTValidator(aCTATLASProcess):
                     else:
                         # compare metadata
                         self.log.debug("File %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                       (datapointlist[i].GetURL().str(), surllist[i]['fsize'],
-                                        surllist[i]['checksum'], files[i].GetSize(), files[i].GetCheckSum()))
-                        if surllist[i]['fsize'] != files[i].GetSize():
+                                       (datapointlist[i].GetURL().str(), int(surllist[i]['fsize']),
+                                        surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
+                        if int(surllist[i]['fsize']) != int(files[i].GetSize()):
                             self.log.warning("File %s: size on storage (%d) differs from expected size (%d)" %
-                                             (datapointlist[i].GetURL().str(), files[i].GetSize(), surllist[i]['fsize']))
+                                             (datapointlist[i].GetURL().str(), int(files[i].GetSize()), int(surllist[i]['fsize'])))
                             result[surllist[i]['arcjobid']] = self.failed
                         elif surllist[i]['checksum'] != files[i].GetCheckSum():
                             self.log.warning("File %s: checksum on storage (%s) differs from expected checksum (%s)" %
@@ -175,7 +175,7 @@ class aCTValidator(aCTATLASProcess):
 
     def validateFinishedJobs(self):
         '''
-        Check for jobs with actpandastate tovalidate and pandastatus running
+        Check for jobs with actpandastatus tovalidate and pandastatus running
         Check if the output files in metadata.xml are valid.
         If yes, move to actpandastatus to finished, if not, move pandastatus
         and actpandastatus to failed. 
@@ -200,7 +200,7 @@ class aCTValidator(aCTATLASProcess):
             # nothing to validate
             return
 
-        # check if surls valid, update pandastate accordingly
+        # check if surls valid, update pandastatus accordingly
         for se in surls:
             checkedsurls = self.checkOutputFiles(surls[se])
             for id, result in checkedsurls.items():
@@ -226,7 +226,7 @@ class aCTValidator(aCTATLASProcess):
                 
     def cleanFailedJobs(self):
         '''
-        Check for jobs with actpandastate tovalidate and pandastatus failed
+        Check for jobs with actpandastatus tovalidate and pandastatus failed
         Delete the output files in metadata.xml.
         Move actpandastatus to failed. 
         '''
@@ -270,7 +270,7 @@ class aCTValidator(aCTATLASProcess):
 
     def cleanResubmittingJobs(self):
         '''
-        Check for jobs with actpandastate toresubmit and pandastatus starting
+        Check for jobs with actpandastatus toresubmit and pandastatus starting
         Delete the output files in metadata.xml.
         Move actpandastatus to starting. 
         '''
@@ -299,7 +299,7 @@ class aCTValidator(aCTATLASProcess):
                 if result == self.ok:
                     select = "arcjobid='"+str(id)+"'"
                     # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
-                    desc = {"actpandastatus": "starting", "pandastate": "starting", "arcjobid": None}
+                    desc = {"actpandastatus": "starting", "pandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
