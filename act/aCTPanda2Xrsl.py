@@ -166,7 +166,7 @@ class aCTPanda2Xrsl:
     def setPriority(self):
         
         if self.jobdesc.has_key('currentPriority'):
-            self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'])/100) + ')'
+            self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'][0])/100) + ')'
             
 
     def parse(self):
