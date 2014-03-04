@@ -35,6 +35,29 @@ class aCTValidator(aCTATLASProcess):
         self.retry = 1
         self.failed = 2
         
+    def extractPickleFromSmallFiles(self, arcjobid):
+        """
+        Extracts panda_node_struct.pickle from jobSmallFiles.tgz and stores it under tmp/pickle
+        """
+        aj = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        jobid=aj['JobID']
+        sessionid=jobid[jobid.rfind('/'):]
+        select="arcjobid='"+str(arcjobid)+"'"
+        j = self.dbpanda.getJobs(select, ["pandaid"])[0]
+        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+        try:
+            smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
+            pandapickle = smallfiles.extractfile("panda_node_struct.pickle")
+            try:
+                os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
+            except:
+                pass
+            f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
+            f.write(pandapickle.read())
+            f.close()
+        except Exception,x:
+            self.log.error("failed to extract pickle file for arcjob %s: %s" %(sessionid, x))
+
 
     def extractOutputFilesFromMetadata(self, arcjobid):
         self.log.debug(arcjobid)
@@ -208,6 +231,7 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc)
+                    self.extractPickleFromSmallFiles(id)
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                     self.dbarc.updateArcJobLazy(id, desc)
