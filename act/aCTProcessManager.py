@@ -25,7 +25,8 @@ class aCTProcessManager:
         self.processes_single = {'aCTAutopilot':None, 
                                  'aCTPanda2Arc':None,
                                  'aCTProxyHandler':None,
-                                 'aCTATLASStatus':None
+                                 'aCTATLASStatus':None,
+                                 'aCTValidator':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
