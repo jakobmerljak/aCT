@@ -311,7 +311,7 @@ class aCTValidator(aCTATLASProcess):
                     # means it will be processed by cleanFailedJobs() so don't 
                     # clean the arc job here
                     select = "arcjobid='"+str(id)+"'"
-                    desc = {"actpandastatus": "tovalidate", "pandastate": "failed"}
+                    desc = {"actpandastatus": "tovalidate", "pandastatus": "failed"}
                     self.dbpanda.updateJobsLazy(select, desc)
                 else:
                     # Retry next time
