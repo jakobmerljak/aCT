@@ -371,6 +371,8 @@ class aCTDBArc(aCTDB):
         f=open(proxypath,'w')
         f.write(proxy)
         f.close()
+        # make sure permissions are correct
+        os.chmod(proxypath, 0600)
         
     def insertProxy(self, proxy, dn, expirytime, attribute='', proxytype='local', myproxyid=''):
         '''
