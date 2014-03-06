@@ -48,7 +48,7 @@ class aCTAutopilot(aCTATLASProcess):
         
         # Get DN from configured proxy file
         uc = arc.UserConfig()
-        uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
+        uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
         self.log.info("Running under DN %s" % dn)
@@ -61,7 +61,7 @@ class aCTAutopilot(aCTATLASProcess):
         self.proxymap = {}
         
         actp = aCTProxy.aCTProxy(self.log)
-        for role in self.conf.getList(['voms', 'roles', 'item']):
+        for role in self.arcconf.getList(['voms', 'roles', 'item']):
             attr = '/atlas/Role='+role
             proxyid = actp.getProxyId(dn, attr)
             if not proxyid:

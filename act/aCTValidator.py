@@ -19,7 +19,7 @@ class aCTValidator(aCTATLASProcess):
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
         uc = arc.UserConfig()
-        uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
+        uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
 
@@ -170,6 +170,11 @@ class aCTValidator(aCTATLASProcess):
         Do bulk arc.DataPoint.Stat() with max 100 files per request. The list
         of surls passed here all belong to the same SE.
         '''
+        
+        if self.arcconf.get(['downtime', 'srmdown']) == 'True':
+            self.log.info("SRM down, will validate later")
+            return dict((k['arcjobid'], self.retry) for k in surls)
+        
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []

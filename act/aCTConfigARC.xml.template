@@ -1,11 +1,4 @@
 <config>
-
-<!-->
-<db>
-  <type>sqlite</type>
-  <file>/afs/cern.ch/user/a/atlact1/aCTjobs.sqlite</file>
-</db>
-</!-->
  
 <db>
   <type>mysql</type>
@@ -36,7 +29,7 @@
 
 <logger>
   <level>debug</level>
-  <arclevel>debug</arclevel>
+  <arclevel>info</arclevel>
   <logdir>/data/user/atlact1/act-test1/log</logdir>
   <size>10000000</size>
   <rotate>25</rotate>
@@ -44,9 +37,6 @@
 
 <atlasgiis>
   <timeout>20</timeout>
-  <!-->
-  <item>ldap://pikolit.ijs.si:2135/o=grid/Mds-Vo-name=local</item>
-  </!-->
   <item>ldap://arcgiis.titan.uio.no:2135/o=grid/Mds-Vo-name=Atlas</item>
   <item>ldap://atlasgiis.nbi.dk:2135/o=grid/Mds-Vo-name=Atlas</item>
 </atlasgiis>
@@ -61,54 +51,6 @@
 <clustersreject>
   <item>nosuchcluster</item>
   <item>grid.uio.no</item>
-  <item>vm009.gla.scotgrid.ac.uk</item>
-  <item>arctest-ce.smokerings.nsc.liu.se</item>
-  <item>arc.bccs.uib.no</item>
-  <item>grid03.unige.ch</item>
-  <item>pinela.ijs.si</item>
-  <item>arc-ce01.pdc.kth.se</item>
-  <item>gateway01.dcsc.ku.dk</item>
-  <item>barbera.ijs.si</item>
-  <item>arc01.lcg.cscs.ch</item>
-  <item>arc02.lcg.cscs.ch</item>
-  <item>meja.arnes.si</item>
-  <item>ce03.titan.uio.no</item>
-  <item>square.arctur.si</item>
-  <item>cetest01.grid.hep.ph.ic.ac.uk</item>
-  <item>tintin-g.uppmax.uu.se</item>
-  <item>ce01.grid.uio.no</item>
-  <item>ce03.grid.uio.no</item>
-  <item>Xabisko-ce.hpc2n.umu.se</item>
-  <item>ce01.lhep.unibe.ch</item>
-  <item>Xlcg-lrz-ce2.grid.lrz.de</item>
-  <item>Xce01.titan.uio.no</item>
-  <!-->
-  <item>pikolit.ijs.si</item>
-  <item>jost.arnes.si</item>
-  <item>gateway01.dcsc.ku.dk</item>
-  <item>grid.uio.no</item>
-  <item>arc.bccs.uib.no</item>
-  <item>ce01.titan.uio.no</item>
-  <item>ce03.titan.uio.no</item>
-  <item>jeannedarc.hpc2n.umu.se</item>
-  <item>grad.uppmax.uu.se</item>
-  <item>arc-ce01.pdc.kth.se</item>
-  <item>siri.lunarc.lu.se</item>
-  <item>alarik-grid.lunarc.lu.se</item>
-  <item>arc-ce.smokerings.nsc.liu.se</item>
-  <item>arctest-ce.smokerings.nsc.liu.se</item>
-  <item>ce.lhep.unibe.ch</item>
-  <item>ce01.lhep.unibe.ch</item>
-  <item>nordugrid.unibe.ch</item>
-  <item>grid03.unige.ch</item>
-  <item>arc01.lcg.cscs.ch</item>
-  <item>arc02.lcg.cscs.ch</item>
-  <item>vm009.gla.scotgrid.ac.uk</item>
-  <item>lcg-lrz-ce2.grid.lrz.de</item>
-  <item>cetest01.grid.hep.ph.ic.ac.uk</item>
-  <item>tintin-g.uppmax.uu.se</item>
-  <item>abisko-ce.hpc2n.umu.se</item>
-  </!-->
 </clustersreject>
 
 <jobs>
@@ -123,16 +65,7 @@
   <lfcdown>false</lfcdown>
   <cluster>
     <item>nosuchcluster</item>
-  <item>Xjeannedarc.hpc2n.umu.se</item>
-  <item>Xnordugrid.unibe.ch</item>
-  <item>Xlcg-lrz-ce2.grid.lrz.de</item>
-  <item>Xsquare.arctur.si</item>
-  <item>Xarc-ce.smokerings.nsc.liu.se</item>
-  <item>Xtintin-g.uppmax.uu.se</item>
-  <item>Xjost.arnes.si</item>
-  <item>Xce01.titan.uio.no</item>
-  <item>Xce01.lhep.unibe.ch</item>
-  <item>Xabisko-ce.hpc2n.umu.se</item>
+    <item>Xjeannedarc.hpc2n.umu.se</item>
   </cluster>
 </downtime>
 
@@ -144,42 +77,6 @@
   <cacertdir>/etc/grid-security/certificates</cacertdir>
   <proxystoredir>/data/user/atlact1/act-test1/proxies</proxystoredir>
 </voms>
-
-<lfc>
-  <host>lfc://;transferprotocol=gsiftp@prod-lfc-atlas.cern.ch/</host>
-</lfc>
-
-<srm>
-  <prefix>srm://srm.ndgf.org</prefix>
-  <token>
-    <name>ATLASMCDISK</name>
-    <dir>/atlas/disk/atlasmcdisk</dir>
-  </token>
-  <token>
-    <name>ATLASPRODDISK</name>
-    <dir>/atlas/disk/atlasproddisk</dir>
-  </token>
-  <token>
-    <name>ATLASMCTAPE</name>
-    <dir>/atlas/tape/atlasmctape</dir>
-  </token>
-  <token>
-    <name>ATLASDATADISK</name>
-    <dir>/atlas/disk/atlasdatadisk</dir>
-  </token>
-  <token>
-    <name>ATLASDATADIS</name>
-    <dir>/atlas/disk/atlasdatadisk</dir>
-  </token>
-  <token>
-    <name>ATLASDATADISKdestination</name>
-    <dir>/atlas/disk/atlasdatadisk</dir>
-  </token>
-  <token>
-    <name>ATLASDATATAPE</name>
-    <dir>/atlas/tape/atlasdatatape</dir>
-  </token>
-</srm>
 
 <errors>
   <toresubmit>

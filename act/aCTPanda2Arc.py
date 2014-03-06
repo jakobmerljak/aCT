@@ -1,3 +1,4 @@
+import time
 from urlparse import urlparse
 from aCTATLASProcess import aCTATLASProcess
 from aCTPanda2Xrsl import aCTPanda2Xrsl
@@ -38,6 +39,8 @@ class aCTPanda2Arc(aCTATLASProcess):
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
                 jd['actpandastatus'] = 'starting'
+                # Make sure heartbeat is updated straight away when job goes to starting
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()-int(self.conf.get(['panda', 'heartbeattime'])))
                 self.dbpanda.updateJob(job['pandaid'], jd)
                 
 
