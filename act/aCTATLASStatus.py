@@ -9,6 +9,7 @@ import os
 import shutil
 
 import aCTSignal
+import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
 
@@ -158,7 +159,9 @@ class aCTATLASStatus(aCTATLASProcess):
             # copy from tmp to outd.
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
             shutil.copytree(localdir, outd)
-            
+            # set right permissions
+            aCTUtils.setFilePermissionsRecursive(outd)
+
             # prepare extracts
             nlines=20
             log=""
