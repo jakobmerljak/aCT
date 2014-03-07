@@ -79,7 +79,7 @@ class aCTATLASStatus(aCTATLASProcess):
         - endTime
         """
         # don't get jobs already having actpandastatus tovalidate to avoid race conditions with validator
-        select = "arcjobs.arcstate='done' and  pandajobs.actpandastatus not like 'tovalidate'"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done' and  pandajobs.actpandastatus not like 'tovalidate'"
         select += " limit 100000"
         columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
