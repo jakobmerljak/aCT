@@ -12,11 +12,14 @@ class aCTPanda2Arc(aCTATLASProcess):
         aCTATLASProcess.__init__(self)
         
         self.sites = {}
+        self.setSites()
+        print self.sites
+
+    def setSites(self):
         for sitename in self.conf.getList(["sites","site","name"]):
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-        print self.sites
 
     def createArcJobs(self):
 
@@ -45,6 +48,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 
 
     def process(self):
+        self.setSites()
         self.createArcJobs()
 
 
