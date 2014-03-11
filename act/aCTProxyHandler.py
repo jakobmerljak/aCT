@@ -30,7 +30,7 @@ class aCTProxyHandler(aCTProcess):
 
     def _updateLocalProxies(self):
         """
-        Function to get local proxies to be updated from proxies table.
+        Function to get local proxies to be updated in proxies table.
         """
         select = "proxytype='local'"
         columns = ["dn","attribute","proxypath","id"]
@@ -40,7 +40,7 @@ class aCTProxyHandler(aCTProcess):
         for row in ret_columns:
             dn = row["dn"]
             attribute = row["attribute"]
-            proxypath = row["proxypath"]
+            proxypath = self.conf.get(["voms", "proxypath"])
             proxyid = row["id"]
             self.pm.voms_proxies[(dn, attribute)] = (vo, attribute, proxypath, validHours, proxyid)
         return len(ret_columns)
