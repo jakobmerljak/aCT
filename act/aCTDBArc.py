@@ -198,7 +198,10 @@ class aCTDBArc(aCTDB):
         c.execute("select id from arcjobs where id="+str(id))
         row=c.fetchone()
         if row is None:
-            self.insertArcJob(id)
+            if job is None:
+                self.log.warning("Arc job id %d no longer exists" % id)
+                return
+            self.insertArcJob(job)
         if job:
             c.execute(s,desc.values() + self._job2db(job).values() )
         else:
