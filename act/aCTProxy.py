@@ -11,7 +11,7 @@ class aCTProxy:
 
     def __init__(self, logger, Interval=3600):
         self.interval = Interval
-        self.conf=aCTConfig.aCTConfigATLAS()
+        self.conf=aCTConfig.aCTConfigARC()
         self.db=aCTDBArc(logger, self.conf.get(["db","file"]))
         self.log = logger
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)

@@ -297,6 +297,11 @@ class aCTSubmitter(aCTProcess):
         if not jobstorerun:
             return
 
+        # TODO: downtimes from AGIS
+        if self.conf.get(['downtime', 'srmdown']) == 'True':
+            self.log.info('SRM down, not rerunning')
+            return
+
         for proxyid, jobs in jobstorerun.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
     

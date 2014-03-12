@@ -5,14 +5,14 @@
 
 import aCTConfig
 
-from aCTATLASProcess import aCTATLASProcess
+from aCTProcess import aCTProcess
 from aCTProxy import aCTProxy
 
-class aCTProxyHandler(aCTATLASProcess):
+class aCTProxyHandler(aCTProcess):
     
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.conf=aCTConfig.aCTConfigATLAS()
+        aCTProcess.__init__(self)
+        self.conf=aCTConfig.aCTConfigARC()
         self.pm = aCTProxy(self.log)
         if self._updateLocalProxies() == 0:
             # no local proxies in proxies table yet, better populate it
@@ -25,12 +25,12 @@ class aCTProxyHandler(aCTATLASProcess):
         proxypath = self.conf.get(["voms", "proxypath"])
         # TODO: roles should be taken from AGIIS
         for role in self.conf.getList(["voms", "roles", "item"]):
-            attribute = "/atlas/Role="+role
+            attribute = "/"+vo+"/Role="+role
             self.pm.createVOMSAttribute(vo, attribute, proxypath, validHours)
 
     def _updateLocalProxies(self):
         """
-        Function to get local proxies to be updated from proxies table.
+        Function to get local proxies to be updated in proxies table.
         """
         select = "proxytype='local'"
         columns = ["dn","attribute","proxypath","id"]
@@ -40,7 +40,7 @@ class aCTProxyHandler(aCTATLASProcess):
         for row in ret_columns:
             dn = row["dn"]
             attribute = row["attribute"]
-            proxypath = row["proxypath"]
+            proxypath = self.conf.get(["voms", "proxypath"])
             proxyid = row["id"]
             self.pm.voms_proxies[(dn, attribute)] = (vo, attribute, proxypath, validHours, proxyid)
         return len(ret_columns)

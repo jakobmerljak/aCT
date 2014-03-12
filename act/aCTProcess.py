@@ -69,7 +69,10 @@ class aCTProcess:
                 # sleep
                 aCTUtils.sleep(1)
                 # restart periodically for gsiftp crash
-                ip=int(self.conf.get(['periodicrestart', self.name.lower()]))
+                ip=self.conf.get(['periodicrestart', self.name.lower()])
+                if not ip:
+                    continue
+                ip = int(ip)
                 if time.time()-self.starttime > ip and ip != 0 :
                     self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                     return

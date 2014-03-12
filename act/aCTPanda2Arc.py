@@ -1,3 +1,4 @@
+import time
 from urlparse import urlparse
 from aCTATLASProcess import aCTATLASProcess
 from aCTPanda2Xrsl import aCTPanda2Xrsl
@@ -11,11 +12,14 @@ class aCTPanda2Arc(aCTATLASProcess):
         aCTATLASProcess.__init__(self)
         
         self.sites = {}
+        self.setSites()
+        print self.sites
+
+    def setSites(self):
         for sitename in self.conf.getList(["sites","site","name"]):
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-        print self.sites
 
     def createArcJobs(self):
 
@@ -38,10 +42,13 @@ class aCTPanda2Arc(aCTATLASProcess):
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
                 jd['actpandastatus'] = 'starting'
+                # Make sure heartbeat is updated straight away when job goes to starting
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()-int(self.conf.get(['panda', 'heartbeattime'])))
                 self.dbpanda.updateJob(job['pandaid'], jd)
                 
 
     def process(self):
+        self.setSites()
         self.createArcJobs()
 
 

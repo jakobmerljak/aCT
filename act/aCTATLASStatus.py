@@ -9,6 +9,7 @@ import os
 import shutil
 
 import aCTSignal
+import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
 
@@ -77,10 +78,11 @@ class aCTATLASStatus(aCTATLASProcess):
         - startTime
         - endTime
         """
-        select = "arcstate='done'"
+        # don't get jobs already having actpandastatus tovalidate to avoid race conditions with validator
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done' and  pandajobs.actpandastatus not like 'tovalidate'"
         select += " limit 100000"
-
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=["id", "UsedTotalWallTime", "EndTime"])
+        columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime"]
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
         
         if len(jobstoupdate) == 0:
             return
@@ -140,14 +142,16 @@ class aCTATLASStatus(aCTATLASProcess):
             cluster=aj['cluster']
             jobid=aj['JobID']
             sessionid=jobid[jobid.rfind('/'):]
-            if cluster in self.conf.getList(['downtime','cluster','item']):
-                continue
-
+            date = time.strftime('%Y%m%d')
             try:
-                os.mkdir(self.conf.get(['joblog','dir']) + "/" + cluster )
+                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
             except:
                 pass
-            outd = self.conf.get(['joblog','dir']) + "/" + cluster + "/" + sessionid
+            try:
+                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
+            except:
+                pass
+            outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + "/" + sessionid
             try:
                 shutil.rmtree(outd)
             except:
@@ -155,7 +159,9 @@ class aCTATLASStatus(aCTATLASProcess):
             # copy from tmp to outd.
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
             shutil.copytree(localdir, outd)
-            
+            # set right permissions
+            aCTUtils.setFilePermissionsRecursive(outd)
+
             # prepare extracts
             nlines=20
             log=""
@@ -216,7 +222,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate['siteName']='ARC'
             pupdate['computingElement']=aj['cluster']
             pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
-            pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+cluster+"/"+sessionid+"|Unknown|Unknown"
+            pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid+"|Unknown|Unknown|Unknown|Unknown"
             pupdate['node']=aj['ExecutionNode']
             pupdate['pilotLog']=log
             pupdate['cpuConsumptionTime']=aj['UsedTotalCPUTime']
@@ -278,12 +284,16 @@ class aCTATLASStatus(aCTATLASProcess):
 
         if len(jobstoupdate) == 0:
             return
-        else:
-            self.log.debug("Found %d failed jobs", len(jobstoupdate))
         
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
+        if len(failedjobs) != 0:
+            self.log.debug("Found %d failed jobs", len(jobstoupdate))
         lostjobs = [job for job in jobstoupdate if job['arcstate']=='lost']
+        if len(lostjobs) != 0:
+            self.log.debug("Found %d lost jobs", len(jobstoupdate))
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
+        if len(cancelledjobs) != 0:
+            self.log.debug("Found %d cancelled jobs", len(jobstoupdate))
                 
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted

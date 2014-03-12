@@ -1,10 +1,13 @@
 from aCTATLASProcess import aCTATLASProcess
 from aCTProxy import aCTProxy
+import aCTUtils
 import os
+import shutil
+import time
 import tarfile
-import re
 import arc
 from xml.dom import minidom
+import pickle
 
 class aCTValidator(aCTATLASProcess):
     '''
@@ -17,7 +20,7 @@ class aCTValidator(aCTATLASProcess):
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
         uc = arc.UserConfig()
-        uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
+        uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
 
@@ -35,39 +38,96 @@ class aCTValidator(aCTATLASProcess):
         self.retry = 1
         self.failed = 2
         
-    def extractPickleFromSmallFiles(self, arcjobid):
-        """
-        Extracts panda_node_struct.pickle from jobSmallFiles.tgz and stores it under tmp/pickle
-        """
-        aj = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+    def _extractFromSmallFiles(self, aj, filename):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/'):]
+        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+        smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
+        return smallfiles.extractfile(filename)
+        
+    
+    def copyFinishedFiles(self, arcjobid):
+        """
+        - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
+        - extract metadata-surl.xml and update pickle. store xml under tmp/xml
+        - copy .job.log file to jobs/date/cluster/jobid
+        - copy gmlog dir to jobs/date/cluster/jobid
+        """
+        aj = self.dbarc.getArcJobInfo(arcjobid)
+        jobid=aj['JobID']
+        sessionid=jobid[jobid.rfind('/'):]
+        date = time.strftime('%Y%m%d')
         select="arcjobid='"+str(arcjobid)+"'"
         j = self.dbpanda.getJobs(select, ["pandaid"])[0]
-        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
         try:
-            smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
-            pandapickle = smallfiles.extractfile("panda_node_struct.pickle")
-            try:
-                os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
-            except:
-                pass
-            f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
-            f.write(pandapickle.read())
-            f.close()
+            pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
+            metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
-            self.log.error("failed to extract pickle file for arcjob %s: %s" %(sessionid, x))
+            self.log.error("failed to extract smallFiles for arcjob %s: %s" %(sessionid, x))
 
+        # update pickle and dump to tmp/pickle
+        pupdate = pickle.load(pandapickle)
+        pupdate['xml'] = str(metadata.read())
+        pupdate['siteName']='ARC'
+        pupdate['computingElement']=aj['cluster']
+        pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
+        pupdate['startTime'] = aj['StartTime']
+        pupdate['endTime'] = aj['EndTime']
+        t=pupdate['pilotID'].split("|")
+        logurl=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['cluster']+sessionid
+        if len(t) > 4:
+            pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
+        else:
+            pupdate['pilotID']=logurl+"|Unknown|Unknown|Unknown|Unknown"
+        pupdate['node']=aj['ExecutionNode']
+
+        try:
+            os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
+        except:
+            pass
+        f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
+        pickle.dump(pupdate, f)
+        f.close()
+        try:
+            os.mkdir(self.conf.get(['tmp','dir'])+"/xml")
+        except:
+            pass
+        f=open(self.conf.get(['tmp','dir'])+"/xml/"+str(j['pandaid'])+".xml","w")
+        f.write(pupdate['xml'])
+        f.close()
+
+        # copy files to joblog dir
+        cluster=aj['cluster']
+        try:
+            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
+        except:
+            pass
+        try:
+            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
+        except:
+            pass
+        outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + sessionid
+        try:
+            os.mkdir(outd)
+        except:
+            pass
+        # copy from tmp to outd.
+        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+        gmlogdir = os.path.join(localdir,"gmlog")
+        shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
+        pilotlog = [f for f in os.listdir(localdir) if f.endswith('.job.log')][0]
+        shutil.copy(os.path.join(localdir,pilotlog), 
+                    os.path.join(outd,pilotlog.replace('.job.log','.out')))
+        # set right permissions
+        aCTUtils.setFilePermissionsRecursive(outd)
+        # todo: unlink localdir
 
     def extractOutputFilesFromMetadata(self, arcjobid):
-        self.log.debug(arcjobid)
-        aj = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID"])
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/'):]
-        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
         try:
-            smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
-            metadata = smallfiles.extractfile("metadata-surl.xml")
+            metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
             self.log.error("failed to extract metadata file for arcjob %s: %s" %(sessionid, x))
             return []
@@ -113,6 +173,11 @@ class aCTValidator(aCTATLASProcess):
         Do bulk arc.DataPoint.Stat() with max 100 files per request. The list
         of surls passed here all belong to the same SE.
         '''
+        
+        if self.arcconf.get(['downtime', 'srmdown']) == 'True':
+            self.log.info("SRM down, will validate later")
+            return dict((k['arcjobid'], self.retry) for k in surls)
+        
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []
@@ -231,7 +296,7 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc)
-                    self.extractPickleFromSmallFiles(id)
+                    self.copyFinishedFiles(id)
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                     self.dbarc.updateArcJobLazy(id, desc)
@@ -245,7 +310,7 @@ class aCTValidator(aCTATLASProcess):
                     pass
                 
         self.dbpanda.Commit()
-        self.dbarc.Commit()            
+        self.dbarc.Commit()
                 
                 
     def cleanFailedJobs(self):
