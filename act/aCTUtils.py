@@ -11,6 +11,8 @@ def setFilePermissionsRecursive(path, dirmod=0755, filemod=0644):
             os.chmod(os.path.join(root,d), dirmod)
         for f in files:
             os.chmod(os.path.join(root,f), filemod)
+    # set permissions for the path itself as well
+    os.chmod(path, dirmod)
             
 def RunThreadsSplit(plist,nthreads=1):
     it=0
