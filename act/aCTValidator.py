@@ -1,5 +1,6 @@
 from aCTATLASProcess import aCTATLASProcess
 from aCTProxy import aCTProxy
+import aCTUtils
 import os
 import shutil
 import time
@@ -117,6 +118,8 @@ class aCTValidator(aCTATLASProcess):
         pilotlog = [f for f in os.listdir(localdir) if f.endswith('.job.log')][0]
         shutil.copy(os.path.join(localdir,pilotlog), 
                     os.path.join(outd,pilotlog.replace('.job.log','.out')))
+        # set right permissions
+        aCTUtils.setFilePermissionsRecursive(outd)
         # todo: unlink localdir
 
     def extractOutputFilesFromMetadata(self, arcjobid):

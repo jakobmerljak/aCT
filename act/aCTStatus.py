@@ -46,6 +46,8 @@ class aCTStatus(aCTProcess):
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
             self.log.info("Will rerun job %s", failedjob.JobID)
+            # Reset arc job state so that next time new state will be picked up
+            failedjob.State = arc.JobState('Undefined')
             return "torerun"
         
         newstate = "failed"
@@ -60,6 +62,7 @@ class aCTStatus(aCTProcess):
                 self.log.info("Job %s out of retries", failedjob.JobID)
             else:
                 self.log.info("Will resubmit job %s, %i attempts left", failedjob.JobID, attemptsleft)
+                failedjob.State = arc.JobState('Undefined')
                 newstate = "toresubmit"
         
         else:
