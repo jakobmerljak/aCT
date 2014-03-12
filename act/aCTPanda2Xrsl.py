@@ -160,6 +160,9 @@ class aCTPanda2Xrsl:
 
         x  = '("jobSmallFiles.tgz" "")'
         x += '("@output.list" "")'
+        # tmp hack until arc 4.1 is everywhere, to avoid "Error reading user
+        # generated output file list"
+        x += '("output.list" "")' 
         self.xrsl['outputs'] = "(outputfiles = %s )" % x
 
 
