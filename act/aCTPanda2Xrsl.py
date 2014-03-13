@@ -3,11 +3,13 @@ import cgi
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,schedconfig):
+    def __init__(self,pandajob,schedconfig,corecount=1):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
-        self.ncores = 0
+        # self.ncores = 0
+        # use schedconfig/xml value for now
+        self.ncores = corecount
 
         self.defaults={}
         self.defaults['memory'] = 2000

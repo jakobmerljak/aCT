@@ -20,6 +20,7 @@ class aCTPanda2Arc(aCTATLASProcess):
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
+            self.sites[sitename]['corecount'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0]
 
     def createArcJobs(self):
 
@@ -27,7 +28,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
         for job in jobs:
             print job['pandajob']
-            parser = aCTPanda2Xrsl(job['pandajob'], self.sites[job['siteName']]['schedconfig'])
+            parser = aCTPanda2Xrsl(job['pandajob'], self.sites[job['siteName']]['schedconfig'], self.sites[job['siteName']]['corecount'] )
             parser.parse()
             xrsl = parser.getXrsl()
             if xrsl is not None:
