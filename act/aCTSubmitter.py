@@ -235,8 +235,14 @@ class aCTSubmitter(aCTProcess):
             for (id, job) in jobs.items():
                 if job.JobID in notcancelled:
                     if job.State == arc.JobState.UNDEFINED:
-                        # Job has not yet reached info system
-                        self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+                        # If longer than one hour since submission assume job never made it
+                        if job.StartTime + arc.Period(3600) < arc.Time():
+                            self.log.warning("Assuming job %s is lost and marking as cancelled", job.JobID)
+                            self.db.updateArcJob(id, {"arcstate": "cancelled",
+                                                      "tarcstate": self.db.getTimeStamp()})
+                        else:
+                            # Job has not yet reached info system
+                            self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
                     else:
                         self.log.error("Could not cancel job %s", job.JobID)
                         # Just to mark as cancelled so it can be cleaned
