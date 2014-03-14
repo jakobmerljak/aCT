@@ -20,13 +20,11 @@ class aCTPanda2Xrsl:
 
     def getNCores(self):
 
-        if self.ncores > 0:
-            return self.ncores
-
-        if self.jobdesc.has_key('CoreCount'):
-            self.ncores = int(self.jobdesc['CoreCount'][0])
-        else:
-            self.ncores=1        
+        if self.ncores == 0:
+            if self.jobdesc.has_key('CoreCount'):
+                self.ncores = int(self.jobdesc['CoreCount'][0])
+            else:
+                self.ncores=1        
 
         self.xrsl['count']='(count=%d)' % self.ncores
 
