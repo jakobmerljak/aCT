@@ -287,13 +287,13 @@ class aCTATLASStatus(aCTATLASProcess):
         
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
         if len(failedjobs) != 0:
-            self.log.debug("Found %d failed jobs", len(jobstoupdate))
+            self.log.debug("Found %d failed jobs", len(failedjobs))
         lostjobs = [job for job in jobstoupdate if job['arcstate']=='lost']
         if len(lostjobs) != 0:
-            self.log.debug("Found %d lost jobs", len(jobstoupdate))
+            self.log.debug("Found %d lost jobs", len(lostjobs))
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
         if len(cancelledjobs) != 0:
-            self.log.debug("Found %d cancelled jobs", len(jobstoupdate))
+            self.log.debug("Found %d cancelled jobs", len(cancelledjobs))
                 
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
