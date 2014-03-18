@@ -14,7 +14,7 @@ LEVELS = {'debug': logging.DEBUG,
 
 class aCTLogger:
 
-    def __init__(self,name):
+    def __init__(self,name,arclog=True):
         self.conf=aCTConfig.aCTConfigARC()
         self.logger=logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
@@ -34,13 +34,14 @@ class aCTLogger:
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
 
-        self.arclogfile = arc.LogFile(str(logfile))
-        self.arclogfile.setFormat(arc.LongFormat)
-        arc.Logger_getRootLogger().addDestination(self.arclogfile)
-        if self.conf.get(["logger", "arclevel"]):
-            arc.Logger_getRootLogger().setThreshold(arc.string_to_level(str(self.conf.get(["logger", "arclevel"])).upper()))
-        else:
-            arc.Logger_getRootLogger().setThreshold(arc.ERROR)
+        if arclog:
+            self.arclogfile = arc.LogFile(str(logfile))
+            self.arclogfile.setFormat(arc.LongFormat)
+            arc.Logger_getRootLogger().addDestination(self.arclogfile)
+            if self.conf.get(["logger", "arclevel"]):
+                arc.Logger_getRootLogger().setThreshold(arc.string_to_level(str(self.conf.get(["logger", "arclevel"])).upper()))
+            else:
+                arc.Logger_getRootLogger().setThreshold(arc.ERROR)
 
     def log(self,level,message,*args, **kwargs):
         lvl = LEVELS.get(level, logging.NOTSET)

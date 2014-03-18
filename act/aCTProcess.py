@@ -28,7 +28,7 @@ class aCTProcess:
         # logger
         self.logger=aCTLogger.aCTLogger(self.name)
         self.log=self.logger()
-        self.criticallogger = aCTLogger.aCTLogger('aCTCritical')
+        self.criticallogger = aCTLogger.aCTLogger('aCTCritical', False)
         self.criticallog = self.criticallogger()
 
         # config
