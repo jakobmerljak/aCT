@@ -20,7 +20,10 @@ class aCTPanda2Arc(aCTATLASProcess):
             self.sites[sitename] = {}
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-            self.sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
+            try:
+                self.sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
+            except:
+                self.sites[sitename]['corecount'] = 1
 
     def createArcJobs(self):
 

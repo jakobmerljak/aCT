@@ -89,6 +89,10 @@ class aCTAutopilot(aCTATLASProcess):
             self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
             self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             self.sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+            try:
+                self.sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
+            except:
+                self.sites[sitename]['maxjobs'] = 1000000
         print self.sites
 
 
@@ -197,10 +201,18 @@ class aCTAutopilot(aCTATLASProcess):
         for site, attrs in self.sites.iteritems():        
 
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
-            nall = self.dbpanda.getNJobs("siteName='%s'" % site)
+            nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' and actpandastatus!='cancelled'" % site)
             self.log.debug("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
+                continue
+            
+            if self.sites[site]['maxjobs'] == 0:
+                self.log.info("Site %s: accepting new jobs disabled" % site)
+                continue
+            
+            if nall >= self.sites[site]['maxjobs']:
+                self.log.info("Site %s: at or above max job limit of %d" % (site, self.sites[site]['maxjobs']))
                 continue
 
             nthreads=int(self.conf.get(['panda','threads']))

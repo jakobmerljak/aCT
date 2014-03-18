@@ -38,24 +38,22 @@
   <sites>
 
     <site>
+      <!-- Panda Resource passed to panda when asking for jobs -->
       <name>LRZ-LMU_C2PAP</name>
+      <!-- Schedconfig site, for ddm endpoint etc -->
       <schedconfig>LRZ-LMU_C2PAP</schedconfig>
+      <!-- List of ARC endpoints for this site -->
       <endpoints>
         <item>gsiftp://pikolit.ijs.si:2811</item>
       </endpoints>
+      <!-- Production or analysis queue -->
       <type>production</type>
+      <!-- Maximum jobs in aCT for this site -->
+      <maxjobs>10</maxjobs>
+      <!-- Number of cores for each job in this queue (eg 8 for mcore) -->
+      <corecount>1</corecount>
     </site>
 
-    <site>
-      <name>XXXARC</name>
-      <schedconfig>ARC-pikolit.ijs.si</schedconfig>
-      <endpoints>
-        <item>gsiftp://jost.arnes.si:2811</item>
-        <item>gsiftp://c2papdata2.lrz.de:2811</item>
-        <item>gsiftp://pikolit.ijs.si:2811</item>
-      </endpoints>
-      <type>production</type>
-    </site>
   </sites>
 
 </panda>
