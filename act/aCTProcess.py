@@ -28,6 +28,8 @@ class aCTProcess:
         # logger
         self.logger=aCTLogger.aCTLogger(self.name)
         self.log=self.logger()
+        self.criticallogger = aCTLogger.aCTLogger('aCTCritical')
+        self.criticallog = self.criticallogger()
 
         # config
         self.conf=aCTConfig.aCTConfigARC()
@@ -82,6 +84,7 @@ class aCTProcess:
             self.log.critical("*** Unexpected exception! ***")
             self.log.critical(traceback.format_exc())
             self.log.critical("*** Process exiting ***")
+            self.criticallog.critical(traceback.format_exc())
 
     def finish(self):
         '''
