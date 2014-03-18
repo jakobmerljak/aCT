@@ -124,13 +124,17 @@ class aCTValidator(aCTATLASProcess):
 
     def extractOutputFilesFromMetadata(self, arcjobid):
         aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID"])
+        if not aj or 'JobID' not in aj:
+            self.log.error("failed to find arcjobid %s in database" % arcjobid)
+            return {}
+
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/'):]
         try:
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
             self.log.error("failed to extract metadata file for arcjob %s: %s" %(sessionid, x))
-            return []
+            return {}
         outputxml = minidom.parse(metadata)
         files = outputxml.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
 

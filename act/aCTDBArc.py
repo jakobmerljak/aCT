@@ -232,6 +232,8 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE id="+str(id))
         row=c.fetchone()
+        if not row:
+            return {}
         # mysql SELECT returns list, we want dict
         if not isinstance(row,dict):
             row=dict(zip([col[0] for col in c.description], row))
