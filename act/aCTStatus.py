@@ -128,10 +128,13 @@ class aCTStatus(aCTProcess):
                 
                 # state changed, update whole Job object
                 arcstate = 'submitted'
-                if updatedjob.State == arc.JobState.FINISHED and updatedjob.ExitCode == 0:
+                if updatedjob.State == arc.JobState.FINISHED:
+                    if updatedjob.ExitCode == -1:
+                        # Missing exit code, but assume success
+                        self.log.warn("Job %s FINISHED but has missing exit code, setting to zero" % updatedjob.JobID)
+                        updatedjob.ExitCode = 0
                     arcstate = 'finished'
-                elif updatedjob.State == arc.JobState.FINISHED or \
-                     updatedjob.State == arc.JobState.FAILED:
+                elif updatedjob.State == arc.JobState.FAILED:
                     arcstate = self.processJobErrors(id, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
                     arcstate = 'cancelled'
