@@ -34,7 +34,10 @@ class aCTATLASStatus(aCTATLASProcess):
     def getStartTime(self, endtime, walltime):
         """
         Get starttime from endtime-walltime where endtime is datetime.datetime and walltime is in seconds
+        If endtime is none then use current time
         """
+        if not endtime:
+            return datetime.datetime.utcnow() - datetime.timedelta(0, walltime)
         return endtime-datetime.timedelta(0, walltime)
            
     def updateRunningJobs(self):
@@ -158,7 +161,15 @@ class aCTATLASStatus(aCTATLASProcess):
                 pass
             # copy from tmp to outd.
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
-            shutil.copytree(localdir, outd)
+            # Sometimes fetcher failes to get output, so just make empty dir
+            try:
+                shutil.copytree(localdir, outd)
+            except OSError, e:
+                self.log.warn("Failed to copy job output for %s: %s" % (jobid, str(e)))
+                try:
+                    os.makedirs(outd, 0755)
+                except OSError, e:
+                    self.log.warn("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -257,14 +268,15 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate['endTime']=aj['EndTime']
             # save the pickle file to be used by aCTMain panda update
             select="arcjobid='"+str(aj["id"])+"'"
-            j = self.dbpanda.getJobs(select, ["pandaid"])[0]
-            try:
-                os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
-            except:
-                pass
-            f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
-            pickle.dump(pupdate,f)
-            f.close()
+            j = self.dbpanda.getJobs(select, ["pandaid"])
+            if j: # panda job could be missing for whatever reason
+                try:
+                    os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
+                except:
+                    pass
+                f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
+                pickle.dump(pupdate,f)
+                f.close()
 
     
     def updateFailedJobs(self):
