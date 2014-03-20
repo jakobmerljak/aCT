@@ -112,7 +112,7 @@ class aCTATLASStatus(aCTATLASProcess):
                     resubmit=True
             if resubmit:
                 self.log.info("Resubmitting %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
-                select = "arcjobid='"+str(aj["id"])
+                select = "arcjobid='"+str(aj["id"])+"'"
                 jd={}
                 jd['arcjobid'] = None
                 jd['pandastatus'] = 'starting'
