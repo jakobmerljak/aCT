@@ -42,7 +42,7 @@
       <name>LRZ-LMU_C2PAP</name>
       <!-- Schedconfig site, for ddm endpoint etc -->
       <schedconfig>LRZ-LMU_C2PAP</schedconfig>
-      <!-- List of ARC endpoints for this site -->
+      <!-- List of ARC endpoints for this site: host[/queue] -->
       <endpoints>
         <item>gsiftp://pikolit.ijs.si:2811</item>
       </endpoints>

@@ -39,7 +39,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 endpoints = self.sites[job['siteName']]['endpoints']
                 cl = []
                 for e in endpoints:
-                    cl.append(urlparse(e).hostname)
+                    cl.append(urlparse(e).hostname + '/' + urlparse(e).path)
                 cls = ",".join(cl)
                 self.log.info("Inserting job %i with clusterlist %s" % (job['id'], cls))
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls, proxyid=job['proxyid'])

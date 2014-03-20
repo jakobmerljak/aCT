@@ -68,7 +68,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["pandastatus"] = "running"
             desc["actpandastatus"] = "running"
             desc["node"] = aj["ExecutionNode"]
-            desc["computingElement"] = aj["cluster"]
+            desc["computingElement"] = aj["cluster"].split('/')[0]
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
@@ -142,7 +142,7 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in arcjobs:
             xml=""
             log=""
-            cluster=aj['cluster']
+            cluster=aj['cluster'].split('/')[0]
             jobid=aj['JobID']
             sessionid=jobid[jobid.rfind('/'):]
             date = time.strftime('%Y%m%d')
@@ -231,7 +231,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate={}
             pupdate['xml']=str(xml)
             pupdate['siteName']='ARC'
-            pupdate['computingElement']=aj['cluster']
+            pupdate['computingElement']=aj['cluster'].split('/')[0]
             pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
             pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid+"|Unknown|Unknown|Unknown|Unknown"
             pupdate['node']=aj['ExecutionNode']

@@ -66,15 +66,16 @@ class aCTValidator(aCTATLASProcess):
             self.log.error("failed to extract smallFiles for arcjob %s: %s" %(sessionid, x))
 
         # update pickle and dump to tmp/pickle
+        cluster=aj['cluster'].split('/')[0]
         pupdate = pickle.load(pandapickle)
         pupdate['xml'] = str(metadata.read())
         pupdate['siteName']='ARC'
-        pupdate['computingElement']=aj['cluster']
+        pupdate['computingElement']=cluster
         pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
         pupdate['startTime'] = aj['StartTime']
         pupdate['endTime'] = aj['EndTime']
         t=pupdate['pilotID'].split("|")
-        logurl=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['cluster']+sessionid
+        logurl=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid
         if len(t) > 4:
             pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
@@ -97,7 +98,6 @@ class aCTValidator(aCTATLASProcess):
         f.close()
 
         # copy files to joblog dir
-        cluster=aj['cluster']
         try:
             os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
         except:
