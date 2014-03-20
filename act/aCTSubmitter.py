@@ -85,7 +85,7 @@ class aCTSubmitter(aCTProcess):
                 jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+300)
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("job id %s", t.job.JobID)
-                jd['cluster']=urlparse(t.job.JobID).hostname
+                jd['cluster']=self.cluster
                 self.db.updateArcJobLazy(t.id,jd,t.job)
             if errfl:
                 break
@@ -101,6 +101,12 @@ class aCTSubmitter(aCTProcess):
         # check for stopsubmission flag
         if self.conf.get(['downtime','stopsubmission']) == "true":
             return 0
+
+        # Get cluster host and queue: cluster/queue
+        clusterhost = self.cluster
+        clusterqueue = ''
+        if self.cluster.find('/') != -1:
+            (clusterhost, clusterqueue) = self.cluster.split('/', 1)
 
         if self.cluster:
             # Lock row for update in case multiple clusters are specified
@@ -123,7 +129,7 @@ class aCTSubmitter(aCTProcess):
         # Query infosys - either local or index
         if self.cluster:
             # Endpoint and type will come from cluster table eventually
-            aris = 'ldap://'+self.cluster+'/mds-vo-name=local,o=grid'
+            aris = 'ldap://'+clusterhost+'/mds-vo-name=local,o=grid'
             infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
                           
         else:
@@ -148,33 +154,43 @@ class aCTSubmitter(aCTProcess):
             if not target.ComputingService.ID:
                 self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
                 continue
-            clustername = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
-            if self.cluster and clustername != self.cluster:
+            # Check for matching host and queue
+            targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
+            targetqueue = target.ComputingShare.Name
+            if clusterhost and targethost != clusterhost:
+                self.log.debug('Rejecting target host %s as it does not match %s' % (targethost, clusterhost))
                 continue
-            s = self.db.getSchedconfig(clustername)
+            if clusterqueue and targetqueue != clusterqueue:
+                self.log.debug('Rejecting target queue %s as it does not match %s' % (targetqueue, clusterqueue))
+                continue
+            s = self.db.getSchedconfig(targethost)
             status = 'online'
             if s is not None:
                 status=s['status']
-            if clustername in self.conf.getList(['queuesreject','item']):
-                pass
-            elif clustername in self.conf.getList(['clustersreject','item']):
-                pass
+            if targetqueue in self.conf.getList(['queuesreject','item']):
+                self.log.debug('Rejecting target queue %s in queuesreject list' % targetqueue)
+                continue
+            elif targethost in self.conf.getList(['clustersreject','item']):
+                self.log.debug('Rejecting target host %s in clustersreject list' % targethost)
+                continue
             elif status == "XXXoffline":
-                pass
+                continue
             else:
                 # tmp hack
                 target.ComputingShare.LocalWaitingJobs = 0
                 target.ComputingShare.PreLRMSWaitingJobs = 0
                 target.ExecutionEnvironment.CPUClockSpeed = 2000
-                qjobs=self.db.getArcJobsInfo("cluster='" +str(clustername)+ "' and  arcstate='submitted'", ['id'])
-                rjobs=self.db.getArcJobsInfo("cluster='" +str(clustername)+ "' and  arcstate='running'", ['id'])
+                qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted'", ['id'])
+                rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running'", ['id'])
 
                 # Set number of submitted jobs to running * 0.15 + 20
                 jlimit = len(rjobs)*0.15 + 20
                 target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
                 if len(qjobs) < jlimit:
                     queuelist.append(target)
-                    self.log.debug("Adding target %s:%s" % (clustername, target.ComputingShare.Name))
+                    self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
+                else:
+                    self.log.debug("%s/%s already at limit of submitted jobs" % (targethost, targetqueue))
 
         # check if any queues are available, if not leave and try again next time
         if not queuelist:
