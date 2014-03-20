@@ -134,7 +134,7 @@ class aCTATLASStatus(aCTATLASProcess):
         process jobs failed for other reasons than athena (log_extracts was not created by pilot)
         """
         if len(arcjobs):
-            self.log.info("%d" % len(arcjobs))
+            self.log.info("processing %d failed jobs" % len(arcjobs))
         else:
             return
 
