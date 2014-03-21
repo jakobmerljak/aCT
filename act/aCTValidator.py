@@ -230,7 +230,9 @@ class aCTValidator(aCTATLASProcess):
                             result[surllist[i]['arcjobid']] = self.failed
                         else:
                             self.log.info("File %s validated" % datapointlist[i].GetURL().str())
-                            result[surllist[i]['arcjobid']] = self.ok
+                            # don't overwrite previous failed file for this job
+                            if surllist[i]['arcjobid'] not in result:
+                                result[surllist[i]['arcjobid']] = self.ok
                             
             # Clear lists and go to next round
             datapointlist = arc.DataPointList()
