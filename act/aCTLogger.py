@@ -14,10 +14,10 @@ LEVELS = {'debug': logging.DEBUG,
 
 class aCTLogger:
 
-    def __init__(self,name,arclog=True):
+    def __init__(self,name,cluster='',arclog=True):
         self.conf=aCTConfig.aCTConfigARC()
-        self.logger=logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger=logging.LoggerAdapter(logging.getLogger(name), {'cluster': cluster})
+        self.logger.logger.setLevel(logging.DEBUG)
         level = LEVELS.get(self.conf.get(["logger","level"]), logging.NOTSET)
         try:
             os.makedirs(self.conf.get(["logger", "logdir"]), 0755)
@@ -25,14 +25,20 @@ class aCTLogger:
             if e.errno != errno.EEXIST:
                 raise e
         logfile = os.path.join(self.conf.get(["logger","logdir"]), name + '.log')
-        self.logger.setLevel(level)
+        self.logger.logger.setLevel(level)
         self.handler=logging.handlers.RotatingFileHandler(
             logfile,
             maxBytes=int(self.conf.get(["logger","size"])),
             backupCount=int(self.conf.get(["logger","rotate"])))
-        self.formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(filename)s:%(lineno)d:%(funcName)s - %(message)s")
+        logger = logging.LoggerAdapter(logging.getLogger(__name__), {'MYVAR': 'Jabberwocky'})
+
+        if cluster:
+            self.formatter = logging.Formatter("[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] [%(cluster)s] - %(message)s")
+        else:
+            self.formatter = logging.Formatter("[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s")
+
         self.handler.setFormatter(self.formatter)
-        self.logger.addHandler(self.handler)
+        self.logger.logger.addHandler(self.handler)
 
         if arclog:
             self.arclogfile = arc.LogFile(str(logfile))

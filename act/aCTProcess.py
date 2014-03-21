@@ -26,9 +26,9 @@ class aCTProcess:
             self.cluster = sys.argv[1]
         
         # logger
-        self.logger=aCTLogger.aCTLogger(self.name)
+        self.logger=aCTLogger.aCTLogger(self.name, cluster=self.cluster)
         self.log=self.logger()
-        self.criticallogger = aCTLogger.aCTLogger('aCTCritical', False)
+        self.criticallogger = aCTLogger.aCTLogger('aCTCritical', cluster=self.cluster, arclog=False)
         self.criticallog = self.criticallogger()
 
         # config
