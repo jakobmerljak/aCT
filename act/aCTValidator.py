@@ -135,6 +135,7 @@ class aCTValidator(aCTATLASProcess):
         except Exception,x:
             self.log.error("failed to extract metadata file for arcjob %s: %s" %(sessionid, x))
             return {}
+
         outputxml = minidom.parse(metadata)
         files = outputxml.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
 
@@ -288,8 +289,16 @@ class aCTValidator(aCTATLASProcess):
 
         surls = {}
         for job in jobstoupdate:
-            surls.update(self.extractOutputFilesFromMetadata(job["arcjobid"]))
-
+            jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
+            if not jobsurls:
+                # Problem extracting files, resubmit the job
+                self.log.error("Cannot validate output of arc job %s, will resubmit" % job["arcjobid"])
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
+                self.dbpanda.updateJobs(select, desc)
+            else:
+                surls.update(jobsurls)
+                
         if not surls:
             # nothing to validate
             return
@@ -338,7 +347,18 @@ class aCTValidator(aCTATLASProcess):
 
         surls = {}
         for job in jobstoupdate:
-            surls.update(self.extractOutputFilesFromMetadata(job["arcjobid"]))
+            jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
+            if not jobsurls:
+                # Problem extracting files, just continue to failed
+                self.log.error("Cannot remove output of arc job %s" % job["arcjobid"])
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
+                self.dbpanda.updateJobs(select, desc)
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJob(job["arcjobid"], desc)
+            else:
+                surls.update(jobsurls)
 
         if not surls:
             # nothing to clean
@@ -382,7 +402,15 @@ class aCTValidator(aCTATLASProcess):
 
         surls = {}
         for job in jobstoupdate:
-            surls.update(self.extractOutputFilesFromMetadata(job["arcjobid"]))
+            jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
+            if not jobsurls:
+                # Can't clean outputs so mark as failed (see more detail below)
+                self.log.error("Cannot remove output of arc job %s" % job["arcjobid"])
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "tovalidate", "pandastatus": "failed"}
+                self.dbpanda.updateJobs(select, desc)
+            else:
+                surls.update(jobsurls)
 
         if not surls:
             # nothing to clean
