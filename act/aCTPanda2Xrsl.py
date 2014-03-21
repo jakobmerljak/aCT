@@ -28,6 +28,10 @@ class aCTPanda2Xrsl:
 
         self.xrsl['count']='(count=%d)' % self.ncores
 
+        # force single-node jobs for now
+        if self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+
         return self.ncores
 
 
