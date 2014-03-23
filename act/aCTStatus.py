@@ -131,7 +131,7 @@ class aCTStatus(aCTProcess):
                 if updatedjob.State == arc.JobState.FINISHED:
                     if updatedjob.ExitCode == -1:
                         # Missing exit code, but assume success
-                        self.log.warn("Job %s FINISHED but has missing exit code, setting to zero" % updatedjob.JobID)
+                        self.log.warning("Job %s FINISHED but has missing exit code, setting to zero" % updatedjob.JobID)
                         updatedjob.ExitCode = 0
                     arcstate = 'finished'
                 elif updatedjob.State == arc.JobState.FAILED:
