@@ -123,10 +123,14 @@ class aCTATLASStatus(aCTATLASProcess):
                 jd['actpandastatus'] = 'toresubmit'
                 self.dbpanda.updateJobsLazy(select,jd)
                 resubmitting=True
+                # Clean up arcjob, no longer of interest
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJobLazy(aj["id"], desc)
             else:
                 failedjobs += [aj]
         if resubmitting:
             self.dbpanda.Commit()
+            self.dbarc.Commit()
         return failedjobs
 
     def processFailed(self, arcjobs):
