@@ -282,7 +282,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='running' and actpandastatus='tovalidate') limit 100000"
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
         columns = ["arcjobid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -323,7 +323,7 @@ class aCTValidator(aCTATLASProcess):
                 elif result == self.failed:
                     select = "arcjobid='"+str(id)+"'"
                     # output file failed, set to toresubmit to clean up output and resubmit
-                    desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
+                    desc = {"actpandastatus": "toresubmit"}
                     self.dbpanda.updateJobsLazy(select, desc)
                 else:
                     # Retry next time
@@ -335,12 +335,12 @@ class aCTValidator(aCTATLASProcess):
                 
     def cleanFailedJobs(self):
         '''
-        Check for jobs with actpandastatus tovalidate and pandastatus failed
+        Check for jobs with actpandastatus toclean and pandastatus transferring.
         Delete the output files in metadata.xml.
         Move actpandastatus to failed. 
         '''
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='failed' and actpandastatus='tovalidate') limit 100000"
+        select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
         columns = ["arcjobid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -390,12 +390,12 @@ class aCTValidator(aCTATLASProcess):
 
     def cleanResubmittingJobs(self):
         '''
-        Check for jobs with actpandastatus toresubmit and pandastatus starting
+        Check for jobs with actpandastatus toresubmit and pandastatus running.
         Delete the output files in metadata.xml.
         Move actpandastatus to starting. 
         '''
         # get all jobs with pandastatus running and actpandastatus toresubmit
-        select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
+        select = "(pandastatus='running' and actpandastatus='toresubmit') limit 100000"
         columns = ["arcjobid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -412,7 +412,7 @@ class aCTValidator(aCTATLASProcess):
                 # Can't clean outputs so mark as failed (see more detail below)
                 self.log.error("Cannot remove output of arc job %s" % job["arcjobid"])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "tovalidate", "pandastatus": "failed"}
+                desc = {"actpandastatus": "transferring", "pandastatus": "toclean"}
                 self.dbpanda.updateJobs(select, desc)
             else:
                 surls.update(jobsurls)
@@ -427,7 +427,7 @@ class aCTValidator(aCTATLASProcess):
                 if result == self.ok:
                     select = "arcjobid='"+str(id)+"'"
                     # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
-                    desc = {"actpandastatus": "starting", "pandastatus": "starting", "arcjobid": None}
+                    desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
@@ -439,7 +439,7 @@ class aCTValidator(aCTATLASProcess):
                     # means it will be processed by cleanFailedJobs() so don't 
                     # clean the arc job here
                     select = "arcjobid='"+str(id)+"'"
-                    desc = {"actpandastatus": "tovalidate", "pandastatus": "failed"}
+                    desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
                     self.dbpanda.updateJobsLazy(select, desc)
                 else:
                     # Retry next time

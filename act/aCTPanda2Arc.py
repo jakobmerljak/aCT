@@ -45,6 +45,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls, proxyid=job['proxyid'])
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
+                jd['pandastatus'] = 'starting'
                 jd['actpandastatus'] = 'starting'
                 # Make sure heartbeat is updated straight away when job goes to starting
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()-int(self.conf.get(['panda', 'heartbeattime'])))

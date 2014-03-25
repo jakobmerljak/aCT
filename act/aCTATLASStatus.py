@@ -82,7 +82,7 @@ class aCTATLASStatus(aCTATLASProcess):
         - endTime
         """
         # don't get jobs already having actpandastatus tovalidate to avoid race conditions with validator
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done' and  pandajobs.actpandastatus not like 'tovalidate'"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done' and pandajobs.actpandastatus not like 'tovalidate'"
         select += " limit 100000"
         columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
@@ -96,7 +96,7 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
-            desc["pandastatus"] = "running" # Will be set to finished by validator
+            desc["pandastatus"] = "transferring"
             desc["actpandastatus"] = "tovalidate"
             desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             desc["endTime"] = aj["EndTime"]
@@ -118,8 +118,8 @@ class aCTATLASStatus(aCTATLASProcess):
                 select = "arcjobid='"+str(aj["id"])+"'"
                 jd={}
                 jd['arcjobid'] = None
-                jd['pandastatus'] = 'starting'
                 # Validator processes this state before setting back to starting
+                jd['pandastatus'] = 'starting'
                 jd['actpandastatus'] = 'toresubmit'
                 self.dbpanda.updateJobsLazy(select,jd)
                 resubmitting=True
@@ -318,8 +318,8 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in failedjobs:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
-            desc["pandastatus"] = "failed"
-            desc["actpandastatus"] = "tovalidate" # to clean up any output
+            desc["pandastatus"] = "transferring"
+            desc["actpandastatus"] = "toclean" # to clean up any output
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)
 
@@ -327,8 +327,8 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("Resubmitting lost job %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["id"])+"'"
             desc={}
-            desc['pandastatus'] = 'starting'
             # Validator processes this state before setting back to starting
+            desc['pandastatus'] = 'starting'
             desc['actpandastatus'] = 'toresubmit'
             self.dbpanda.updateJobsLazy(select,desc)
 
