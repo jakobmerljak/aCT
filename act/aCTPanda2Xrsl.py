@@ -3,7 +3,7 @@ import cgi
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,schedconfig,corecount=1):
+    def __init__(self,pandajob,schedconfig,catalog,corecount=1):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -15,6 +15,7 @@ class aCTPanda2Xrsl:
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
         self.schedconfig=schedconfig
+        self.catalog = catalog
 
         #print self.jobdesc.keys()
 
@@ -133,9 +134,16 @@ class aCTPanda2Xrsl:
 
         if(self.jobdesc.has_key('inFiles')):
             inf={}
-            for f,g in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['GUID'][0].split(",")):
-                lfn="lfc://prod-lfc-atlas.cern.ch/:guid="+g
-                inf[f]=lfn
+            if self.catalog.find('lfc://') == 0:
+                for f,g in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['GUID'][0].split(",")):
+                    lfn="lfc://prod-lfc-atlas.cern.ch/:guid="+g
+                    inf[f]=lfn
+            elif self.catalog.find('rucio://') == 0:
+                for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
+                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch/replicas", s, f])
+                    inf[f]=lfn
+            else:
+                raise Exception("Unknown catalog implementation: " + self.catalog)
             # some files are double:
             for k,v in inf.items():
                 x += "(" + k + " " + '"' + v + '"' + ")"
