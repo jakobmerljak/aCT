@@ -196,11 +196,11 @@ class aCTATLASStatus(aCTATLASProcess):
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
-                self.log.warn("Failed to copy job output for %s: %s" % (jobid, str(e)))
+                self.log.warning("Failed to copy job output for %s: %s" % (jobid, str(e)))
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
-                    self.log.warn("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
+                    self.log.warning("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
