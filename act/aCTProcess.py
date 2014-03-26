@@ -38,8 +38,10 @@ class aCTProcess:
         
         # ARC Configuration
         # Credentials will be set by ARC agents for each job or set of jobs
+        # but for now set default credential in config to keep ARC happy
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
         self.uc=arc.UserConfig(cred_type)
+        self.uc.ProxyPath(str(self.conf.get(['voms', 'proxypath'])))
         self.uc.CACertificatesDirectory(str(self.conf.get(["voms", "cacertdir"])))
         timeout=int(self.conf.get(['atlasgiis','timeout']))
         self.uc.Timeout(timeout)
