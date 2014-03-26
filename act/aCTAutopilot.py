@@ -202,7 +202,7 @@ class aCTAutopilot(aCTATLASProcess):
 
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
             nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' and actpandastatus!='cancelled'" % site)
-            self.log.debug("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
+            self.log.info("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
                 continue
