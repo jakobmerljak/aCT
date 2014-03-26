@@ -209,6 +209,7 @@ class aCTAutopilot(aCTATLASProcess):
             # Limit number of jobs waiting submission to avoid getting too many
             # jobs from Panda 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
+                self.log.info("Site %s: at limit of sent jobs" % site)
                 continue
             
             if self.sites[site]['maxjobs'] == 0:
