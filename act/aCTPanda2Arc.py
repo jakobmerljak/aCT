@@ -46,7 +46,6 @@ class aCTPanda2Arc(aCTATLASProcess):
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
                 jd['pandastatus'] = 'starting'
-                jd['actpandastatus'] = 'starting'
                 # Make sure heartbeat is updated straight away when job goes to starting
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()-int(self.conf.get(['panda', 'heartbeattime'])))
                 self.dbpanda.updateJob(job['pandaid'], jd)
