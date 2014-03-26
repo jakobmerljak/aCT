@@ -302,8 +302,11 @@ class aCTValidator(aCTATLASProcess):
                 desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
                 self.dbpanda.updateJobs(select, desc)
             else:
-                surls.update(jobsurls)
-                
+                for se in jobsurls:
+                    try:
+                        surls[se].extend(jobsurls[se])
+                    except:
+                        surls[se] = jobsurls[se]
         if not surls:
             # nothing to validate
             return
