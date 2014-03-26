@@ -82,7 +82,7 @@ class aCTStatus(aCTProcess):
 
         # check jobs which were last checked more than checkinterval ago
         jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
-                                       "cluster='"+self.cluster+"' and "+ \
+                                       "jobid not like '' and cluster='"+self.cluster+"' and "+ \
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
 
@@ -116,7 +116,7 @@ class aCTStatus(aCTProcess):
                     continue
                 if updatedjob.JobID != originaljob.JobID:
                     # something went wrong with list order
-                    self.log.warn("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
+                    self.log.warning("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
                     continue
                 # compare strings here to get around limitations of JobState API
                 if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
@@ -161,7 +161,7 @@ class aCTStatus(aCTProcess):
                                     ['id', 'JobID'])
         
         for job in jobs:
-            self.log.warn("Job %s lost from information system, marking as lost", job['JobID'])
+            self.log.warning("Job %s lost from information system, marking as lost", job['JobID'])
             self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
