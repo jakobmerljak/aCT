@@ -25,9 +25,9 @@ class aCTPanda2Arc(aCTATLASProcess):
             except:
                 self.sites[sitename]['corecount'] = 1
             try:
-                self.sites[sitename['catalog']] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
+                self.sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
             except:
-                self.sites[sitename['catalog']] = self.conf.get(["panda", "catalog"])
+                self.sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
                         
 
     def createArcJobs(self):
