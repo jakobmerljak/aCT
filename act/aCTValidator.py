@@ -116,7 +116,7 @@ class aCTValidator(aCTATLASProcess):
         localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
         gmlogdir = os.path.join(localdir,"gmlog")
 
-        if not os.path.exists(gmlogdir):
+        if not os.path.exists(os.path.join(outd,"gmlog")):
             shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
 
         pilotlog = [f for f in os.listdir(localdir) if f.find('.job.log') != -1]
