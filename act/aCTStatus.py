@@ -146,7 +146,7 @@ class aCTStatus(aCTProcess):
                     arcstate = 'holding'
                 # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
                 elif updatedjob.State.GetSpecificState() == 'INLRMS:S' or \
-                     updatedjob.State.GetSpecificState() == 'INLRMS:R':
+                     updatedjob.State.GetSpecificState() == 'INLRMS:O':
                     arcstate = 'holding'
                     updatedjob.State = arc.JobState('Hold')
                 elif updatedjob.State == arc.JobState.DELETED or \
