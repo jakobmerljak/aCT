@@ -44,10 +44,12 @@ class aCTATLASStatus(aCTATLASProcess):
     def updateStartingJobs(self):
         """
         Check for sent jobs that have been submitted to ARC and update
-        actpandastatus to starting
+        actpandastatus to starting, and also for jobs that were requeued
+        from running.
         """
 
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='submitted' and pandajobs.actpandastatus='sent'"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='submitted'"
+        select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
         select += " limit 100000"
         columns = ["arcjobs.id", "arcjobs.cluster"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
