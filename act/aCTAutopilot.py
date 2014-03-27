@@ -128,6 +128,9 @@ class aCTAutopilot(aCTATLASProcess):
         for t in tlist:
             if t.status == None:
                 continue
+            if t.status['StatusCode'] and t.status['StatusCode'][0] == '60':
+                self.log.error('Failed to contact Panda, proxy may have expired')
+                continue
             self.log.debug(t.status)
             if t.status['command'][0] != "NULL":
                 self.log.info("response: %s %s" % (t.id,t.status) )
