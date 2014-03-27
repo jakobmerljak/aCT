@@ -40,6 +40,33 @@ class aCTATLASStatus(aCTATLASProcess):
             return datetime.datetime.utcnow() - datetime.timedelta(0, walltime)
         return endtime-datetime.timedelta(0, walltime)
            
+           
+    def updateStartingJobs(self):
+        """
+        Check for sent jobs that have been submitted to ARC and update
+        actpandastatus to starting
+        """
+
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='submitted' and pandajobs.actpandastatus='sent'"
+        select += " limit 100000"
+        columns = ["arcjobs.id", "arcjobs.cluster"]
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
+
+        if len(jobstoupdate) == 0:
+            return
+        else:
+            self.log.debug("Found %d submitted jobs", len(jobstoupdate))
+
+        for aj in jobstoupdate:
+            select = "arcjobid='"+str(aj["id"])+"'"
+            desc = {}
+            desc["pandastatus"] = "starting"
+            desc["actpandastatus"] = "starting"
+            desc["computingElement"] = aj["cluster"].split('/')[0]
+            self.dbpanda.updateJobsLazy(select, desc)
+        self.dbpanda.Commit()
+
+        
     def updateRunningJobs(self):
         """
         Check for new running jobs and update pandajobs with
@@ -169,11 +196,11 @@ class aCTATLASStatus(aCTATLASProcess):
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
-                self.log.warn("Failed to copy job output for %s: %s" % (jobid, str(e)))
+                self.log.warning("Failed to copy job output for %s: %s" % (jobid, str(e)))
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
-                    self.log.warn("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
+                    self.log.warning("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -360,6 +387,8 @@ class aCTATLASStatus(aCTATLASProcess):
             # Check for jobs that panda told us to kill and cancel them in ARC
             self.checkJobstoKill()
             # Check status of arcjobs
+            # Query jobs that were submitted since last time
+            self.updateStartingJobs()
             # Query jobs in running arcstate with tarcstate sooner than last run
             self.updateRunningJobs()
             # Query jobs in arcstate done and update pandajobs

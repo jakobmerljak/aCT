@@ -8,6 +8,7 @@ import tarfile
 import arc
 from xml.dom import minidom
 import pickle
+import re
 
 class aCTValidator(aCTATLASProcess):
     '''
@@ -45,7 +46,7 @@ class aCTValidator(aCTATLASProcess):
         smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
         return smallfiles.extractfile(filename)
         
-    
+
     def copyFinishedFiles(self, arcjobid):
         """
         - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
@@ -114,10 +115,14 @@ class aCTValidator(aCTATLASProcess):
         # copy from tmp to outd.
         localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
         gmlogdir = os.path.join(localdir,"gmlog")
-        shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
-        pilotlog = [f for f in os.listdir(localdir) if f.endswith('.job.log')][0]
-        shutil.copy(os.path.join(localdir,pilotlog), 
-                    os.path.join(outd,pilotlog.replace('.job.log','.out')))
+
+        if not os.path.exists(os.path.join(outd,"gmlog")):
+            shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
+
+        pilotlog = [f for f in os.listdir(localdir) if f.find('.job.log') != -1]
+        if pilotlog:
+            shutil.copy(os.path.join(localdir,pilotlog[0]), 
+                        os.path.join(outd,re.sub('.job.log.*$', '.out', pilotlog[0])))
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
         # todo: unlink localdir
@@ -170,7 +175,7 @@ class aCTValidator(aCTATLASProcess):
                 surls[se] += [{"surl":surl, "fsize":size, "checksum":checksum, "arcjobid":arcjobid}]
         
         return surls
-            
+                
 
     def checkOutputFiles(self, surls):
         '''
@@ -297,8 +302,11 @@ class aCTValidator(aCTATLASProcess):
                 desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
                 self.dbpanda.updateJobs(select, desc)
             else:
-                surls.update(jobsurls)
-                
+                for se in jobsurls:
+                    try:
+                        surls[se].extend(jobsurls[se])
+                    except:
+                        surls[se] = jobsurls[se]
         if not surls:
             # nothing to validate
             return

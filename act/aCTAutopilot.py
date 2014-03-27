@@ -200,11 +200,16 @@ class aCTAutopilot(aCTATLASProcess):
 
         for site, attrs in self.sites.iteritems():        
 
+            # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
+            # Get total number of active jobs
             nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' and actpandastatus!='cancelled'" % site)
-            self.log.debug("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
+            self.log.info("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
+            # Limit number of jobs waiting submission to avoid getting too many
+            # jobs from Panda 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
+                self.log.info("Site %s: at limit of sent jobs" % site)
                 continue
             
             if self.sites[site]['maxjobs'] == 0:

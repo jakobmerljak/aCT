@@ -22,7 +22,7 @@ class aCTDBMySQL(object):
             c=self.conn.cursor()
             c.execute("CREATE DATABASE "+self.dbname)
 
-        self.log.info("initialized aCTDBMySQL")
+        self.log.debug("initialized aCTDBMySQL")
     
     def _connect(self, dbname=None):
         if self.socket != 'None':

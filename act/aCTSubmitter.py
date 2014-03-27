@@ -311,7 +311,8 @@ class aCTSubmitter(aCTProcess):
             j = arc.Job()
             for (id, job) in jobs.items():
                 self.db.updateArcJob(id, {"arcstate": "tosubmit",
-                                               "tarcstate": self.db.getTimeStamp()}, j)
+                                          "tarcstate": self.db.getTimeStamp(),
+                                          "cluster": None}, j)
 
     def processToRerun(self):
         
