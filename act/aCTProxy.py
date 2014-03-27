@@ -17,7 +17,7 @@ class aCTProxy:
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
         self.uc=arc.UserConfig(cred_type)
         self.uc.CACertificatesDirectory(str(self.conf.get(["voms", "cacertdir"])))
-        self.tstamp = datetime.datetime.utcnow()
+        self.tstamp = datetime.datetime.utcnow()-datetime.timedelta(0,self.interval)
         self.voms_proxies = {}
                 
     def _timediffSeconds(self, t1, t2):
