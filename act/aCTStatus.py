@@ -124,7 +124,8 @@ class aCTStatus(aCTProcess):
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
                 
-                self.log.debug("Job %s: %s -> %s", originaljob.JobID, originaljob.State.GetGeneralState(), updatedjob.State.GetGeneralState())
+                self.log.info("Job %s: %s -> %s (%s)", originaljob.JobID, originaljob.State.GetGeneralState(),
+                               updatedjob.State.GetGeneralState(), updatedjob.State.GetSpecificState())
                 
                 # state changed, update whole Job object
                 arcstate = 'submitted'
@@ -141,6 +142,13 @@ class aCTStatus(aCTProcess):
                 elif updatedjob.State == arc.JobState.RUNNING or \
                      updatedjob.State == arc.JobState.FINISHING:
                     arcstate = 'running'
+                elif updatedjob.State == arc.JobState.HOLD:
+                    arcstate = 'holding'
+                # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
+                elif updatedjob.State.GetSpecificState() == 'INLRMS:S' or \
+                     updatedjob.State.GetSpecificState() == 'INLRMS:R':
+                    arcstate = 'holding'
+                    updatedjob.State = arc.JobState('Hold')
                 elif updatedjob.State == arc.JobState.DELETED or \
                      updatedjob.State == arc.JobState.OTHER:
                     # unexpected
