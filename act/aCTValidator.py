@@ -326,7 +326,7 @@ class aCTValidator(aCTATLASProcess):
                 elif result == self.failed:
                     select = "arcjobid='"+str(id)+"'"
                     # output file failed, set to toresubmit to clean up output and resubmit
-                    desc = {"actpandastatus": "toresubmit"}
+                    desc = {"pandastatus": "starting", "actpandastatus": "toresubmit"}
                     self.dbpanda.updateJobsLazy(select, desc)
                 else:
                     # Retry next time
@@ -393,12 +393,12 @@ class aCTValidator(aCTATLASProcess):
 
     def cleanResubmittingJobs(self):
         '''
-        Check for jobs with actpandastatus toresubmit and pandastatus running.
+        Check for jobs with actpandastatus toresubmit and pandastatus starting.
         Delete the output files in metadata.xml.
         Move actpandastatus to starting. 
         '''
-        # get all jobs with pandastatus running and actpandastatus toresubmit
-        select = "(pandastatus='running' and actpandastatus='toresubmit') limit 100000"
+        # get all jobs with pandastatus starting and actpandastatus toresubmit
+        select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
         columns = ["arcjobid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
