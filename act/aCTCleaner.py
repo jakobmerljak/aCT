@@ -20,15 +20,15 @@ class aCTCleaner(aCTProcess):
         for proxyid, jobs in jobstoclean.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
 
-            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             job_supervisor.Clean()
             
             notcleaned = job_supervisor.GetIDsNotProcessed()
     
-            for (id, job) in jobs.items():
+            for (id, appjobid, job) in jobs:
                 if job.JobID in notcleaned:
-                    self.log.error("Could not clean job %s", job.JobID)
+                    self.log.error("%s: Could not clean job %s" % (appjobid, job.JobID))
     
                 self.db.deleteArcJob(id)  
   

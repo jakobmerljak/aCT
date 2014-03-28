@@ -143,7 +143,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 if aj['Error'].find(error) != -1:
                     resubmit=True
             if resubmit:
-                self.log.info("Resubmitting %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
+                self.log.info("%s: Resubmitting %d %s %s" % (aj['appjobid'],aj['id'],aj['JobID'],aj['Error']))
                 select = "arcjobid='"+str(aj["id"])+"'"
                 jd={}
                 jd['arcjobid'] = None
@@ -194,15 +194,15 @@ class aCTATLASStatus(aCTATLASProcess):
                 pass
             # copy from tmp to outd.
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
-            # Sometimes fetcher failes to get output, so just make empty dir
+            # Sometimes fetcher fails to get output, so just make empty dir
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
-                self.log.warning("Failed to copy job output for %s: %s" % (jobid, str(e)))
+                self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
-                    self.log.warning("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
+                    self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -353,7 +353,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
-            self.log.info("Resubmitting lost job %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
+            self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['id'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["id"])+"'"
             desc={}
             # Validator processes this state before setting back to starting
