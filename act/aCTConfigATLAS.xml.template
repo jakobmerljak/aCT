@@ -34,6 +34,8 @@
   <timeout>60</timeout>
   <schedinterval>60</schedinterval>
   <minjobs>10</minjobs>
+  <!-- catalog for input files. Can be overridden per site -->
+  <catalog>rucio://rucio.cern.ch:/grid/atlas</catalog>
 
   <sites>
 
@@ -52,6 +54,8 @@
       <maxjobs>10</maxjobs>
       <!-- Number of cores for each job in this queue (eg 8 for mcore) -->
       <corecount>1</corecount>
+      <!-- Overriding catalog -->
+      <catalog>lfc://prod-lfc-atlas.cern.ch:/grid/atlas</catalog>
     </site>
 
   </sites>
