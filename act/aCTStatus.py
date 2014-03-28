@@ -81,7 +81,7 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='holding') and " \
                                        "jobid not like '' and cluster='"+self.cluster+"' and "+ \
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
@@ -119,6 +119,9 @@ class aCTStatus(aCTProcess):
                     self.log.warning("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
                     continue
                 # compare strings here to get around limitations of JobState API
+                # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
+                if updatedjob.State.GetGeneralState() == 'Queuing' and (updatedjob.State.GetSpecificState() == 'INLRMS:S' or updatedjob.State.GetSpecificState() == 'INLRMS:O'):
+                    updatedjob.State = arc.JobState('Hold')
                 if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
                     # just update timestamp
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
@@ -144,11 +147,6 @@ class aCTStatus(aCTProcess):
                     arcstate = 'running'
                 elif updatedjob.State == arc.JobState.HOLD:
                     arcstate = 'holding'
-                # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
-                elif updatedjob.State.GetSpecificState() == 'INLRMS:S' or \
-                     updatedjob.State.GetSpecificState() == 'INLRMS:O':
-                    arcstate = 'holding'
-                    updatedjob.State = arc.JobState('Hold')
                 elif updatedjob.State == arc.JobState.DELETED or \
                      updatedjob.State == arc.JobState.OTHER:
                     # unexpected
