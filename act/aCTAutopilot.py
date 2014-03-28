@@ -167,7 +167,7 @@ class aCTAutopilot(aCTATLASProcess):
                 jd=pickle.load(f)
                 f.close()
             except Exception,x:
-                self.log.error(x)
+                self.log.error('%s: %s' % (j['pandaid'], x))
                 # TODO push back to download (tofinished)
                 continue
 

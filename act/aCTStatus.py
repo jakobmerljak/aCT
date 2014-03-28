@@ -33,19 +33,19 @@ class aCTStatus(aCTProcess):
         for jobs in jobstoreset.values():   
             for job in jobs:
                 for attr in attrstoreset:
-                    setattr(jobs[job], attr, emptylist)
+                    setattr(job[2], attr, emptylist)
         
         
-    def processJobErrors(self, id, failedjob):
+    def processJobErrors(self, id, appjobid, failedjob):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
-        self.log.info("Job failure for %s: %s", failedjob.JobID, ";".join([joberr for joberr in failedjob.Error]))
+        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, ";".join([joberr for joberr in failedjob.Error])))
         
         # First check if it was a data staging problem
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
-            self.log.info("Will rerun job %s", failedjob.JobID)
+            self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
             # Reset arc job state so that next time new state will be picked up
             failedjob.State = arc.JobState('Undefined')
             return "torerun"
@@ -59,14 +59,14 @@ class aCTStatus(aCTProcess):
         self.db.updateArcJob(id, {'attemptsleft': str(attemptsleft)})
         if resub:
             if not attemptsleft:
-                self.log.info("Job %s out of retries", failedjob.JobID)
+                self.log.info("%s: Job %s out of retries" % (appjobid, failedjob.JobID))
             else:
-                self.log.info("Will resubmit job %s, %i attempts left", failedjob.JobID, attemptsleft)
+                self.log.info("%s: Will resubmit job %s, %i attempts left" % (appjobid, failedjob.JobID, attemptsleft))
                 failedjob.State = arc.JobState('Undefined')
                 newstate = "toresubmit"
         
         else:
-            self.log.info("Job %s has fatal errors, cannot resubmit", failedjob.JobID)
+            self.log.info("%s: Job %s has fatal errors, cannot resubmit" % (appjobid, failedjob.JobID))
         return newstate
         
     def checkJobs(self):
@@ -81,7 +81,7 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling') and " \
+        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='holding') and " \
                                        "jobid not like '' and cluster='"+self.cluster+"' and "+ \
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
@@ -105,18 +105,19 @@ class aCTStatus(aCTProcess):
         for proxyid, jobs in jobstocheck.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
     
-            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             jobsupdated = job_supervisor.GetAllJobs()
             jobsnotupdated = job_supervisor.GetIDsNotProcessed()
             
-            for (id, originaljob, updatedjob) in zip(jobs.keys(), jobs.values(), jobsupdated):
+            for (originaljobinfo, updatedjob) in zip(jobs, jobsupdated):
+                (id, appjobid, originaljob) = originaljobinfo
                 if updatedjob.JobID in jobsnotupdated:
-                    self.log.error("Failed to find information on %s", updatedjob.JobID)
+                    self.log.error("%s: Failed to find information on %s" % (appjobid, updatedjob.JobID))
                     continue
                 if updatedjob.JobID != originaljob.JobID:
                     # something went wrong with list order
-                    self.log.warning("Bad job id (%s), expected %s", updatedjob.JobID, originaljob.JobID)
+                    self.log.warning("%s: Bad job id (%s), expected %s" % (appjobid, updatedjob.JobID, originaljob.JobID))
                     continue
                 # compare strings here to get around limitations of JobState API
                 if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
@@ -124,19 +125,19 @@ class aCTStatus(aCTProcess):
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
                 
-                self.log.info("Job %s: %s -> %s (%s)", originaljob.JobID, originaljob.State.GetGeneralState(),
-                               updatedjob.State.GetGeneralState(), updatedjob.State.GetSpecificState())
+                self.log.info("%s: Job %s: %s -> %s (%s)" % (appjobid, originaljob.JobID, originaljob.State.GetGeneralState(),
+                               updatedjob.State.GetGeneralState(), updatedjob.State.GetSpecificState()))
                 
                 # state changed, update whole Job object
                 arcstate = 'submitted'
                 if updatedjob.State == arc.JobState.FINISHED:
                     if updatedjob.ExitCode == -1:
                         # Missing exit code, but assume success
-                        self.log.warning("Job %s FINISHED but has missing exit code, setting to zero" % updatedjob.JobID)
+                        self.log.warning("%s: Job %s FINISHED but has missing exit code, setting to zero" % (appjobid, updatedjob.JobID))
                         updatedjob.ExitCode = 0
                     arcstate = 'finished'
                 elif updatedjob.State == arc.JobState.FAILED:
-                    arcstate = self.processJobErrors(id, updatedjob)
+                    arcstate = self.processJobErrors(id, appjobid, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
                     arcstate = 'cancelled'
                 elif updatedjob.State == arc.JobState.RUNNING or \
@@ -166,10 +167,10 @@ class aCTStatus(aCTProcess):
         # 2 days limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='finished') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
-                                    ['id', 'JobID'])
+                                    ['id', 'appjobid', 'JobID'])
         
         for job in jobs:
-            self.log.warning("Job %s lost from information system, marking as lost", job['JobID'])
+            self.log.warning("%s: Job %s lost from information system, marking as lost" % (job['appjobid'], job['JobID']))
             self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
             
     
