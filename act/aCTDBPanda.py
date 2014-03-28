@@ -124,7 +124,7 @@ class aCTDBPanda(aCTDB):
         c=self.getCursor()
         c.execute("select count(*) from pandajobs where " + select)
         njobs=c.fetchone()['count(*)']
-        return njobs
+        return int(njobs)
 
     def getJobReport(self):
         c=self.getCursor()
