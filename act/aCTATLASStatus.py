@@ -48,7 +48,7 @@ class aCTATLASStatus(aCTATLASProcess):
         from running.
         """
 
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='submitted'"
+        select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
         select += " limit 100000"
         columns = ["arcjobs.id", "arcjobs.cluster"]
