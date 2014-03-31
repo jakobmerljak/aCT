@@ -140,7 +140,8 @@ class aCTPanda2Xrsl:
                     inf[f]=lfn
             elif self.catalog.find('rucio://') == 0:
                 for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
-                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch/replicas", s, f])
+                    # Hard-coded pilot rucio account - should change based on proxy
+                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch;rucioaccount=pilot/replicas", s, f])
                     inf[f]=lfn
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)
