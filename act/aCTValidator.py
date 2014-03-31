@@ -271,7 +271,7 @@ class aCTValidator(aCTATLASProcess):
                     self.log.error("Failed to delete %s for %s: %s" % (surl['surl'], surl['arcjobid'], str(status)))
                     result[surl['arcjobid']] = self.failed
             else:
-                self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid'])
+                self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid']))
                 result[surl['arcjobid']] = self.ok
                 
         return result                  
