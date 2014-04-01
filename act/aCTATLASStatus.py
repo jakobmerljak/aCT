@@ -364,7 +364,7 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in cancelledjobs:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
-            # TODO: Jobs cancelled unexpectedly - report error to panda
+            # TODO: Jobs cancelled unexpectedly - resubmit
             desc["actpandastatus"] = "cancelled"
             desc["endTime"] = aj["EndTime"]
             self.dbpanda.updateJobsLazy(select, desc)

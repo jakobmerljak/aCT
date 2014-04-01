@@ -19,8 +19,9 @@ class PandaThr(Thread):
         self.id = id
         self.status = status
         self.args = args
+        self.result = None
     def run(self):
-        self.status=self.func(self.id,self.status,self.args)
+        self.result=self.func(self.id,self.status,self.args)
 
 class PandaGetThr(Thread):
     """
@@ -31,9 +32,9 @@ class PandaGetThr(Thread):
         self.func=func
         self.siteName=siteName
         self.prodSourceLabel=prodSourceLabel
-        self.status = (None,None)
+        self.result = (None,None)
     def run(self):
-        self.status=self.func(self.siteName,self.prodSourceLabel)
+        self.result=self.func(self.siteName,self.prodSourceLabel)
 
 
         
@@ -93,7 +94,6 @@ class aCTAutopilot(aCTATLASProcess):
                 self.sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
                 self.sites[sitename]['maxjobs'] = 1000000
-        print self.sites
 
 
     def getPanda(self, sitename):
@@ -126,20 +126,20 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
         
         for t in tlist:
-            if t.status == None:
+            if t.result == None:
                 continue
-            if t.status['StatusCode'] and t.status['StatusCode'][0] == '60':
+            if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
-            self.log.debug(t.status)
-            if t.status['command'][0] != "NULL":
-                self.log.info("response: %s %s" % (t.id,t.status) )
+            self.log.debug('%s: %s' % (t.id, t.result))
+            if t.result['command'][0] != "NULL":
+                self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
             jd['pandastatus']=pstatus
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if (t.status['command'][0] == "tobekilled") or (t.status['command'][0] == "badattemptnr"):
+            if (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr"):
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
             self.dbpanda.updateJob(t.id,jd)
@@ -179,11 +179,13 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
         for t in tlist:
-            if t.status == None:
+            if t.result == None:
                 continue
             jd={}
             jd['pandastatus']=None
             jd['actpandastatus']='done'
+            if t.status == 'failed':
+                jd['actpandastatus']='donefailed'
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             self.dbpanda.updateJob(t.id,jd)
 
@@ -240,8 +242,7 @@ class aCTAutopilot(aCTATLASProcess):
                     t.start()
                 for t in tlist:
                     t.join()
-                    (pandaid,pandajob)=t.status
-                    print t.status
+                    (pandaid,pandajob)=t.result
                     if pandaid == None:
                         stopflag=True
                         continue
