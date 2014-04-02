@@ -8,6 +8,7 @@ import os
 import errno
 import arc
 import shutil
+import fnmatch, re
 
 from aCTProcess import aCTProcess
 
@@ -25,6 +26,20 @@ class aCTFetcher(aCTProcess):
         job_supervisor.Retrieve(str(self.conf.get(['tmp','dir'])), False, False, dirs)
         
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
+  
+    def listUrlRecursive(self, url, fname='', filelist=[]):
+        dp = arc.datapoint_from_url(url+'/'+fname, self.uc)
+        files = dp.List()
+        if not files[1]:
+            self.log.warning("Failed listing %s"%url+'/fname')
+            return
+        for f in files[0]:
+            if f.GetType()==f.file_type_file:
+                filelist.append((fname+'/'+f.GetName()).strip('/'))
+            elif f.GetType()==f.file_type_dir:
+                filelist = self.listUrlRecursive(url, (fname+'/'+str(f.GetName())).strip('/'), filelist)
+        return filelist
+  
   
     def fetchSome(self, jobs, downloadfiles):
         
@@ -54,9 +69,21 @@ class aCTFetcher(aCTProcess):
             if arc.URL(jobid).ConnectionURL() != dp:
                 dp = arc.datapoint_from_url(jobid, self.uc)
             localdir = str(self.conf.get(['tmp','dir'])) + jobid[jobid.rfind('/'):] + '/'
-            files = downloadfiles[id].split(',')
             
-            # TODO wildcards. List dir and choose matching files
+            files = downloadfiles[id].split(';')
+            if re.search('[\*\[\]\?]', downloadfiles[id]):
+                # found wildcard, need to get sessiondir list
+                remotefiles = self.listUrlRecursive(jobid)
+                expandedfiles = []
+                for wcf in files:
+                    if re.search('[\*\[\]\?]', wcf):
+                        # only match wildcards in matching dirs
+                        expandedfiles += [rf for rf in remotefiles if fnmatch.fnmatch(rf, wcf) and os.path.dirname(rf)==os.path.dirname(wcf)]
+                    else:
+                        expandedfiles.append(wcf)
+                # remove duplicates from wildcard matching through set
+                files = list(set(expandedfiles))
+
             for f in files:
                 localfile = jobid + '/' + f
                 localfiledir = localfile[:localfile.rfind('/')]
