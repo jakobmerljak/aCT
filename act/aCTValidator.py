@@ -399,7 +399,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         # get all jobs with pandastatus starting and actpandastatus toresubmit
         select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "id"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -410,6 +410,12 @@ class aCTValidator(aCTATLASProcess):
 
         surls = {}
         for job in jobstoupdate:
+            if not job["arcjobid"]:
+                # job was probably not submitted, so just set actpandastatus
+                select = "id="+job['id']
+                desc = {"actpandastatus": "starting", "arcjobid": None}
+                self.dbpanda.updateJobs(select, desc)
+                continue
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
                 # Can't clean outputs so mark as failed (see more detail below)
