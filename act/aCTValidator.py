@@ -129,7 +129,7 @@ class aCTValidator(aCTATLASProcess):
 
     def extractOutputFilesFromMetadata(self, arcjobid):
         aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID"])
-        if not aj or 'JobID' not in aj:
+        if not aj or 'JobID' not in aj or not aj['JobID']:
             self.log.error("failed to find arcjobid %s in database" % arcjobid)
             return {}
 
