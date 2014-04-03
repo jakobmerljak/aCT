@@ -334,9 +334,7 @@ class aCTAutopilot(aCTATLASProcess):
         select = self.dbpanda.timeStampLessThan('modified', 60*60*24)
         select += ' and (actpandastatus="done" or actpandastatus="donefailed" or actpandastatus="cancelled")'
         columns = ['pandaid', 'sitename', 'actpandastatus', 'starttime', 'endtime']
-        print select
         jobs = self.dbpanda.getJobs(select, columns)
-        print jobs
         if not jobs:
             return
         
