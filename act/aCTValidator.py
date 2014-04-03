@@ -128,7 +128,7 @@ class aCTValidator(aCTATLASProcess):
         # todo: unlink localdir
 
     def extractOutputFilesFromMetadata(self, arcjobid):
-        aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID"])
+        aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID", "appjobid"])
         if not aj or 'JobID' not in aj:
             self.log.error("failed to find arcjobid %s in database" % arcjobid)
             return {}
@@ -286,7 +286,7 @@ class aCTValidator(aCTATLASProcess):
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -347,7 +347,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -402,7 +402,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         # get all jobs with pandastatus starting and actpandastatus toresubmit
         select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
