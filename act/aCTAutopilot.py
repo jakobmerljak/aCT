@@ -325,6 +325,38 @@ class aCTAutopilot(aCTATLASProcess):
                 self.dbpanda.updateSchedconfig(cluster,status)
 
 
+    def updateArchive(self):
+        """
+        Move old jobs older than 1 day to archive table
+        """
+        
+        # modified column is reported in local time so may not be exactly one day
+        select = self.dbpanda.timeStampLessThan('modified', 60*60*24)
+        select += ' and (actpandastatus="done" or actpandastatus="donefailed" or actpandastatus="cancelled")'
+        columns = ['pandaid', 'sitename', 'actpandastatus', 'starttime', 'endtime']
+        print select
+        jobs = self.dbpanda.getJobs(select, columns)
+        print jobs
+        if not jobs:
+            return
+        
+        self.log.info('Archiving %d jobs' % len(jobs))
+        for job in jobs:
+            self.log.debug('Archiving panda job %d' % job['pandaid'])
+            # Fill out empty start/end time
+            if job['starttime']:
+                if not job['endtime']:
+                    job['endtime'] = job['starttime']
+            elif job['endtime']:
+                job['starttime'] = job['endtime']
+            else:
+                job['starttime'] = self.dbpanda.getTimeStamp()
+                job['endtime'] = self.dbpanda.getTimeStamp()
+                
+            self.dbpanda.insertJobArchiveLazy(job)
+            self.dbpanda.deleteJob(job['pandaid']) # commit is called here
+        
+
     def process(self):
         """
         Method called from loop
@@ -344,6 +376,12 @@ class aCTAutopilot(aCTATLASProcess):
         
         # Update jobs which finished
         self.updatePandaFinishedPilot()
+        
+        # Move old jobs to archive - every hour
+        if time.time()-self.starttime > 3600:
+            self.log.info("Checking for jobs to archive")
+            self.updateArchive()
+            self.starttime = time.time()
 
         
 if __name__ == '__main__':
