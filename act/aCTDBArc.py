@@ -61,7 +61,7 @@ class aCTDBArc(aCTDB):
             run. Can be empty.
           - jobdesc: job description added by the application engine
           - attemptsleft: Number of attempts left to run the job
-          - downloadfiles: Comma-separated list of specific files to download
+          - downloadfiles: Semicolon-separated list of specific files to download
             after job finished. If empty download all in job desc.
           - rerunnable:
           - proxyid: id of corresponding proxies entry of proxy to use for this job
