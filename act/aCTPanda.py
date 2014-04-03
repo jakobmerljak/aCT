@@ -88,7 +88,6 @@ class aCTPanda:
     def getJob(self,siteName,prodSourceLabel=None):
         node={}
         node['siteName']=siteName
-        print siteName
         if prodSourceLabel is not None:
             node['prodSourceLabel']=prodSourceLabel
         pid = None
@@ -122,8 +121,6 @@ class aCTPanda:
         except Exception,x:
             self.log.error(x)
             return None
-        #print urldesc
-        #print "exit ",pandaId
         return urldesc
         
 
@@ -142,7 +139,6 @@ class aCTPanda:
         except Exception,x:
             self.log.error(x)
             return None
-        #print urldesc
         return urldesc
 
     def queryJobInfo(self):

@@ -36,6 +36,10 @@ class aCTDBPanda(aCTDB):
            - endTime: Job end time
            - computingElement: CE where the job is running
            - proxyid: ID of proxy in proxies table to use for this job
+           
+        pandaarchive:
+          - Selected fields from above list:
+            - pandaid, siteName, actpandastatus, startTime, endTime
         '''
         aCTDB.createTables(self)
         str="""
@@ -67,10 +71,32 @@ class aCTDBPanda(aCTDB):
             pass
         try:
             c.execute(str)
-            self.conn.commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
             pass
+        
+        str="""
+        create table pandaarchive (
+        pandaid integer, 
+        siteName VARCHAR(255),
+        actpandastatus VARCHAR(255),
+        startTime TIMESTAMP DEFAULT 0,
+        endTime TIMESTAMP
+    )
+"""
+       
+        try:
+            c.execute("drop table pandaarchive")
+        except:
+            self.log.warning("no pandaarchive table")
+            pass
+        try:
+            c.execute(str)
+        except Exception,x:
+            self.log.error("failed create table %s" %x)
+            pass
+        self.conn.commit()
+        
 
     def insertJob(self,pandaid,pandajob,desc={}):
         desc['created']=self.getTimeStamp()
@@ -80,6 +106,11 @@ class aCTDBPanda(aCTDB):
         c=self.getCursor()
         c.execute(s,desc.values())
         self.conn.commit()
+        
+    def insertJobArchiveLazy(self,desc={}):
+        s="insert into pandaarchive (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
+        c=self.getCursor()
+        c.execute(s,desc.values())
 
     def deleteJob(self,pandaid):
         c=self.getCursor()
