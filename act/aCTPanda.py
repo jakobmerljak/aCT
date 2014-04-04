@@ -100,11 +100,13 @@ class aCTPanda:
             return (None,None)
         status = urldesc['StatusCode'][0]
         if status == '20':
-            self.log.debug('No Panda activated jobs avaliable')
+            self.log.debug('No Panda activated jobs available')
             return (None, None)
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
+        elif status == '60':
+            self.log.error('Failed to contact Panda, proxy may have expired')             
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         self.log.debug("%s %s" % (pid,urldesc))
