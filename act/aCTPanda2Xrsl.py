@@ -31,7 +31,8 @@ class aCTPanda2Xrsl:
 
         # force single-node jobs for now
         if self.ncores > 1:
-            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+            #self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+            self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
 
@@ -59,6 +60,10 @@ class aCTPanda2Xrsl:
             cpucount = int(self.jobdesc['maxCpuCount'][0])
         else:
             cpucount = 2*24*3600
+
+        # shorten installation jobs
+        if self.jobdesc['prodSourceLabel'][0] == 'install':
+            cpucount = 6*3600
 
         if int(cpucount) <= 0 :
             cpucount = self.defaults['cputime']
@@ -99,6 +104,10 @@ class aCTPanda2Xrsl:
             rte=rte.replace('PHYSICS-','ATLASPHYSICS-')
             rte=rte.replace('PROD2-','ATLASPROD2-')
             rte=rte.replace('PROD1-','ATLASPROD1-')
+
+            if rte.find('NULL') != -1:
+                rte='PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
+
             atlasrtes.append(rte)
 
 
@@ -181,7 +190,10 @@ class aCTPanda2Xrsl:
     def setPriority(self):
         
         if self.jobdesc.has_key('currentPriority'):
-            self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'][0])/100) + ')'
+            #self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'][0])/100) + ')'
+            # need a better number
+            self.xrsl['priority'] = '("priority" = 60 )'
+            pass
             
 
     def parse(self):
