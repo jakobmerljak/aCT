@@ -8,12 +8,15 @@ import aCTConfig
 from aCTProcess import aCTProcess
 from aCTProxy import aCTProxy
 
+import datetime
+
 class aCTProxyHandler(aCTProcess):
     
     def __init__(self):
         aCTProcess.__init__(self)
         self.conf=aCTConfig.aCTConfigARC()
         self.pm = aCTProxy(self.log)
+        self.tstamp = datetime.datetime.utcnow()-datetime.timedelta(0,self.pm.interval)
         if self._updateLocalProxies() == 0:
             # no local proxies in proxies table yet, better populate it
             self._updateRolesFromConfig()
@@ -47,15 +50,17 @@ class aCTProxyHandler(aCTProcess):
             
     def _updateMyProxies(self):
         return None
-        
+
     def renewProxies(self):
+        self.log.info("renewing proxies")
         self.pm.renew()
   
     def process(self):
-
         # renew proxies
-        self.renewProxies()
-
+        t=datetime.datetime.utcnow()
+        if self.pm._timediffSeconds(t, self.tstamp) >= self.pm.interval:
+            self.renewProxies()
+        self.tstamp = t
 
 if __name__ == '__main__':
     st=aCTProxyHandler()

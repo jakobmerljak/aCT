@@ -17,7 +17,6 @@ class aCTProxy:
         cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
         self.uc=arc.UserConfig(cred_type)
         self.uc.CACertificatesDirectory(str(self.conf.get(["voms", "cacertdir"])))
-        self.tstamp = datetime.datetime.utcnow()
         self.voms_proxies = {}
                 
     def _timediffSeconds(self, t1, t2):
@@ -122,10 +121,6 @@ class aCTProxy:
 
     def renew(self):
         "renews proxies in db. renews all proxies created with createVOMSRole."
-        t=datetime.datetime.utcnow()
-        if self._timediffSeconds(t, self.tstamp) < self.interval:
-            return
-        self.tstamp=t
         for (dn, attribute), args in self.voms_proxies.items():
             tleft = self.timeleft(dn, attribute)
             if tleft <= int(self.conf.get(["voms","minlifetime"])) :
