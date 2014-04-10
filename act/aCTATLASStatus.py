@@ -358,20 +358,15 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select,desc)
 
         for aj in cancelledjobs:
-            # For jobs that panda cancelled, send to final state cancelled
-            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus='tobekilled'"
-            desc = {}
-            desc["actpandastatus"] = "cancelled"
-            desc["endTime"] = aj["EndTime"]
-            self.dbpanda.updateJobsLazy(select, desc)
-            # For jobs that were killed in arc, resubmit
-            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus!='tobekilled'"
+            # For jobs that panda cancelled, don't do anything, they already
+            # have actpandastatus=cancelled. For jobs that were killed in arc,
+            # resubmit
+            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus!='cancelled'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
             desc["arcjobid"] = None
             self.dbpanda.updateJobsLazy(select, desc)
-            
         
         if len(failedjobs)+len(lostjobs)+len(cancelledjobs)!=0:
             self.dbpanda.Commit()
