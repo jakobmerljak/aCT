@@ -6,24 +6,25 @@ from threading import Thread
 from aCTProcess import aCTProcess
 
 class SubmitThr(Thread):
-    def __init__ (self,func,id,jobdescs,uc,logger):
+    def __init__ (self,func,id,appjobid,jobdescs,uc,logger):
         Thread.__init__(self)
         self.func=func
         self.id=id
+        self.appjobid=appjobid
         self.jobdescs = jobdescs
         self.uc = uc
         self.log=logger
         self.job = None
     def run(self):
-        self.job=self.func(self.jobdescs,self.uc,self.log)
+        self.job=self.func(self.jobdescs,self.uc,self.log,self.appjobid)
 
 
-def Submit(jobdescs,uc,log):
+def Submit(jobdescs,uc,log,appjobid):
 
     global queuelist
 
     if len(queuelist) == 0  :
-        log.error("no cluster free for submission")
+        log.error("%s: no cluster free for submission" % appjobid)
         return None
     
     # Do brokering among the available queues
@@ -31,13 +32,13 @@ def Submit(jobdescs,uc,log):
     broker = arc.Broker(uc, jobdesc, "Random")
     targetsorter = arc.ExecutionTargetSorter(broker)
     for target in queuelist:
-        log.debug("considering target %s:%s" % (target.ComputingService.Name, target.ComputingShare.Name))
+        log.debug("%s: considering target %s:%s" % (appjobid, target.ComputingService.Name, target.ComputingShare.Name))
 
         # Adding an entity performs matchmaking and brokering
         targetsorter.addEntity(target)
     
     if len(targetsorter.getMatchingTargets()) == 0:
-        log.error("no clusters satisfied job description requirements")
+        log.error("%s: no clusters satisfied job description requirements" % appjobid)
         return None
         
     targetsorter.reset() # required to reset iterator, otherwise we get a seg fault
@@ -46,7 +47,7 @@ def Submit(jobdescs,uc,log):
     job = arc.Job()
     submitter = arc.Submitter(uc)
     if submitter.Submit(selectedtarget, jobdesc, job) != arc.SubmissionStatus.NONE:
-        log.error("Submission failed")
+        log.error("%s: Submission failed" % appjobid)
         return None
 
     return job
@@ -70,13 +71,13 @@ class aCTSubmitter(aCTProcess):
                 t.join(60.0)
                 if t.isAlive() :
                     # abort due to timeout and try again
-                    self.log.error("submission timeout: exit and try again")
+                    self.log.error("%s: submission timeout: exit and try again" % t.appjobid)
                     errfl=True
                     continue
                 # updatedb
                 if t.job is None:
                     #self.log.error("no jobname")
-                    self.log.error("no job defined for %d" % t.id)
+                    self.log.error("%s: no job defined for %d" % (t.appjobid, t.id))
                     errfl=True
                     continue
                 jd={}
@@ -84,7 +85,7 @@ class aCTSubmitter(aCTProcess):
                 # initial offset to 1 minute to force first status check
                 jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+300)
                 # extract hostname of cluster (depends on JobID being a URL)
-                self.log.info("job id %s", t.job.JobID)
+                self.log.info("%s: job id %s" % (t.appjobid, t.job.JobID))
                 jd['cluster']=self.cluster
                 self.db.updateArcJobLazy(t.id,jd,t.job)
             if errfl:
@@ -100,6 +101,7 @@ class aCTSubmitter(aCTProcess):
 
         # check for stopsubmission flag
         if self.conf.get(['downtime','stopsubmission']) == "true":
+            self.log.info('Submission suspended due to downtime')
             return 0
 
         # Get cluster host and queue: cluster/queue
@@ -111,9 +113,9 @@ class aCTSubmitter(aCTProcess):
         if self.cluster:
             # Lock row for update in case multiple clusters are specified
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' limit 10",
-                                        columns=["id", "jobdesc", "proxyid"], lock=True)
+                                        columns=["id", "jobdesc", "proxyid", "appjobid"], lock=True)
         else:
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 10", ["id", "jobdesc", "proxyid"])
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 10", ["id", "jobdesc", "proxyid", "appjobid"])
 
         # mark submitting in db
         for j in jobs:
@@ -203,15 +205,15 @@ class aCTSubmitter(aCTProcess):
         # Just run one thread for each job in sequence. Strange things happen
         # when trying to create a new UserConfig object for each thread.
         for j in jobs:
-            self.log.debug("preparing: %s" % j['id'])
+            self.log.debug("%s: preparing submission" % j['appjobid'])
             jobdescstr = str(j['jobdesc'])
             jobdescs = arc.JobDescriptionList()
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
-                self.log.error("Failed to prepare job description %d" % j['id'])
+                self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                 continue
             # Set UserConfig credential for each proxy
             self.uc.CredentialString(self.db.getProxy(j['proxyid']))
-            t=SubmitThr(Submit,j['id'],jobdescs,self.uc,self.log)
+            t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
             self.RunThreadsSplit([t],1)
 
         self.log.info("threads finished")
@@ -238,35 +240,35 @@ class aCTSubmitter(aCTProcess):
         if not jobstocancel:
             return
         
-        self.log.info("Cancelling %i jobs", sum(len(v) for v in jobstocancel.values()))
+        self.log.info("Cancelling %i jobs" % sum(len(v) for v in jobstocancel.values()))
         for proxyid, jobs in jobstocancel.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
                 
-            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             job_supervisor.Cancel()
             
             notcancelled = job_supervisor.GetIDsNotProcessed()
     
-            for (id, job) in jobs.items():
+            for (id, appjobid, job) in jobs:
                 if job.JobID in notcancelled:
                     if job.State == arc.JobState.UNDEFINED:
                         # If longer than one hour since submission assume job never made it
                         if job.StartTime + arc.Period(3600) < arc.Time():
-                            self.log.warning("Assuming job %s is lost and marking as cancelled", job.JobID)
+                            self.log.warning("%s: Assuming job %s is lost and marking as cancelled" % (appjobid, job.JobID))
                             self.db.updateArcJob(id, {"arcstate": "cancelled",
                                                       "tarcstate": self.db.getTimeStamp()})
                         else:
                             # Job has not yet reached info system
-                            self.log.warning("Job %s is not yet in info system so cannot be cancelled", job.JobID)
+                            self.log.warning("%s: Job %s is not yet in info system so cannot be cancelled" % (appjobid, job.JobID))
                     else:
-                        self.log.error("Could not cancel job %s", job.JobID)
+                        self.log.error("%s: Could not cancel job %s" % (appjobid, job.JobID))
                         # Just to mark as cancelled so it can be cleaned
                         self.db.updateArcJob(id, {"arcstate": "cancelled",
                                                   "tarcstate": self.db.getTimeStamp()})
                 else:
                     self.db.updateArcJob(id, {"arcstate": "cancelling",
-                                                   "tarcstate": self.db.getTimeStamp()})
+                                              "tarcstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
         
@@ -276,7 +278,7 @@ class aCTSubmitter(aCTProcess):
             self.uc.CredentialString(self.db.getProxy(proxyid))
             
             # Clean up jobs which were submitted
-            jobstoclean = [job for job in jobs.values() if job.JobID]
+            jobstoclean = [job[2] for job in jobs if job[2].JobID]
             
             if jobstoclean:
                 
@@ -285,7 +287,7 @@ class aCTSubmitter(aCTProcess):
                 # to Clean()
                 job_supervisor = arc.JobSupervisor(self.uc, jobstoclean)
                 job_supervisor.Update()
-                self.log.info("Cancelling %i jobs", len(jobstoclean))
+                self.log.info("Cancelling %i jobs" % len(jobstoclean))
                 job_supervisor.Cancel()
                 
                 processed = job_supervisor.GetIDsProcessed()
@@ -293,23 +295,23 @@ class aCTSubmitter(aCTProcess):
                 # Clean the successfully cancelled jobs
                 if processed:
                     job_supervisor.SelectByID(processed)
-                    self.log.info("Cleaning %i jobs", len(processed))
+                    self.log.info("Cleaning %i jobs" % len(processed))
                     if not job_supervisor.Clean():
                         self.log.warning("Failed to clean some jobs")
                 
                 # New job supervisor with the uncancellable jobs
                 if notprocessed:
-                    notcancellable = [job for job in jobs.values() if job.JobID in notprocessed]
+                    notcancellable = [job for job in jobstoclean if job.JobID in notprocessed]
                     job_supervisor = arc.JobSupervisor(self.uc, notcancellable)
                     job_supervisor.Update()
                     
-                    self.log.info("Cleaning %i jobs", len(notcancellable))
+                    self.log.info("Cleaning %i jobs" % len(notcancellable))
                     if not job_supervisor.Clean():
                         self.log.warning("Failed to clean some jobs")
             
             # Empty job to reset DB info
             j = arc.Job()
-            for (id, job) in jobs.items():
+            for (id, appjobid, job) in jobs:
                 self.db.updateArcJob(id, {"arcstate": "tosubmit",
                                           "tarcstate": self.db.getTimeStamp(),
                                           "cluster": None}, j)
@@ -325,23 +327,23 @@ class aCTSubmitter(aCTProcess):
             self.log.info('SRM down, not rerunning')
             return
 
+        self.log.info("Resuming %i jobs" % sum(len(v) for v in jobstorerun.values()))
         for proxyid, jobs in jobstorerun.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
     
-            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             # Renew proxy to be safe
             job_supervisor.Renew()
-            self.log.info("Resuming %i jobs", len(jobs.values()))
-            job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+            job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             job_supervisor.Resume()
             
             notresumed = job_supervisor.GetIDsNotProcessed()
     
-            for (id, job) in jobs.items():
+            for (id, appjobid, job) in jobs:
                 if job.JobID in notresumed:
-                    self.log.error("Could not resume job %s", job.JobID)
+                    self.log.error("%s: Could not resume job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": "failed",
                                                    "tarcstate": self.db.getTimeStamp()})
                 else:

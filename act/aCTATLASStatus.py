@@ -144,18 +144,14 @@ class aCTATLASStatus(aCTATLASProcess):
                 if aj['Error'].find(error) != -1:
                     resubmit=True
             if resubmit:
-                self.log.info("Resubmitting %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
+                self.log.info("%s: Resubmitting %d %s %s" % (aj['appjobid'],aj['id'],aj['JobID'],aj['Error']))
                 select = "arcjobid='"+str(aj["id"])+"'"
                 jd={}
-                jd['arcjobid'] = None
                 # Validator processes this state before setting back to starting
                 jd['pandastatus'] = 'starting'
                 jd['actpandastatus'] = 'toresubmit'
                 self.dbpanda.updateJobsLazy(select,jd)
                 resubmitting=True
-                # Clean up arcjob, no longer of interest
-                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                self.dbarc.updateArcJobLazy(aj["id"], desc)
             else:
                 failedjobs += [aj]
         if resubmitting:
@@ -195,15 +191,15 @@ class aCTATLASStatus(aCTATLASProcess):
                 pass
             # copy from tmp to outd.
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
-            # Sometimes fetcher failes to get output, so just make empty dir
+            # Sometimes fetcher fails to get output, so just make empty dir
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
-                self.log.warning("Failed to copy job output for %s: %s" % (jobid, str(e)))
+                self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
-                    self.log.warning("Failed to create %s: %s. Job logs will be missing" % (outd, str(e)))
+                    self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -354,7 +350,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
-            self.log.info("Resubmitting lost job %d %s %s" % (aj['id'],aj['JobID'],aj['Error']))
+            self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['id'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["id"])+"'"
             desc={}
             # Validator processes this state before setting back to starting
@@ -363,11 +359,18 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select,desc)
 
         for aj in cancelledjobs:
-            select = "arcjobid='"+str(aj["id"])+"'"
+            # For jobs that panda cancelled, send to final state cancelled
+            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus='tobekilled'"
             desc = {}
-            # TODO: Jobs cancelled unexpectedly - report error to panda
             desc["actpandastatus"] = "cancelled"
             desc["endTime"] = aj["EndTime"]
+            self.dbpanda.updateJobsLazy(select, desc)
+            # For jobs that were killed in arc, resubmit
+            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus!='tobekilled'"
+            desc = {}
+            desc["pandastatus"] = "starting"
+            desc["actpandastatus"] = "starting"
+            desc["arcjobid"] = None
             self.dbpanda.updateJobsLazy(select, desc)
             
         

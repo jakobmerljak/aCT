@@ -117,7 +117,7 @@ class aCTFetcher(aCTProcess):
         
         if not jobstofetch:
             return
-        self.log.info("Fetching %i jobs", sum(len(v) for v in jobstofetch.values()))
+        self.log.info("Fetching %i jobs" % sum(len(v) for v in jobstofetch.values()))
         
         fetched = []; notfetched = []
         for proxyid, jobs in jobstofetch.items():
@@ -128,9 +128,9 @@ class aCTFetcher(aCTProcess):
             # id: downloadfiles
             downloadfiles = dict((row['id'], row['downloadfiles']) for row in filestodl)
             # jobs to download all files
-            jobs_downloadall = dict((j, jobs[j]) for j in jobs if not downloadfiles[j])
+            jobs_downloadall = dict((j[0], j[2]) for j in jobs if not downloadfiles[j[0]])
             # jobs to download specific files
-            jobs_downloadsome = dict((j, jobs[j]) for j in jobs if downloadfiles[j])
+            jobs_downloadsome = dict((j[0], j[2]) for j in jobs if downloadfiles[j[0]])
             
             (f, n) = self.fetchAll(jobs_downloadall)
             fetched.extend(f)
@@ -142,15 +142,15 @@ class aCTFetcher(aCTProcess):
 
         # Check for massive failure, and back off before trying again
         # TODO: downtime awareness
-        if len(notfetched) > 10 and len(notfetched) == len(jobs):
-            self.log.error("Failed to get any jobs from %s, sleeping for 5 mins", self.cluster)
+        if len(notfetched) > 10 and len(notfetched) == len(jobstofetch):
+            self.log.error("Failed to get any jobs from %s, sleeping for 5 mins" % self.cluster)
             time.sleep(300)
             return
         
         for proxyid, jobs in jobstofetch.items():
-            for (id, job) in jobs.iteritems():
+            for (id, appjobid, job) in jobs:
                 if job.JobID in notfetched:
-                    self.log.warning("Could not get output from job %s", job.JobID)
+                    self.log.warning("%s: Could not get output from job %s" % (appjobid, job.JobID))
                     # Remove download directory to allow retry
                     shutil.rmtree(self.conf.get(['tmp','dir']) + job.JobID[job.JobID.rfind('/'):], True)
                     # Check if job still exists
@@ -160,12 +160,12 @@ class aCTFetcher(aCTProcess):
                     status = dp.Stat(fileinfo)
                     # TODO Check other permanent errors
                     if not status and status.GetErrno() == errno.ENOENT:
-                        self.log.warning("Job %s no longer exists" % job.JobID)
+                        self.log.warning("%s: Job %s no longer exists" % (appjobid, job.JobID))
                         self.db.updateArcJob(id, {"arcstate": "donefailed",
                                                   "tarcstate": self.db.getTimeStamp()})
                     # Otherwise try again next time
                 else:
-                    self.log.info("Downloaded job %s" % job.JobID)
+                    self.log.info("%s: Downloaded job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": nextarcstate,
                                               "tarcstate": self.db.getTimeStamp()})
 

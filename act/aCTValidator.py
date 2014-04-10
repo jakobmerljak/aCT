@@ -46,7 +46,7 @@ class aCTValidator(aCTATLASProcess):
         smallfiles = tarfile.open(os.path.join(localdir,'jobSmallFiles.tgz'))
         return smallfiles.extractfile(filename)
         
-
+    
     def copyFinishedFiles(self, arcjobid):
         """
         - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
@@ -67,7 +67,7 @@ class aCTValidator(aCTATLASProcess):
             pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
-            self.log.error("failed to extract smallFiles for arcjob %s: %s" %(sessionid, x))
+            self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
 
         # update pickle and dump to tmp/pickle
         cluster=aj['cluster'].split('/')[0]
@@ -118,7 +118,7 @@ class aCTValidator(aCTATLASProcess):
         # copy from tmp to outd.
         localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
         gmlogdir = os.path.join(localdir,"gmlog")
-
+        
         if not os.path.exists(os.path.join(outd,"gmlog")):
             shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
 
@@ -132,7 +132,7 @@ class aCTValidator(aCTATLASProcess):
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
-        aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID"])
+        aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID", "appjobid"])
         if not aj or 'JobID' not in aj or not aj['JobID']:
             self.log.error("failed to find arcjobid %s in database" % arcjobid)
             return {}
@@ -142,7 +142,7 @@ class aCTValidator(aCTATLASProcess):
         try:
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
-            self.log.error("failed to extract metadata file for arcjob %s: %s" %(sessionid, x))
+            self.log.error("%s: failed to extract metadata file for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
             return {}
 
         outputxml = minidom.parse(metadata)
@@ -169,7 +169,7 @@ class aCTValidator(aCTATLASProcess):
                         surl=v
                         se = arc.URL(str(surl)).Host()
             except Exception,x:
-                self.log.error(x)
+                self.log.error('%s: %s' % (aj['appjobid'], x))
                 outp = False
 
             if outp:
@@ -179,7 +179,7 @@ class aCTValidator(aCTATLASProcess):
                 surls[se] += [{"surl":surl, "fsize":size, "checksum":checksum, "arcjobid":arcjobid}]
         
         return surls
-                
+            
 
     def checkOutputFiles(self, surls):
         '''
@@ -223,23 +223,25 @@ class aCTValidator(aCTATLASProcess):
                 # another error in the listing FileInfo object will be invalid
                 for i in range(len(datapointlist)):
                     if not files[i]:
-                        self.log.warning("Failed to find info on %s" % datapointlist[i].GetURL().str())
+                        self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
                         result[surllist[i]['arcjobid']] = self.failed
                     else:
                         # compare metadata
-                        self.log.debug("File %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                       (datapointlist[i].GetURL().str(), int(surllist[i]['fsize']),
+                        self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
+                                       (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(), int(surllist[i]['fsize']),
                                         surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
                         if int(surllist[i]['fsize']) != int(files[i].GetSize()):
-                            self.log.warning("File %s: size on storage (%d) differs from expected size (%d)" %
-                                             (datapointlist[i].GetURL().str(), int(files[i].GetSize()), int(surllist[i]['fsize'])))
+                            self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
+                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                                              int(files[i].GetSize()), int(surllist[i]['fsize'])))
                             result[surllist[i]['arcjobid']] = self.failed
                         elif surllist[i]['checksum'] != files[i].GetCheckSum():
-                            self.log.warning("File %s: checksum on storage (%s) differs from expected checksum (%s)" %
-                                             (datapointlist[i].GetURL().str(), files[i].GetCheckSum(), surllist[i]['checksum']))
+                            self.log.warning("File %sf for %s: checksum on storage (%s) differs from expected checksum (%s)" %
+                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                                              files[i].GetCheckSum(), surllist[i]['checksum']))
                             result[surllist[i]['arcjobid']] = self.failed
                         else:
-                            self.log.info("File %s validated" % datapointlist[i].GetURL().str())
+                            self.log.info("File %s validated for %s" % (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
                             # don't overwrite previous failed file for this job
                             if surllist[i]['arcjobid'] not in result:
                                 result[surllist[i]['arcjobid']] = self.ok
@@ -263,19 +265,48 @@ class aCTValidator(aCTATLASProcess):
             status = dp.Remove()
             if not status:
                 if status.Retryable():
-                    self.log.warning("Failed to delete %s, will retry later: %s" % (surl['surl'], str(status)))
+                    self.log.warning("Failed to delete %s for %s, will retry later: %s" %
+                                     (surl['surl'], surl['arcjobid'], str(status)))
                     result[surl['arcjobid']] = self.retry
                 elif status.GetErrno() == os.errno.ENOENT:
-                    self.log.info("File %s does not exist" % surl['surl'])
+                    self.log.info("File %s for %s does not exist" % (surl['surl'], surl['arcjobid']))
                     result[surl['arcjobid']] = self.ok
                 else:
-                    self.log.error("Failed to delete %s: %s" % (surl['surl'], str(status)))
+                    self.log.error("Failed to delete %s for %s: %s" % (surl['surl'], surl['arcjobid'], str(status)))
                     result[surl['arcjobid']] = self.failed
             else:
-                self.log.info("Removed %s" % surl['surl'])
+                self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid']))
                 result[surl['arcjobid']] = self.ok
                 
-        return result                  
+        return result        
+    
+    
+    def downloadSmallFiles(self, jobs):
+        '''
+        This method is for jobs which should be killed and resubmitted. An attempt
+        is made to download jobSmallFiles.tgz but it is fine to fail as the job
+        may still be running.
+        '''
+        
+        for job in jobs:
+            if not 'JobID' in job or not job['JobID']:
+                continue
+            jobid = job['JobID']
+            sessionid = jobid[jobid.rfind('/'):]
+            localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+            
+            try:
+                os.makedirs(localdir)
+            except:
+                pass
+            
+            source = arc.datapoint_from_url(str(jobid + '/jobSmallFiles.tgz'))
+            dest = arc.datapoint_from_url(str(localdir + '/jobSmallFiles.tgz'))
+            dm = arc.DataMover()
+            status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
+            if not status:
+                self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.GetURL().str(), str(status)))
+        
 
     def validateFinishedJobs(self):
         '''
@@ -287,7 +318,7 @@ class aCTValidator(aCTATLASProcess):
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -301,7 +332,7 @@ class aCTValidator(aCTATLASProcess):
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
                 # Problem extracting files, resubmit the job
-                self.log.error("Cannot validate output of arc job %s, will resubmit" % job["arcjobid"])
+                self.log.error("%s: Cannot validate output of arc job %s, will resubmit" % (job['pandaid'], job["arcjobid"]))
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
                 self.dbpanda.updateJobs(select, desc)
@@ -350,7 +381,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
-        columns = ["arcjobid"]
+        columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -364,7 +395,7 @@ class aCTValidator(aCTATLASProcess):
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
                 # Problem extracting files, just continue to failed
-                self.log.error("Cannot remove output of arc job %s" % job["arcjobid"])
+                self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
@@ -403,32 +434,65 @@ class aCTValidator(aCTATLASProcess):
         Delete the output files in metadata.xml.
         Move actpandastatus to starting. 
         '''
-        # get all jobs with pandastatus starting and actpandastatus toresubmit
-        select = "(pandastatus='starting' and actpandastatus='toresubmit') limit 100000"
-        columns = ["arcjobid", "id"]
+        
+        # First check for resubmitting jobs with no arcjob id defined
+        select = "(actpandastatus='toresubmit' and arcjobid=NULL) limit 100000"
+        columns = ["pandaid", "id"]
+        
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
+
+        for job in jobstoupdate:
+            self.log.info('%s: resubmitting' % job['pandaid'])
+            select = "id="+job['id']
+            desc = {"actpandastatus": "starting", "arcjobid": None}
+            self.dbpanda.updateJobs(select, desc)
+
+        # Get all other jobs with pandastatus starting and actpandastatus toresubmit
+        # 2 possibilities for these jobs:
+        # - job failed and aCT decided to resubmit: clean output files
+        # - job was manually set toresubmit by aCT admin: set arc job tocancel,
+        #   attempt to get jobSmallFiles and clean but don't fail if not possible.
+        #   In this case don't wait for cancellation to finish as A-REX may be
+        #   broken. There is always the possibility of a race condition where
+        #   jobSmallFiles is produced and uploaded between checking for it and
+        #   cancelling the job.
+        select = "actpandastatus='toresubmit' and arcjobs.id=pandajobs.arcjobid limit 100000"
+        columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate"]
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs, pandajobs')
 
         if len(jobstoupdate)==0:
             # nothing to do
             return
 
+        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed']
+        
+        self.downloadSmallFiles(killedbymanual)
+        # Cancel the jobs manually set toresubmit (when the jobs eventually go 
+        # to cancelled they will be cleaned by ATLASStatus but pandastatus will
+        # not be changed because the arc id will not be in pandajobs any more)
+        for job in killedbymanual:
+            self.log.info('%s: manually asked to resubmit, cancelling arc job %s' %
+                          (job['pandaid'], job['JobID']))
+            desc = {'arcstate': 'tocancel', 'tarcstate': self.dbarc.getTimeStamp()}
+            self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
+        self.dbpanda.Commit()
+            
         # pull out output file info from metadata.xml into dict, order by SE
-
         surls = {}
         for job in jobstoupdate:
-            if not job["arcjobid"]:
-                # job was probably not submitted, so just set actpandastatus
-                select = "id="+job['id']
-                desc = {"actpandastatus": "starting", "arcjobid": None}
-                self.dbpanda.updateJobs(select, desc)
-                continue
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                # Can't clean outputs so mark as failed (see more detail below)
-                self.log.error("Cannot remove output of arc job %s" % job["arcjobid"])
-                select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
-                self.dbpanda.updateJobs(select, desc)
+                if job in killedbymanual:
+                    # Nothing to clean - just let it be resubmitted
+                    select = "arcjobid="+str(job['arcjobid'])
+                    desc = {"actpandastatus": "starting", "arcjobid": None}
+                    self.dbpanda.updateJobs(select, desc)
+                else:
+                    # Can't clean outputs so mark as failed (see more detail below)
+                    self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                    select = "arcjobid='"+str(job["arcjobid"])+"'"
+                    desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
+                    self.dbpanda.updateJobs(select, desc)
             else:
                 surls.update(jobsurls)
 
@@ -439,6 +503,14 @@ class aCTValidator(aCTATLASProcess):
         for se in surls:
             removedsurls = self.removeOutputFiles(surls[se])
             for id, result in removedsurls.items():
+                # if manually killed the cleaning is allowed to fail
+                if id in [j['arcjobid'] for j in killedbymanual]:
+                    select = "arcjobid='"+str(id)+"'"
+                    # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
+                    desc = {"actpandastatus": "starting", "arcjobid": None}
+                    self.dbpanda.updateJobsLazy(select, desc)
+                    continue
+                
                 if result == self.ok:
                     select = "arcjobid='"+str(id)+"'"
                     # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission

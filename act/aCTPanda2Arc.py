@@ -35,7 +35,7 @@ class aCTPanda2Arc(aCTATLASProcess):
         jobs = self.dbpanda.getJobs("arcjobid is NULL limit 10000")
 
         for job in jobs:
-            print job['pandajob']
+            
             parser = aCTPanda2Xrsl(job['pandajob'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'])
             parser.parse()
@@ -47,8 +47,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 for e in endpoints:
                     cl.append(urlparse(e).hostname + urlparse(e).path)
                 cls = ",".join(cl)
-                self.log.info("Inserting job %i with clusterlist %s" % (job['id'], cls))
-                aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls, proxyid=job['proxyid'])
+                self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))
+                aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls,
+                                                         proxyid=job['proxyid'], appjobid=str(job['pandaid']))
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
                 jd['pandastatus'] = 'starting'

@@ -88,7 +88,6 @@ class aCTPanda:
     def getJob(self,siteName,prodSourceLabel=None):
         node={}
         node['siteName']=siteName
-        print siteName
         if prodSourceLabel is not None:
             node['prodSourceLabel']=prodSourceLabel
         pid = None
@@ -101,11 +100,13 @@ class aCTPanda:
             return (None,None)
         status = urldesc['StatusCode'][0]
         if status == '20':
-            self.log.debug('No Panda activated jobs avaliable')
+            self.log.debug('No Panda activated jobs available')
             return (None, None)
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
+        elif status == '60':
+            self.log.error('Failed to contact Panda, proxy may have expired')             
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         self.log.debug("%s %s" % (pid,urldesc))
@@ -122,8 +123,6 @@ class aCTPanda:
         except Exception,x:
             self.log.error(x)
             return None
-        #print urldesc
-        #print "exit ",pandaId
         return urldesc
         
 
@@ -142,7 +141,6 @@ class aCTPanda:
         except Exception,x:
             self.log.error(x)
             return None
-        #print urldesc
         return urldesc
 
     def queryJobInfo(self):
