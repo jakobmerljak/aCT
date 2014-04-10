@@ -62,7 +62,7 @@ class aCTValidator(aCTATLASProcess):
         sessionid=jobid[jobid.rfind('/'):]
         date = time.strftime('%Y%m%d')
         select="arcjobid='"+str(arcjobid)+"'"
-        j = self.dbpanda.getJobs(select, ["pandaid"])[0]
+        j = self.dbpanda.getJobs(select, ["pandaid", "sitename"])[0]
         try:
             pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
@@ -73,7 +73,7 @@ class aCTValidator(aCTATLASProcess):
         cluster=aj['cluster'].split('/')[0]
         pupdate = pickle.load(pandapickle)
         pupdate['xml'] = str(metadata.read())
-        pupdate['siteName']='ARC'
+        pupdate['siteName']=j["sitename"]
         pupdate['computingElement']=cluster
         pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
         pupdate['startTime'] = aj['StartTime']
@@ -443,7 +443,7 @@ class aCTValidator(aCTATLASProcess):
 
         for job in jobstoupdate:
             self.log.info('%s: resubmitting' % job['pandaid'])
-            select = "id="+job['id']
+            select = "id="+str(job['id'])
             desc = {"actpandastatus": "starting", "arcjobid": None}
             self.dbpanda.updateJobs(select, desc)
 
