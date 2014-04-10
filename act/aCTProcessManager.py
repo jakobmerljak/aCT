@@ -99,6 +99,11 @@ class aCTProcessManager:
             if not cluster: # Job not submitted yet
                 continue
             if cluster not in self.running.keys():
+                # If submitter was already started, kill it and start again here
+                if cluster in self.submitters:
+                    self.log.info("Stopping aCTSubmitter for %s", cluster)
+                    del self.submitters[cluster]
+                
                 self.running[cluster] = []
                 for proc in self.processes:
                     self.log.info("Starting process %s for %s", proc, cluster)

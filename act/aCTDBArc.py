@@ -65,6 +65,8 @@ class aCTDBArc(aCTDB):
             after job finished. If empty download all in job desc.
           - rerunnable:
           - proxyid: id of corresponding proxies entry of proxy to use for this job
+          - appjobid: job identifier of application. Used in log messages to track
+            a job through the system
         proxies: columns are the following:
           - id:
           - proxy:
@@ -91,6 +93,7 @@ class aCTDBArc(aCTDB):
             rerunable TEXT,
             downloadfiles TEXT,
             proxyid INTEGER,
+            appjobid VARCHAR(255),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
         c=self.getCursor()
         try:
@@ -142,7 +145,7 @@ class aCTDBArc(aCTDB):
         self.conn.commit()
         return row
         
-    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist=''):
+    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
@@ -159,6 +162,7 @@ class aCTDBArc(aCTDB):
         desc['jobdesc'] = jobdesc
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
+        desc['appjobid'] = appjobid
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
@@ -264,22 +268,22 @@ class aCTDBArc(aCTDB):
 
     def getArcJobs(self,select):
         '''
-        Return a dictionary of {proxyid: {id: arc.Job}} for jobs matching select
+        Return a dictionary of {proxyid: [(id, appjobid, arc.Job), ...]} for jobs matching select
         '''
         c=self.getCursor()
-        c.execute("SELECT id, proxyid, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT id, proxyid, appjobid, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
             rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
             for row in rows:
                 d[row[0]] = self._db2job(dict(zip([col[0] for col in c.description], row[1:])))
-        # sqlite returns list of dictionaries
+        # mysql returns list of dictionaries
         if isinstance(rows, list):
             for row in rows:
                 if not row['proxyid'] in d:
-                    d[row['proxyid']] = {}
-                d[row['proxyid']][row['id']] = self._db2job(row)
+                    d[row['proxyid']] = []
+                d[row['proxyid']].append((row['id'], row['appjobid'], self._db2job(row)))
             
         return d
     
