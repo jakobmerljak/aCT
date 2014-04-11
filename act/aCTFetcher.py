@@ -32,7 +32,7 @@ class aCTFetcher(aCTProcess):
         files = dp.List()
         if not files[1]:
             self.log.warning("Failed listing %s"%url+'/fname')
-            return
+            return filelist
         for f in files[0]:
             if f.GetType()==f.file_type_file:
                 filelist.append((fname+'/'+f.GetName()).strip('/'))
