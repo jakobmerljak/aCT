@@ -144,8 +144,8 @@ class aCTATLASStatus(aCTATLASProcess):
                 if aj['Error'].find(error) != -1:
                     resubmit=True
             if resubmit:
-                self.log.info("%s: Resubmitting %d %s %s" % (aj['appjobid'],aj['id'],aj['JobID'],aj['Error']))
-                select = "arcjobid='"+str(aj["id"])+"'"
+                self.log.info("%s: Resubmitting %d %s %s" % (aj['appjobid'],aj['arcjobid'],aj['JobID'],aj['Error']))
+                select = "arcjobid='"+str(aj["arcjobid"])+"'"
                 jd={}
                 # Validator processes this state before setting back to starting
                 jd['pandastatus'] = 'starting'
@@ -297,7 +297,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             pupdate['endTime']=aj['EndTime']
             # save the pickle file to be used by aCTMain panda update
-            select="arcjobid='"+str(aj["id"])+"'"
+            select="arcjobid='"+str(aj["arcjobid"])+"'"
             j = self.dbpanda.getJobs(select, ["pandaid"])
             if j: # panda job could be missing for whatever reason
                 try:
@@ -353,7 +353,7 @@ class aCTATLASStatus(aCTATLASProcess):
         self.processFailed(failedjobs)
 
         for aj in failedjobs:
-            select = "arcjobid='"+str(aj["id"])+"'"
+            select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc = {}
             desc["pandastatus"] = "transferring"
             desc["actpandastatus"] = "toclean" # to clean up any output
@@ -361,8 +361,8 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
-            self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['id'],aj['JobID'],aj['Error']))
-            select = "arcjobid='"+str(aj["id"])+"'"
+            self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
+            select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc={}
             # Validator processes this state before setting back to starting
             desc['pandastatus'] = 'starting'
@@ -373,7 +373,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # For jobs that panda cancelled, don't do anything, they already
             # have actpandastatus=cancelled. For jobs that were killed in arc,
             # resubmit
-            select = "arcjobid='"+str(aj["id"])+"' and actpandastatus!='cancelled'"
+            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
@@ -386,7 +386,7 @@ class aCTATLASStatus(aCTATLASProcess):
         # set arcjobs state toclean for cancelled jobs
         desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for aj in cancelledjobs:
-            self.dbarc.updateArcJobLazy(aj["id"], desc)
+            self.dbarc.updateArcJobLazy(aj["arcjobid"], desc)
         if len(cancelledjobs)!=0:
             self.dbarc.Commit()            
     
