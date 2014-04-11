@@ -330,9 +330,10 @@ class aCTATLASStatus(aCTATLASProcess):
         
         # Look for failed final states
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
-        select += " limit 100000"
+        select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
+        select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
 
-        jobstoupdate=self.dbarc.getArcJobsInfo(select)
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, tables='arcjobs,pandajobs')
 
         if len(jobstoupdate) == 0:
             return
