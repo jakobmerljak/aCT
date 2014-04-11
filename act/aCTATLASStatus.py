@@ -316,9 +316,19 @@ class aCTATLASStatus(aCTATLASProcess):
         If they should be resubmitted, set arcjobid to null in pandajobs
         If not do post-processing and fill status in pandajobs
         """
+        # Get outputs to download for failed jobs
         select = "arcstate='failed'"
-        desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp()}
-        self.dbarc.updateArcJobs(desc, select)
+        columns = ['id', 'stdout', 'logdir']
+        arcjobs = self.dbarc.getArcJobsInfo(select, columns)
+        if arcjobs:
+            for aj in arcjobs:
+                downloadfiles = aj['stdout']+';'+aj['logdir']+'/*'
+                select = "id='"+str(aj["id"])+"'"
+                desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
+                self.dbarc.updateArcJobsLazy(desc, select)
+            self.dbarc.Commit()
+        
+        # Look for failed final states
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " limit 100000"
 
