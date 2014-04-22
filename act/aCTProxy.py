@@ -35,14 +35,14 @@ class aCTProxy:
         expirytime=datetime.datetime.strptime(cred.GetEndTime().str(arc.UTCTime),"%Y-%m-%dT%H:%M:%SZ")
         return proxy, dn, expirytime
 
-    def _createVomsProxyFromFile(self, oldproxypath, newproxypath, validHours, voms, attribute=''):
+    def _createVomsProxyFromFile(self, oldproxypath, newproxypath, validTime, voms, attribute=''):
         '''
         Helper function to create proxy under newproxypath from proxy under oldproxypath
         with given voms and attribute (if given), using arcproxy. 
         '''
         cmd=[self.conf.get(["voms","bindir"])+"/arcproxy"]
-        cmd.extend(["--constraint=validityPeriod="+str(validHours)+"H"])
-        cmd.extend(["--constraint=vomsACvalidityPeriod="+str(validHours)+"H"])
+        cmd.extend(["--constraint=validityPeriod="+str(validTime)+"S"])
+        cmd.extend(["--constraint=vomsACvalidityPeriod="+str(validTime)+"S"])
         cmd.extend(["--voms="+voms])
         if attribute:
             cmd[-1]+=":"+attribute
@@ -53,7 +53,7 @@ class aCTProxy:
         p = subprocess.call(cmd)
         return p
 
-    def createVOMSAttribute(self, voms, attribute, proxypath="", validHours=96, proxyid=None):
+    def createVOMSAttribute(self, voms, attribute, proxypath="", validTime=345600, proxyid=None):
         '''
         Function to create proxy with voms extensions from proxy.
         Example: To add production attribute to atlas voms, set voms="atlas" and 
@@ -74,7 +74,7 @@ class aCTProxy:
             proxyid = self.updateProxy("", dn, attribute, expirytime)
         dbproxypath = self.db.getProxyPath(proxyid)
         retries = 3
-        while self._createVomsProxyFromFile(proxypath, dbproxypath, validHours, voms, attribute):
+        while self._createVomsProxyFromFile(proxypath, dbproxypath, validTime, voms, attribute):
             # todo: check that attribute is actually set in the new proxy.
             retries -= 1
             if retries == 0:
@@ -85,7 +85,7 @@ class aCTProxy:
         proxy, _, expirytime = self._readProxyFromFile(dbproxypath)
         desc={"proxy":proxy, "expirytime":expirytime}
         self.db.updateProxy(proxyid, desc)
-        self.voms_proxies[(dn, attribute)] = (voms, attribute, proxypath, validHours, proxyid)
+        self.voms_proxies[(dn, attribute)] = (voms, attribute, proxypath, validTime, proxyid)
         return proxyid
     
     def deleteVOMSRole(self, dn, attribute):
@@ -169,9 +169,9 @@ def test_aCTProxy():
     voms="atlas"
     attribute="/atlas/Role=pilot"
     proxypath=p.conf.get(["voms", "proxypath"])
-    validHours=12
-    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=pilot", proxypath, validHours)
-    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=production", proxypath, validHours)
+    validTime=43200
+    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=pilot", proxypath, validTime)
+    proxyid = p.createVOMSAttribute(voms, "/atlas/Role=production", proxypath, validTime)
     dn = p.db.getProxiesInfo("id="+str(proxyid), ["dn"], expect_one=True)["dn"]
     print "dn=", dn
     print "path from dn,attribute lookup matches path from proxyid lookup:", 

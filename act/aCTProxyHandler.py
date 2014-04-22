@@ -24,20 +24,20 @@ class aCTProxyHandler(aCTProcess):
 
     def _checkProxyLifetime(self, proxylifetime):
         # enforcing max limit of 96 hours since this is the maximum lifetime of voms attrs
-        if proxylifetime > 96:
+        if proxylifetime > 345600:
             self.log.warning("voms proxylifetime was higher than the allowed max time of 96 hours. Reducing to 96 hours.")
-            return 96
+            return 345600
         else:
             return proxylifetime
         
     def _updateRolesFromConfig(self):
         vo = self.conf.get(["voms", "vo"])
-        validHours = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
+        validTime = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
         proxypath = self.conf.get(["voms", "proxypath"])
         # TODO: roles should be taken from AGIIS
         for role in self.conf.getList(["voms", "roles", "item"]):
             attribute = "/"+vo+"/Role="+role
-            self.pm.createVOMSAttribute(vo, attribute, proxypath, validHours)
+            self.pm.createVOMSAttribute(vo, attribute, proxypath, validTime)
 
     def _updateLocalProxies(self):
         """
@@ -47,13 +47,13 @@ class aCTProxyHandler(aCTProcess):
         columns = ["dn","attribute","proxypath","id"]
         ret_columns = self.pm.db.getProxiesInfo(select, columns)
         vo = self.conf.get(["voms", "vo"])
-        validHours = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
+        validTime = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
         for row in ret_columns:
             dn = row["dn"]
             attribute = row["attribute"]
             proxypath = self.conf.get(["voms", "proxypath"])
             proxyid = row["id"]
-            self.pm.voms_proxies[(dn, attribute)] = (vo, attribute, proxypath, validHours, proxyid)
+            self.pm.voms_proxies[(dn, attribute)] = (vo, attribute, proxypath, validTime, proxyid)
         return len(ret_columns)
             
     def _updateMyProxies(self):
