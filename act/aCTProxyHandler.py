@@ -21,10 +21,18 @@ class aCTProxyHandler(aCTProcess):
             # no local proxies in proxies table yet, better populate it
             self._updateRolesFromConfig()
         self._updateMyProxies()
+
+    def _checkProxyLifetime(self, proxylifetime):
+        # enforcing max limit of 96 hours since this is the maximum lifetime of voms attrs
+        if proxylifetime > 96:
+            self.log.warning("voms proxylifetime was higher than the allowed max time of 96 hours. Reducing to 96 hours.")
+            return 96
+        else:
+            return proxylifetime
         
     def _updateRolesFromConfig(self):
         vo = self.conf.get(["voms", "vo"])
-        validHours = self.conf.get(["voms", "proxylifetime"])
+        validHours = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
         proxypath = self.conf.get(["voms", "proxypath"])
         # TODO: roles should be taken from AGIIS
         for role in self.conf.getList(["voms", "roles", "item"]):
@@ -39,7 +47,7 @@ class aCTProxyHandler(aCTProcess):
         columns = ["dn","attribute","proxypath","id"]
         ret_columns = self.pm.db.getProxiesInfo(select, columns)
         vo = self.conf.get(["voms", "vo"])
-        validHours = self.conf.get(["voms", "proxylifetime"])
+        validHours = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
         for row in ret_columns:
             dn = row["dn"]
             attribute = row["attribute"]
@@ -60,7 +68,7 @@ class aCTProxyHandler(aCTProcess):
         t=datetime.datetime.utcnow()
         if self.pm._timediffSeconds(t, self.tstamp) >= self.pm.interval:
             self.renewProxies()
-        self.tstamp = t
+            self.tstamp = t
 
 if __name__ == '__main__':
     st=aCTProxyHandler()
