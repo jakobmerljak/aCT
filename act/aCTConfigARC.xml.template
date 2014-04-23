@@ -70,9 +70,14 @@
 </downtime>
 
 <voms>
+  <vo>atlas</vo>
+  <roles>
+    <item>production</item>
+    <item>pilot</item>
+  </roles>
   <bindir>/usr/bin</bindir>
-  <proxylifetime>192</proxylifetime>
-  <minlifetime>432000</minlifetime>
+  <proxylifetime>345600</proxylifetime>
+  <minlifetime>259200</minlifetime>
   <proxypath>/tmp/x509up_u59175</proxypath>
   <cacertdir>/etc/grid-security/certificates</cacertdir>
   <proxystoredir>/data/user/atlact1/act-test1/proxies</proxystoredir>

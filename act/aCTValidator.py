@@ -55,11 +55,14 @@ class aCTValidator(aCTATLASProcess):
         - copy gmlog dir to jobs/date/cluster/jobid
         """
         aj = self.dbarc.getArcJobInfo(arcjobid)
+        if not aj.has_key('JobID'):
+            self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
+            return False
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/'):]
         date = time.strftime('%Y%m%d')
         select="arcjobid='"+str(arcjobid)+"'"
-        j = self.dbpanda.getJobs(select, ["pandaid"])[0]
+        j = self.dbpanda.getJobs(select, ["pandaid", "sitename"])[0]
         try:
             pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
@@ -70,7 +73,7 @@ class aCTValidator(aCTATLASProcess):
         cluster=aj['cluster'].split('/')[0]
         pupdate = pickle.load(pandapickle)
         pupdate['xml'] = str(metadata.read())
-        pupdate['siteName']='ARC'
+        pupdate['siteName']=j["sitename"]
         pupdate['computingElement']=cluster
         pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
         pupdate['startTime'] = aj['StartTime']
@@ -126,6 +129,7 @@ class aCTValidator(aCTATLASProcess):
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
         # todo: unlink localdir
+        return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
         aj = self.dbarc.getArcJobInfo(arcjobid, columns=["JobID", "appjobid"])
@@ -349,8 +353,10 @@ class aCTValidator(aCTATLASProcess):
                 if result == self.ok:
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
-                    self.dbpanda.updateJobsLazy(select, desc)
-                    self.copyFinishedFiles(id)
+                    self.dbpanda.updateJobsLazy(select, desc) 
+                    if not self.copyFinishedFiles(id):
+                        # id was gone already
+                        continue
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                     self.dbarc.updateArcJobLazy(id, desc)
@@ -437,7 +443,7 @@ class aCTValidator(aCTATLASProcess):
 
         for job in jobstoupdate:
             self.log.info('%s: resubmitting' % job['pandaid'])
-            select = "id="+job['id']
+            select = "id="+str(job['id'])
             desc = {"actpandastatus": "starting", "arcjobid": None}
             self.dbpanda.updateJobs(select, desc)
 

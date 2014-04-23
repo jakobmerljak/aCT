@@ -69,6 +69,10 @@ class aCTPanda2Xrsl:
             cpucount = self.defaults['cputime']
 
         walltime = int( cpucount  / 60)
+
+        if self.getNCores() > 1:
+            walltime = int (walltime / self.getNCores() ) + 60
+
         cputime = self.getNCores() * walltime
         
 

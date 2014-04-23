@@ -31,8 +31,8 @@ class aCTFetcher(aCTProcess):
         dp = arc.datapoint_from_url(url+'/'+fname, self.uc)
         files = dp.List()
         if not files[1]:
-            self.log.warning("Failed listing %s"%url+'/fname')
-            return
+            self.log.warning("Failed listing %s/%s" % (url, fname))
+            return filelist
         for f in files[0]:
             if f.GetType()==f.file_type_file:
                 filelist.append((fname+'/'+f.GetName()).strip('/'))
