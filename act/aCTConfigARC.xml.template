@@ -70,6 +70,11 @@
 </downtime>
 
 <voms>
+  <vo>atlas</vo>
+  <roles>
+    <item>production</item>
+    <item>pilot</item>
+  </roles>
   <bindir>/usr/bin</bindir>
   <proxylifetime>345600</proxylifetime>
   <minlifetime>259200</minlifetime>
