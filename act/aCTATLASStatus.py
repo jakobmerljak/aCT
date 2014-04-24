@@ -27,7 +27,9 @@ class aCTATLASStatus(aCTATLASProcess):
         self.log.info("Found %d jobs to cancel" % len(jobs))
         for job in jobs:
             self.log.info("Cancelling job %d", job['pandaid'])
-            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            # check if arcjobid is set before cancelling the job
+            if job['arcjobid']:
+                self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
         self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
            
