@@ -11,6 +11,7 @@ import shutil
 import fnmatch, re
 
 from aCTProcess import aCTProcess
+import aCTUtils
 
 class aCTFetcher(aCTProcess):
     '''
@@ -28,7 +29,7 @@ class aCTFetcher(aCTProcess):
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
   
     def listUrlRecursive(self, url, fname='', filelist=[]):
-        dp = arc.datapoint_from_url(url+'/'+fname, self.uc)
+        (_, __, dp) = aCTUtils.datapointFromURL(url+'/'+fname, self.uc)
         files = dp.List()
         if not files[1]:
             self.log.warning("Failed listing %s/%s" % (url, fname))
@@ -51,7 +52,7 @@ class aCTFetcher(aCTProcess):
         
         # construct datapoint object, initialising connection. Use the same
         # object until base URL changes. TODO group by base URL.
-        dp = arc.datapoint_from_url(jobs.values()[0].JobID, self.uc)
+        (_, __, dp) = aCTUtils.datapointFromURL(jobs.values()[0].JobID, self.uc)
         dm = arc.DataMover()
         dm.retry(False)
         dm.passive(True)
@@ -67,7 +68,7 @@ class aCTFetcher(aCTProcess):
             
             # If connection URL is different reconnect
             if arc.URL(jobid).ConnectionURL() != dp:
-                dp = arc.datapoint_from_url(jobid, self.uc)
+                (_, __, dp) = aCTUtils.datapointFromURL(jobid, self.uc)
             localdir = str(self.conf.get(['tmp','dir'])) + jobid[jobid.rfind('/'):] + '/'
             
             files = downloadfiles[id].split(';')
@@ -95,9 +96,9 @@ class aCTFetcher(aCTProcess):
                         self.log.warning('Failed to create directory %s: %s', localfiledir, os.strerror(e.errno))
                         notfetched.append(jobid)
                         break
-
-                dp.SetURL(arc.URL(str(jobid + '/' + f)))
-                localdp = arc.datapoint_from_url(str(localdir + f))
+                remotefile = arc.URL(str(jobid + '/' + f))
+                dp.SetURL(remotefile)
+                (_l, __l, localdp) = aCTUtils.datapointFromURL(str(localdir + f), self.uc)
                 # do the copy
                 status = dm.Transfer(dp, localdp, arc.FileCache(), arc.URLMap())
                 if not status:
@@ -156,7 +157,7 @@ class aCTFetcher(aCTProcess):
                     # Check if job still exists
                     fileinfo = arc.FileInfo()
                     self.uc.CredentialString(self.db.getProxy(proxyid))
-                    dp = arc.datapoint_from_url(job.JobID, self.uc)
+                    (_, __, dp) = aCTUtils.datapointFromURL(job.JobID, self.uc)
                     status = dp.Stat(fileinfo)
                     # TODO Check other permanent errors
                     if not status and status.GetErrno() == errno.ENOENT:

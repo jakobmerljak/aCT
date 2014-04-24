@@ -202,7 +202,7 @@ class aCTValidator(aCTATLASProcess):
         bulklimit = 100
         for surl in surls:
             count += 1
-            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
+            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
             datapointlist.append(dp)
             surllist.append(surl)
             
@@ -264,7 +264,7 @@ class aCTValidator(aCTATLASProcess):
         
         # As yet there is no bulk remove in ARC
         for surl in surls:
-            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
+            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
             status = dp.Remove()
             if not status:
                 if status.Retryable():
@@ -303,8 +303,8 @@ class aCTValidator(aCTATLASProcess):
             except:
                 pass
             
-            source = arc.datapoint_from_url(str(jobid + '/jobSmallFiles.tgz'))
-            dest = arc.datapoint_from_url(str(localdir + '/jobSmallFiles.tgz'))
+            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'))
+            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'))
             dm = arc.DataMover()
             status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
             if not status:
