@@ -84,7 +84,10 @@ class aCTValidator(aCTATLASProcess):
             pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
             pupdate['pilotID']=logurl+"|Unknown|Unknown|Unknown|Unknown"
-        pupdate['node']=aj['ExecutionNode']
+        try:
+            pupdate['node']=aj['ExecutionNode']
+        except:
+            pass
 
         try:
             os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")

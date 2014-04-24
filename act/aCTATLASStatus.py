@@ -264,7 +264,10 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate['computingElement']=aj['cluster'].split('/')[0]
             pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
             pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid+"|Unknown|Unknown|Unknown|Unknown"
-            pupdate['node']=aj['ExecutionNode']
+            try:
+                pupdate['node']=aj['ExecutionNode']
+            except:
+                pass
             pupdate['pilotLog']=log
             pupdate['cpuConsumptionTime']=aj['UsedTotalCPUTime']
             pupdate['cpuConsumptionUnit']='seconds'
