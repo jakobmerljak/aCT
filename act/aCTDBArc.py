@@ -127,12 +127,6 @@ class aCTDBArc(aCTDB):
         except Exception,x:
             self.log.error("failed create table %s" %x)
 
-    def Commit(self):
-        '''
-        Commit a transaction after calling a Lazy method.
-        '''
-        self.conn.commit()
-
     def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
@@ -259,9 +253,10 @@ class aCTDBArc(aCTDB):
         Return a list of column: value dictionaries for jobs matching select.
         If lock is True the row will be locked if possible.
         '''
-        if lock:
-            select += self.addLock()
         c=self.getCursor()
+        if lock:
+            #select += self.addLock()
+            c.execute("LOCK TABLES arcjobs WRITE")
         c.execute("SELECT "+self._column_list2str(columns)+" FROM "+tables+" WHERE "+select)
         rows=c.fetchall()
         return rows
