@@ -27,7 +27,9 @@ class aCTATLASStatus(aCTATLASProcess):
         self.log.info("Found %d jobs to cancel" % len(jobs))
         for job in jobs:
             self.log.info("Cancelling job %d", job['pandaid'])
-            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            # check if arcjobid is set before cancelling the job
+            if job['arcjobid']:
+                self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
         self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
            
@@ -322,7 +324,11 @@ class aCTATLASStatus(aCTATLASProcess):
         arcjobs = self.dbarc.getArcJobsInfo(select, columns)
         if arcjobs:
             for aj in arcjobs:
-                downloadfiles = aj['stdout']+';'+aj['logdir']+'/*'
+                downloadfiles = ''
+                if aj['stdout']:
+                    downloadfiles += aj['stdout']+';'
+                if aj['logdir']:
+                    downloadfiles += aj['logdir']+'/*'
                 select = "id='"+str(aj["id"])+"'"
                 desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
                 self.dbarc.updateArcJobsLazy(desc, select)

@@ -93,6 +93,8 @@ class aCTPanda:
         pid = None
         urldesc=None
         urldata=self.__HTTPConnect__('getJob',node)
+        if not urldata:
+            return (None,None)
         try:
             urldesc = cgi.parse_qs(urldata)
         except Exception,x:

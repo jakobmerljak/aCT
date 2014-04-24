@@ -97,8 +97,11 @@ class aCTDB(aCTDBMS):
         row=c.fetchone()
         return row
 
-    def Commit(self):
+    def Commit(self, lock=False):
         self.conn.commit()
+        if lock:
+            c=self.getCursor()
+            c.execute("UNLOCK TABLES")
 
     def removeJobs(self,pandaid):
         c=self.getCursor()
