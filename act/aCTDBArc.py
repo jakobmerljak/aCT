@@ -127,6 +127,13 @@ class aCTDBArc(aCTDB):
         except Exception,x:
             self.log.error("failed create table %s" %x)
 
+    def Commit(self, lock=False):
+        if lock:
+            res = self.releaseMutexLock('arcjobs')
+            if not res:
+                self.log.warning("Could not release lock: %s"%str(res))
+        self.conn.commit()
+
     def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
@@ -256,7 +263,10 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         if lock:
             #select += self.addLock()
-            c.execute("LOCK TABLES arcjobs WRITE")
+            res = self.getMutexLock('arcjobs', timeout=2)
+            if not res:
+                self.log.debug("Could not get lock: %s"%str(res))
+                return []
         c.execute("SELECT "+self._column_list2str(columns)+" FROM "+tables+" WHERE "+select)
         rows=c.fetchall()
         return rows
