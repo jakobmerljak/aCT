@@ -127,10 +127,11 @@ class aCTDBArc(aCTDB):
         except Exception,x:
             self.log.error("failed create table %s" %x)
 
-    def Commit(self):
-        '''
-        Commit a transaction after calling a Lazy method.
-        '''
+    def Commit(self, lock=False):
+        if lock:
+            res = self.releaseMutexLock('arcjobs')
+            if not res:
+                self.log.warning("Could not release lock: %s"%str(res))
         self.conn.commit()
 
     def insertArcJob(self, job):
@@ -259,9 +260,13 @@ class aCTDBArc(aCTDB):
         Return a list of column: value dictionaries for jobs matching select.
         If lock is True the row will be locked if possible.
         '''
-        if lock:
-            select += self.addLock()
         c=self.getCursor()
+        if lock:
+            #select += self.addLock()
+            res = self.getMutexLock('arcjobs', timeout=2)
+            if not res:
+                self.log.debug("Could not get lock: %s"%str(res))
+                return []
         c.execute("SELECT "+self._column_list2str(columns)+" FROM "+tables+" WHERE "+select)
         rows=c.fetchall()
         return rows

@@ -17,3 +17,17 @@ class aCTDBOracle(object):
 
     def addLock(self):
         return " FOR UPDATE"
+
+    def getMutexLock(self, lock_name, timeout=2):
+        """
+        Function to get named lock. Returns 1 if lock was obtained, 0 if attempt timed out, None if error occured.
+        """
+        # don't know how to do mutex in oracle
+        return None
+    
+    def releaseMutexLock(self, lock_name):
+        """
+        Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.
+        """
+        # don't know how to do mutex in oracle
+        return None
