@@ -84,7 +84,10 @@ class aCTValidator(aCTATLASProcess):
             pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
             pupdate['pilotID']=logurl+"|Unknown|Unknown|Unknown|Unknown"
-        pupdate['node']=aj['ExecutionNode']
+        try:
+            pupdate['node']=aj['ExecutionNode']
+        except:
+            pass
 
         try:
             os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
@@ -195,12 +198,14 @@ class aCTValidator(aCTATLASProcess):
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []
+        dummylist = []
         count = 0
         bulklimit = 100
         for surl in surls:
             count += 1
-            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
+            (h, u, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
             datapointlist.append(dp)
+            dummylist.append((h, u)) # to not destroy objects
             surllist.append(surl)
             
             if count % bulklimit != 0 and count != len(surls):
@@ -249,6 +254,7 @@ class aCTValidator(aCTATLASProcess):
             # Clear lists and go to next round
             datapointlist = arc.DataPointList()
             surllist = []
+            dummylist = []
         
         return result
     
@@ -261,7 +267,7 @@ class aCTValidator(aCTATLASProcess):
         
         # As yet there is no bulk remove in ARC
         for surl in surls:
-            dp = arc.datapoint_from_url(str(surl['surl']), self.uc)
+            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
             status = dp.Remove()
             if not status:
                 if status.Retryable():
@@ -300,8 +306,8 @@ class aCTValidator(aCTATLASProcess):
             except:
                 pass
             
-            source = arc.datapoint_from_url(str(jobid + '/jobSmallFiles.tgz'))
-            dest = arc.datapoint_from_url(str(localdir + '/jobSmallFiles.tgz'))
+            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'))
+            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'))
             dm = arc.DataMover()
             status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
             if not status:
