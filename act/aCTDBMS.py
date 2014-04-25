@@ -53,3 +53,9 @@ class aCTDBMS(supported_dbms[dbtype]):
 
     def addLock(self):
         return super(aCTDBMS, self).addLock()
+
+    def getMutexLock(self, lock_name, timeout=2):
+        return super(aCTDBMS, self).getMutexLock(lock_name, timeout)
+
+    def releaseMutexLock(self, lock_name):
+        return super(aCTDBMS, self).releaseMutexLock(lock_name)
