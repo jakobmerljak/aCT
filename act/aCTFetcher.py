@@ -11,6 +11,7 @@ import shutil
 import fnmatch, re
 
 from aCTProcess import aCTProcess
+import aCTUtils
 
 class aCTFetcher(aCTProcess):
     '''
@@ -28,8 +29,8 @@ class aCTFetcher(aCTProcess):
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
   
     def listUrlRecursive(self, url, fname='', filelist=[]):
-        dp = arc.datapoint_from_url(url+'/'+fname, self.uc)
-        files = dp.List()
+        (_, __, dp) = aCTUtils.datapointFromURL(url+'/'+fname, self.uc)
+        files = dp.List(arc.DataPoint.INFO_TYPE_NAME | arc.DataPoint.INFO_TYPE_TYPE)
         if not files[1]:
             self.log.warning("Failed listing %s/%s" % (url, fname))
             return filelist
@@ -47,11 +48,11 @@ class aCTFetcher(aCTProcess):
         # jobs: id: Job object
         # downloadfiles: id: list of files relative to session dir, with wildcards
         if not jobs or not downloadfiles:
-            return ([], [])
+            return ([], [], [])
         
         # construct datapoint object, initialising connection. Use the same
         # object until base URL changes. TODO group by base URL.
-        dp = arc.datapoint_from_url(jobs.values()[0].JobID, self.uc)
+        (_, __, dp) = aCTUtils.datapointFromURL(jobs.values()[0].JobID, self.uc)
         dm = arc.DataMover()
         dm.retry(False)
         dm.passive(True)
@@ -59,6 +60,7 @@ class aCTFetcher(aCTProcess):
         
         fetched = []
         notfetched = []
+        notfetchedretry = []
         
         for (id, job) in jobs.items():
             if id not in downloadfiles:
@@ -67,7 +69,7 @@ class aCTFetcher(aCTProcess):
             
             # If connection URL is different reconnect
             if arc.URL(jobid).ConnectionURL() != dp:
-                dp = arc.datapoint_from_url(jobid, self.uc)
+                (_, __, dp) = aCTUtils.datapointFromURL(jobid, self.uc)
             localdir = str(self.conf.get(['tmp','dir'])) + jobid[jobid.rfind('/'):] + '/'
             
             files = downloadfiles[id].split(';')
@@ -95,19 +97,23 @@ class aCTFetcher(aCTProcess):
                         self.log.warning('Failed to create directory %s: %s', localfiledir, os.strerror(e.errno))
                         notfetched.append(jobid)
                         break
-
-                dp.SetURL(arc.URL(str(jobid + '/' + f)))
-                localdp = arc.datapoint_from_url(str(localdir + f))
+                remotefile = arc.URL(str(jobid + '/' + f))
+                dp.SetURL(remotefile)
+                (_l, __l, localdp) = aCTUtils.datapointFromURL(str(localdir + f), self.uc)
                 # do the copy
                 status = dm.Transfer(dp, localdp, arc.FileCache(), arc.URLMap())
                 if not status:
-                    self.log.warning('Failed to download %s: %s', dp.GetURL().str(), str(status))
-                    notfetched.append(jobid)
+                    if status.Retryable():
+                        self.log.warning('Failed to download but will retry %s: %s', dp.GetURL().str(), str(status))
+                        notfetchedretry.append(jobid)
+                    else:
+                        self.log.error('Failed to download with permanent failure %s: %s', dp.GetURL().str(), str(status))
+                        notfetched.append(jobid)
                     break
                 self.log.info('Downloaded %s', dp.GetURL().str())
-            if jobid not in notfetched:
+            if jobid not in notfetched and jobid not in notfetchedretry:
                 fetched.append(jobid)
-        return (fetched, notfetched)
+        return (fetched, notfetched, notfetchedretry)
                 
                 
     def fetchJobs(self, arcstate, nextarcstate):
@@ -119,9 +125,13 @@ class aCTFetcher(aCTProcess):
             return
         self.log.info("Fetching %i jobs" % sum(len(v) for v in jobstofetch.values()))
         
-        fetched = []; notfetched = []
+        fetched = []; notfetched = []; notfetchedretry = []
         for proxyid, jobs in jobstofetch.items():
             self.uc.CredentialString(self.db.getProxy(proxyid))
+            
+            # Clean the download dir just in case something was left from previous attempt
+            for job in jobs:    
+                shutil.rmtree(self.conf.get(['tmp','dir']) + job[2].JobID[job[2].JobID.rfind('/'):], True)           
 
             # Get list of downloadable files for these jobs
             filestodl = self.db.getArcJobsInfo("arcstate='"+arcstate+"' and cluster='"+self.cluster+"' and proxyid='"+str(proxyid)+"'", ['id', 'downloadfiles'])
@@ -131,32 +141,36 @@ class aCTFetcher(aCTProcess):
             jobs_downloadall = dict((j[0], j[2]) for j in jobs if not downloadfiles[j[0]])
             # jobs to download specific files
             jobs_downloadsome = dict((j[0], j[2]) for j in jobs if downloadfiles[j[0]])
-            
-            (f, n) = self.fetchAll(jobs_downloadall)
-            fetched.extend(f)
-            notfetched.extend(n)
 
-            (f, n) = self.fetchSome(jobs_downloadsome, downloadfiles)
+            # We don't know if a failure from JobSupervisor is retryable or not
+            # so always retry            
+            (f, r) = self.fetchAll(jobs_downloadall)
+            fetched.extend(f)
+            notfetchedretry.extend(r)
+
+            (f, n, r) = self.fetchSome(jobs_downloadsome, downloadfiles)
             fetched.extend(f)
             notfetched.extend(n)
+            notfetchedretry.extend(r)
 
         # Check for massive failure, and back off before trying again
         # TODO: downtime awareness
-        if len(notfetched) > 10 and len(notfetched) == len(jobstofetch):
+        if len(notfetched) > 10 and len(notfetched) == len(jobstofetch) or \
+           len(notfetchedretry) > 10 and len(notfetchedretry) == len(jobstofetch):
             self.log.error("Failed to get any jobs from %s, sleeping for 5 mins" % self.cluster)
             time.sleep(300)
             return
         
         for proxyid, jobs in jobstofetch.items():
             for (id, appjobid, job) in jobs:
-                if job.JobID in notfetched:
+                if job.JobID in notfetchedretry:
                     self.log.warning("%s: Could not get output from job %s" % (appjobid, job.JobID))
                     # Remove download directory to allow retry
                     shutil.rmtree(self.conf.get(['tmp','dir']) + job.JobID[job.JobID.rfind('/'):], True)
                     # Check if job still exists
                     fileinfo = arc.FileInfo()
                     self.uc.CredentialString(self.db.getProxy(proxyid))
-                    dp = arc.datapoint_from_url(job.JobID, self.uc)
+                    (_, __, dp) = aCTUtils.datapointFromURL(job.JobID, self.uc)
                     status = dp.Stat(fileinfo)
                     # TODO Check other permanent errors
                     if not status and status.GetErrno() == errno.ENOENT:
@@ -164,10 +178,15 @@ class aCTFetcher(aCTProcess):
                         self.db.updateArcJob(id, {"arcstate": "donefailed",
                                                   "tarcstate": self.db.getTimeStamp()})
                     # Otherwise try again next time
+                elif job.JobID in notfetched:
+                    self.log.error("%s: Failed to download job %s" % (appjobid, job.JobID))
+                    self.db.updateArcJob(id, {"arcstate": "donefailed",
+                                              "tarcstate": self.db.getTimeStamp()})
                 else:
                     self.log.info("%s: Downloaded job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": nextarcstate,
                                               "tarcstate": self.db.getTimeStamp()})
+
 
     def process(self):
 
