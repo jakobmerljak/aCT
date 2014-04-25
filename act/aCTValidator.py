@@ -306,8 +306,8 @@ class aCTValidator(aCTATLASProcess):
             except:
                 pass
             
-            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'))
-            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'))
+            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'), self.uc)
+            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'), self.uc)
             dm = arc.DataMover()
             status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
             if not status:
