@@ -30,3 +30,11 @@ class aCTDBSqlite(object):
     def addLock(self):
         # SQLite does not support row locking
         return ""
+
+    def getMutexLock(self):
+        # SQLite does not support mutex locking
+        return
+    
+    def releaseMutexLock(self):
+        # SQLite does not support mutex locking
+        return

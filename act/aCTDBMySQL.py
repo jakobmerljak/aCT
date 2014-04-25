@@ -43,3 +43,21 @@ class aCTDBMySQL(object):
     
     def addLock(self):
         return " FOR UPDATE"
+
+    def getMutexLock(self, lock_name, timeout=2):
+        """
+        Function to get named lock. Returns 1 if lock was obtained, 0 if attempt timed out, None if error occured.
+        """
+        c=self.getCursor()
+        select="GET_LOCK('"+lock_name+"',"+str(timeout)+")"
+        c.execute("SELECT "+select)
+        return c.fetchone()[select]
+    
+    def releaseMutexLock(self, lock_name):
+        """
+        Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.
+        """
+        c=self.getCursor()
+        select="RELEASE_LOCK('"+lock_name+"')"
+        c.execute("SELECT "+select)
+        return c.fetchone()[select]
