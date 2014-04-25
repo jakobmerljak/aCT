@@ -114,6 +114,8 @@ class aCTSubmitter(aCTProcess):
             # Lock row for update in case multiple clusters are specified
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' limit 10",
                                         columns=["id", "jobdesc", "proxyid", "appjobid"], lock=True)
+            if jobs:
+                self.log.debug("started lock for writing %d jobs"%len(jobs))
         else:
             jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 10", ["id", "jobdesc", "proxyid", "appjobid"])
 
@@ -131,6 +133,8 @@ class aCTSubmitter(aCTProcess):
  
         if self.cluster:
             self.db.Commit(lock=True)
+            if jobs:
+                self.log.debug("ended lock")
         else:
             self.db.Commit()
 
