@@ -198,12 +198,14 @@ class aCTValidator(aCTATLASProcess):
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []
+        dummylist = []
         count = 0
         bulklimit = 100
         for surl in surls:
             count += 1
-            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
+            (h, u, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
             datapointlist.append(dp)
+            dummylist.append((h, u)) # to not destroy objects
             surllist.append(surl)
             
             if count % bulklimit != 0 and count != len(surls):
@@ -252,6 +254,7 @@ class aCTValidator(aCTATLASProcess):
             # Clear lists and go to next round
             datapointlist = arc.DataPointList()
             surllist = []
+            dummylist = []
         
         return result
     
