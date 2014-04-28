@@ -203,24 +203,24 @@ class aCTValidator(aCTATLASProcess):
         bulklimit = 100
         for surl in surls:
             count += 1
-            (h, u, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
-            datapointlist.append(dp)
-            dummylist.append((h, u)) # to not destroy objects
+            dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            datapointlist.append(dp.h)
+            dummylist.append(dp) # to not destroy objects
             surllist.append(surl)
             
             if count % bulklimit != 0 and count != len(surls):
                 continue
             
             # do bulk call
-            (files, status) = dp.Stat(datapointlist)
+            (files, status) = dp.h.Stat(datapointlist)
             if not status:
                 # If call fails it is generally a server or connection problem
                 # and in most cases should be retryable
                 if status.Retryable():
-                    self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.GetURL().Host(), str(status)))
+                    self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.h.GetURL().Host(), str(status)))
                     result.update(dict((k['arcjobid'], self.retry) for k in surllist))
                 else:
-                    self.log.error("Failed to query files on %s: %s" % (dp.GetURL().Host(), str(status)))
+                    self.log.error("Failed to query files on %s: %s" % (dp.h.GetURL().Host(), str(status)))
                     result.update(dict((k['arcjobid'], self.failed) for k in surllist))
             
             else:
@@ -267,8 +267,8 @@ class aCTValidator(aCTATLASProcess):
         
         # As yet there is no bulk remove in ARC
         for surl in surls:
-            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
-            status = dp.Remove()
+            dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            status = dp.h.Remove()
             if not status:
                 if status.Retryable():
                     self.log.warning("Failed to delete %s for %s, will retry later: %s" %
@@ -306,12 +306,12 @@ class aCTValidator(aCTATLASProcess):
             except:
                 pass
             
-            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'))
-            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'))
+            source = aCTUtils.DataPoint(str(jobid + '/jobSmallFiles.tgz'), self.uc)
+            dest = aCTUtils.DataPoint(str(localdir + '/jobSmallFiles.tgz'), self.uc)
             dm = arc.DataMover()
-            status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
+            status = dm.Transfer(source.h, dest.h, arc.FileCache(), arc.URLMap())
             if not status:
-                self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.GetURL().str(), str(status)))
+                self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.h.GetURL().str(), str(status)))
         
 
     def validateFinishedJobs(self):
