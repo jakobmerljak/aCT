@@ -86,12 +86,11 @@ class aCTDBArc(aCTDB):
             created TIMESTAMP,
             arcstate VARCHAR(255),
             tarcstate TIMESTAMP,
-            cluster TEXT,
-            clusterlist TEXT,
+            cluster VARCHAR(255),
+            clusterlist VARCHAR(1024),
             jobdesc TEXT,
             attemptsleft INTEGER,
-            rerunable TEXT,
-            downloadfiles TEXT,
+            downloadfiles VARCHAR(255),
             proxyid INTEGER,
             appjobid VARCHAR(255),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
@@ -112,10 +111,10 @@ class aCTDBArc(aCTDB):
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             proxy BLOB,
             expirytime DATETIME,
-            proxypath TEXT,
+            proxypath VARCHAR(255),
             dn VARCHAR(255),
             attribute VARCHAR(255),
-            proxytype TEXT,
+            proxytype VARCHAR(255),
             myproxyid VARCHAR(255) )"""
         try:
             c.execute("drop table proxies")
