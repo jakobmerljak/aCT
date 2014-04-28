@@ -48,7 +48,7 @@ class aCTFetcher(aCTProcess):
         # jobs: id: Job object
         # downloadfiles: id: list of files relative to session dir, with wildcards
         if not jobs or not downloadfiles:
-            return ([], [])
+            return ([], [], [])
         
         # construct datapoint object, initialising connection. Use the same
         # object until base URL changes. TODO group by base URL.
