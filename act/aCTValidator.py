@@ -59,7 +59,7 @@ class aCTValidator(aCTATLASProcess):
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         jobid=aj['JobID']
-        sessionid=jobid[jobid.rfind('/'):]
+        sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
         select="arcjobid='"+str(arcjobid)+"'"
         j = self.dbpanda.getJobs(select, ["pandaid", "sitename"])[0]
@@ -79,7 +79,7 @@ class aCTValidator(aCTATLASProcess):
         pupdate['startTime'] = aj['StartTime']
         pupdate['endTime'] = aj['EndTime']
         t=pupdate['pilotID'].split("|")
-        logurl=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid
+        logurl=os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
         if len(t) > 4:
             pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
@@ -105,33 +105,32 @@ class aCTValidator(aCTATLASProcess):
         f.close()
 
         # copy files to joblog dir
+        outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
-            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
-        except:
-            pass
-        try:
-            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
-        except:
-            pass
-        outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + sessionid
-        try:
-            os.mkdir(outd)
+            os.makedirs(outd)
         except:
             pass
         # copy from tmp to outd.
-        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+        localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
         gmlogdir = os.path.join(localdir,"gmlog")
         
         if not os.path.exists(os.path.join(outd,"gmlog")):
             shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
 
-        pilotlog = [f for f in os.listdir(localdir) if f.find('.job.log') != -1]
+        pilotlog = ''
+        if aj.has_key('stdout'):
+            pilotlog = aj['stdout']
+        if not pilotlog:
+            pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
+            if pilotlogs:
+                pilotlog = pilotlogs[0]
         if pilotlog:
-            shutil.copy(os.path.join(localdir,pilotlog[0]), 
-                        os.path.join(outd,re.sub('.job.log.*$', '.out', pilotlog[0])))
+            shutil.copy(os.path.join(localdir,pilotlog), 
+                        os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
-        # todo: unlink localdir
+        # unlink localdir
+        shutil.rmtree(localdir, ignore_errors=True)
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
@@ -233,16 +232,16 @@ class aCTValidator(aCTATLASProcess):
                     else:
                         # compare metadata
                         self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                       (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(), int(surllist[i]['fsize']),
+                                       (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
                                         surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
                         if int(surllist[i]['fsize']) != int(files[i].GetSize()):
                             self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
-                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
                                               int(files[i].GetSize()), int(surllist[i]['fsize'])))
                             result[surllist[i]['arcjobid']] = self.failed
                         elif surllist[i]['checksum'] != files[i].GetCheckSum():
-                            self.log.warning("File %sf for %s: checksum on storage (%s) differs from expected checksum (%s)" %
-                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                            self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
+                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
                                               files[i].GetCheckSum(), surllist[i]['checksum']))
                             result[surllist[i]['arcjobid']] = self.failed
                         else:
