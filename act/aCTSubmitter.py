@@ -221,7 +221,7 @@ class aCTSubmitter(aCTProcess):
         # when trying to create a new UserConfig object for each thread.
         for j in jobs:
             self.log.debug("%s: preparing submission" % j['appjobid'])
-            jobdescstr = str(j['jobdesc'])
+            jobdescstr = str(self.db.getArcJobDescription(str(j['jobdesc'])))
             jobdescs = arc.JobDescriptionList()
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                 self.log.error("%s: Failed to prepare job description" % j['appjobid'])
