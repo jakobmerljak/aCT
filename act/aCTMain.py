@@ -1,6 +1,8 @@
 import os
 import signal
+import subprocess
 import sys
+import tempfile
 import traceback
 import aCTConfig
 import aCTLogger
@@ -122,6 +124,34 @@ class aCTMain:
             print 'Usage: python aCTMain.py [start|stop]'
             sys.exit(1)
                 
+                
+    def logrotate(self):
+        """
+        Run logrotate to rotate all logs
+        """
+        
+        logrotateconf = '''
+            %s/*.log {
+                daily
+                missingok
+                rotate %s
+                create
+                nocompress
+            }''' % (self.conf.get(["logger", "logdir"]), 
+                    self.conf.get(["logger", "rotate"]))
+        logrotatestatus = os.path.join(self.conf.get(["tmp", "dir"]), "logrotate.status")
+        
+        # Make a temp file with conf and call logrotate    
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(logrotateconf)
+            temp.flush()
+            command = ['/usr/sbin/logrotate', '-s', logrotatestatus, temp.name]
+            try:
+                subprocess.call(command)
+            except subprocess.CalledProcessError as e:
+                self.log.warning("Failed to run logrotate: %s" % str(e))
+
+                
     def run(self):
         """
         Main loop
@@ -129,6 +159,8 @@ class aCTMain:
         try:
             self.log.info("Running")
             while 1:
+                # Rotate logs
+                self.logrotate()
                 # check running processes are ok
                 self.procmanager.checkRunning()
                 # start and stop new processes as necessary
