@@ -255,7 +255,7 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 pass
 
-            print log
+            #print log
 
             xml=""
             # xml and log
@@ -290,7 +290,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 res=re.match(".*"+errcode+".*",aj['Error'])
                 if res is not None:
                     pupdate['pilotErrorCode']=1213
-                    print pupdate['pilotErrorCode'],aj['Error']
+                    #print pupdate['pilotErrorCode'],aj['Error']
             codes=[]
             codes.append("Job probably exceeded memory limit")
             codes.append("job killed: vmem")
@@ -299,7 +299,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 res=re.match(".*"+errcode+".*",aj['Error'])
                 if res is not None:
                     pupdate['pilotErrorCode']=1212
-                    print pupdate['pilotErrorCode'],aj['Error']
+                    #print pupdate['pilotErrorCode'],aj['Error']
             pupdate['pilotErrorDiag']=aj['Error']
             # set start/endtime
             pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
