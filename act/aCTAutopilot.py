@@ -172,7 +172,8 @@ class aCTAutopilot(aCTATLASProcess):
             except Exception,x:
                 self.log.error('%s: %s' % (j['pandaid'], x))
                 # TODO push back to download (tofinished)
-                continue
+                #continue
+                jd={}
 
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
             tlist.append(t)
@@ -238,7 +239,10 @@ class aCTAutopilot(aCTATLASProcess):
                 tlist=[]
 
                 for i in range(0,nthreads):
-                    t=PandaGetThr(self.getPanda(site).getJob,site)
+                    if attrs['type'] == "analysis":
+                        t=PandaGetThr(self.getPanda(site).getJob,site,'user')
+                    else:
+                        t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                 for t in tlist:
