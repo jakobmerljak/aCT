@@ -104,6 +104,8 @@ class aCTDBArc(aCTDB):
             c.execute(create)
             # JobDescriptionDocument needs more than varchar(255)
             c.execute("alter table arcjobs modify JobDescriptionDocument text")
+            # add indexes
+            c.execute("ALTER TABLE arcjobs ADD INDEX (arcstate)")
             self.conn.commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)

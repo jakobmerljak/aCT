@@ -71,6 +71,11 @@ class aCTDBPanda(aCTDB):
             pass
         try:
             c.execute(str)
+            # add indexes
+            c.execute("ALTER TABLE pandajobs ADD INDEX (arcjobid)")
+            c.execute("ALTER TABLE pandajobs ADD INDEX (pandaid)")
+            c.execute("ALTER TABLE pandajobs ADD INDEX (pandastatus)")
+            c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")
         except Exception,x:
             self.log.error("failed create table %s" %x)
             pass
