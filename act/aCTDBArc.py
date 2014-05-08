@@ -119,7 +119,7 @@ class aCTDBArc(aCTDB):
         # Create job description table
         create="""CREATE TABLE jobdescriptions (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
-            jobdescription text)
+            jobdescription mediumtext)
             """
         try:
             c.execute("drop table jobdescriptions")
