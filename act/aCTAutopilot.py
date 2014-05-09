@@ -171,8 +171,8 @@ class aCTAutopilot(aCTATLASProcess):
                 f.close()
             except Exception,x:
                 self.log.error('%s: %s' % (j['pandaid'], x))
-                # TODO push back to download (tofinished)
-                continue
+                # TODO create fake pickle to send back to panda 
+                jd = {}
 
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
             tlist.append(t)
