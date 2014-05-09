@@ -71,7 +71,7 @@ class aCTProcess:
                     # do class-specific things
                     self.process()
                 # sleep
-                aCTUtils.sleep(1)
+                aCTUtils.sleep(10)
                 # restart periodically for gsiftp crash
                 ip=self.conf.get(['periodicrestart', self.name.lower()])
                 if not ip:
