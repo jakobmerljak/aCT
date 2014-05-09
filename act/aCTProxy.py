@@ -50,7 +50,8 @@ class aCTProxy:
         cmd.extend(["--key="+oldproxypath])
         cmd.extend(["--proxy="+newproxypath])
         
-        p = subprocess.call(cmd)
+        p = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        self.log.info('arcproxy returned:\n%s' % p.communicate()[0])
         return p
 
     def createVOMSAttribute(self, voms, attribute, proxypath="", validTime=345600, proxyid=None):

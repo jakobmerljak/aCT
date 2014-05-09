@@ -213,15 +213,16 @@ class aCTSubmitter(aCTProcess):
         if not queuelist:
             self.log.info("No free queues available")
             self.db.Commit()
-            return
+            return 0
 
         self.log.info("start submitting")
 
         # Just run one thread for each job in sequence. Strange things happen
         # when trying to create a new UserConfig object for each thread.
+        count=0
         for j in jobs:
             self.log.debug("%s: preparing submission" % j['appjobid'])
-            jobdescstr = str(j['jobdesc'])
+            jobdescstr = str(self.db.getArcJobDescription(str(j['jobdesc'])))
             jobdescs = arc.JobDescriptionList()
             if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                 self.log.error("%s: Failed to prepare job description" % j['appjobid'])
@@ -230,12 +231,15 @@ class aCTSubmitter(aCTProcess):
             self.uc.CredentialString(self.db.getProxy(j['proxyid']))
             t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
             self.RunThreadsSplit([t],1)
+            count=count+1
 
         self.log.info("threads finished")
         # commit transaction to release row locks
         self.db.Commit()
 
         self.log.info("end submitting")
+
+        return count
 
 
     def checkFailedSubmissions(self):
@@ -377,7 +381,8 @@ class aCTSubmitter(aCTProcess):
         # process jobs which have to be rerun
         self.processToRerun()
         # submit new jobs
-        self.submit()
+        while self.submit():
+            continue
 
 
 # Main

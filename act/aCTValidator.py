@@ -59,7 +59,7 @@ class aCTValidator(aCTATLASProcess):
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         jobid=aj['JobID']
-        sessionid=jobid[jobid.rfind('/'):]
+        sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
         select="arcjobid='"+str(arcjobid)+"'"
         j = self.dbpanda.getJobs(select, ["pandaid", "sitename"])[0]
@@ -79,7 +79,7 @@ class aCTValidator(aCTATLASProcess):
         pupdate['startTime'] = aj['StartTime']
         pupdate['endTime'] = aj['EndTime']
         t=pupdate['pilotID'].split("|")
-        logurl=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid
+        logurl=os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
         if len(t) > 4:
             pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
@@ -105,33 +105,32 @@ class aCTValidator(aCTATLASProcess):
         f.close()
 
         # copy files to joblog dir
+        outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
-            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
-        except:
-            pass
-        try:
-            os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
-        except:
-            pass
-        outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + sessionid
-        try:
-            os.mkdir(outd)
+            os.makedirs(outd)
         except:
             pass
         # copy from tmp to outd.
-        localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+        localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
         gmlogdir = os.path.join(localdir,"gmlog")
         
         if not os.path.exists(os.path.join(outd,"gmlog")):
             shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
 
-        pilotlog = [f for f in os.listdir(localdir) if f.find('.job.log') != -1]
+        pilotlog = ''
+        if aj.has_key('stdout'):
+            pilotlog = aj['stdout']
+        if not pilotlog:
+            pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
+            if pilotlogs:
+                pilotlog = pilotlogs[0]
         if pilotlog:
-            shutil.copy(os.path.join(localdir,pilotlog[0]), 
-                        os.path.join(outd,re.sub('.job.log.*$', '.out', pilotlog[0])))
+            shutil.copy(os.path.join(localdir,pilotlog), 
+                        os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
-        # todo: unlink localdir
+        # unlink localdir
+        shutil.rmtree(localdir, ignore_errors=True)
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
@@ -203,24 +202,24 @@ class aCTValidator(aCTATLASProcess):
         bulklimit = 100
         for surl in surls:
             count += 1
-            (h, u, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
-            datapointlist.append(dp)
-            dummylist.append((h, u)) # to not destroy objects
+            dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            datapointlist.append(dp.h)
+            dummylist.append(dp) # to not destroy objects
             surllist.append(surl)
             
             if count % bulklimit != 0 and count != len(surls):
                 continue
             
             # do bulk call
-            (files, status) = dp.Stat(datapointlist)
+            (files, status) = dp.h.Stat(datapointlist)
             if not status:
                 # If call fails it is generally a server or connection problem
                 # and in most cases should be retryable
                 if status.Retryable():
-                    self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.GetURL().Host(), str(status)))
+                    self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.h.GetURL().Host(), str(status)))
                     result.update(dict((k['arcjobid'], self.retry) for k in surllist))
                 else:
-                    self.log.error("Failed to query files on %s: %s" % (dp.GetURL().Host(), str(status)))
+                    self.log.error("Failed to query files on %s: %s" % (dp.h.GetURL().Host(), str(status)))
                     result.update(dict((k['arcjobid'], self.failed) for k in surllist))
             
             else:
@@ -233,16 +232,16 @@ class aCTValidator(aCTATLASProcess):
                     else:
                         # compare metadata
                         self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                       (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(), int(surllist[i]['fsize']),
+                                       (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
                                         surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
                         if int(surllist[i]['fsize']) != int(files[i].GetSize()):
                             self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
-                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
                                               int(files[i].GetSize()), int(surllist[i]['fsize'])))
                             result[surllist[i]['arcjobid']] = self.failed
                         elif surllist[i]['checksum'] != files[i].GetCheckSum():
-                            self.log.warning("File %sf for %s: checksum on storage (%s) differs from expected checksum (%s)" %
-                                             (surllist[i]['arcjobid'], datapointlist[i].GetURL().str(),
+                            self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
+                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
                                               files[i].GetCheckSum(), surllist[i]['checksum']))
                             result[surllist[i]['arcjobid']] = self.failed
                         else:
@@ -267,8 +266,8 @@ class aCTValidator(aCTATLASProcess):
         
         # As yet there is no bulk remove in ARC
         for surl in surls:
-            (_, __, dp) = aCTUtils.datapointFromURL(str(surl['surl']), self.uc)
-            status = dp.Remove()
+            dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            status = dp.h.Remove()
             if not status:
                 if status.Retryable():
                     self.log.warning("Failed to delete %s for %s, will retry later: %s" %
@@ -306,12 +305,12 @@ class aCTValidator(aCTATLASProcess):
             except:
                 pass
             
-            (_s, __s, source) = aCTUtils.datapointFromURL(str(jobid + '/jobSmallFiles.tgz'), self.uc)
-            (_d, __d, dest) = aCTUtils.datapointFromURL(str(localdir + '/jobSmallFiles.tgz'), self.uc)
+            source = aCTUtils.DataPoint(str(jobid + '/jobSmallFiles.tgz'), self.uc)
+            dest = aCTUtils.DataPoint(str(localdir + '/jobSmallFiles.tgz'), self.uc)
             dm = arc.DataMover()
-            status = dm.Transfer(source, dest, arc.FileCache(), arc.URLMap())
+            status = dm.Transfer(source.h, dest.h, arc.FileCache(), arc.URLMap())
             if not status:
-                self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.GetURL().str(), str(status)))
+                self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.h.GetURL().str(), str(status)))
         
 
     def validateFinishedJobs(self):
@@ -543,6 +542,8 @@ class aCTValidator(aCTATLASProcess):
 
 
     def process(self):
+        self.logger.arclogfile.setReopen(True)
+        self.logger.arclogfile.setReopen(False)
         self.validateFinishedJobs()
         self.cleanFailedJobs()
         self.cleanResubmittingJobs()

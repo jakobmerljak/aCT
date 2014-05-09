@@ -202,6 +202,9 @@ class aCTATLASStatus(aCTATLASProcess):
                     os.makedirs(outd, 0755)
                 except OSError, e:
                     self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
+            else:
+                shutil.rmtree(localdir, ignore_errors=True)
+                
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -252,7 +255,7 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 pass
 
-            print log
+            #print log
 
             xml=""
             # xml and log
@@ -287,7 +290,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 res=re.match(".*"+errcode+".*",aj['Error'])
                 if res is not None:
                     pupdate['pilotErrorCode']=1213
-                    print pupdate['pilotErrorCode'],aj['Error']
+                    #print pupdate['pilotErrorCode'],aj['Error']
             codes=[]
             codes.append("Job probably exceeded memory limit")
             codes.append("job killed: vmem")
@@ -296,7 +299,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 res=re.match(".*"+errcode+".*",aj['Error'])
                 if res is not None:
                     pupdate['pilotErrorCode']=1212
-                    print pupdate['pilotErrorCode'],aj['Error']
+                    #print pupdate['pilotErrorCode'],aj['Error']
             pupdate['pilotErrorDiag']=aj['Error']
             # set start/endtime
             pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
@@ -329,9 +332,11 @@ class aCTATLASStatus(aCTATLASProcess):
             for aj in arcjobs:
                 downloadfiles = ''
                 if aj['stdout']:
-                    downloadfiles += aj['stdout']+';'
-                if aj['logdir']:
-                    downloadfiles += aj['logdir']+'/*'
+                    downloadfiles = aj['stdout']
+                    if aj['logdir']:
+                        downloadfiles += ';' + aj['logdir'] + '/*'
+                elif aj['logdir']:
+                    downloadfiles = aj['logdir'] + '/*'
                 select = "id='"+str(aj["id"])+"'"
                 desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
                 self.dbarc.updateArcJobsLazy(desc, select)

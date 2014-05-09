@@ -1,5 +1,6 @@
 import arc
 import cgi
+import re
 
 class aCTPanda2Xrsl:
 
@@ -99,6 +100,14 @@ class aCTPanda2Xrsl:
             if cache.find('Production') > 1:
                 rte = package.split('-')[0].upper()  + '-' \
                       + cache.split('/')[1]
+            elif cache.find('AnalysisTransforms') != -1:
+                rte=package.upper()
+    	        res=re.match('AnalysisTransforms-(.+)_(.+)',cache)
+                if res is not None:
+    	            if res.group(1).find('AtlasProduction') != -1:
+                        rte="ATLAS-"+res.group(2)
+                    else:
+                        rte="ATLAS-"+res.group(1).upper()+"-"+res.group(2)
             else:
                 rte=cache.replace('Atlas','Atlas-').replace('/','-').upper()
             rte=str(rte)
@@ -141,7 +150,8 @@ class aCTPanda2Xrsl:
         x = ""        
         x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
         #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
-        x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
+        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
+        x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
         x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.pilot.json")' % self.schedconfig
 

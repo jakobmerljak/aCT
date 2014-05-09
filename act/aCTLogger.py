@@ -26,11 +26,8 @@ class aCTLogger:
                 raise e
         logfile = os.path.join(self.conf.get(["logger","logdir"]), name + '.log')
         self.logger.logger.setLevel(level)
-        self.handler=logging.handlers.RotatingFileHandler(
-            logfile,
-            maxBytes=int(self.conf.get(["logger","size"])),
-            backupCount=int(self.conf.get(["logger","rotate"])))
-        logger = logging.LoggerAdapter(logging.getLogger(__name__), {'MYVAR': 'Jabberwocky'})
+        # aCTMain calls logrotate to rotate logs
+        self.handler = logging.handlers.WatchedFileHandler(logfile)
 
         if cluster:
             self.formatter = logging.Formatter("[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] [%(cluster)s] - %(message)s")

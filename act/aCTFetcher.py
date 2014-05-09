@@ -29,8 +29,8 @@ class aCTFetcher(aCTProcess):
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
   
     def listUrlRecursive(self, url, fname='', filelist=[]):
-        (_, __, dp) = aCTUtils.datapointFromURL(url+'/'+fname, self.uc)
-        files = dp.List(arc.DataPoint.INFO_TYPE_NAME | arc.DataPoint.INFO_TYPE_TYPE)
+        dp = aCTUtils.DataPoint(url+'/'+fname, self.uc)
+        files = dp.h.List(arc.DataPoint.INFO_TYPE_NAME | arc.DataPoint.INFO_TYPE_TYPE)
         if not files[1]:
             self.log.warning("Failed listing %s/%s" % (url, fname))
             return filelist
@@ -52,12 +52,12 @@ class aCTFetcher(aCTProcess):
         
         # construct datapoint object, initialising connection. Use the same
         # object until base URL changes. TODO group by base URL.
-        (_, __, dp) = aCTUtils.datapointFromURL(jobs.values()[0].JobID, self.uc)
+        datapoint = aCTUtils.DataPoint(jobs.values()[0].JobID, self.uc)
+        dp = datapoint.h
         dm = arc.DataMover()
         dm.retry(False)
         dm.passive(True)
         dm.secure(False)
-        
         fetched = []
         notfetched = []
         notfetchedretry = []
@@ -69,7 +69,8 @@ class aCTFetcher(aCTProcess):
             
             # If connection URL is different reconnect
             if arc.URL(jobid).ConnectionURL() != dp:
-                (_, __, dp) = aCTUtils.datapointFromURL(jobid, self.uc)
+                datapoint = aCTUtils.DataPoint(jobid, self.uc)
+                dp = datapoint.h
             localdir = str(self.conf.get(['tmp','dir'])) + jobid[jobid.rfind('/'):] + '/'
             
             files = downloadfiles[id].split(';')
@@ -99,9 +100,9 @@ class aCTFetcher(aCTProcess):
                         break
                 remotefile = arc.URL(str(jobid + '/' + f))
                 dp.SetURL(remotefile)
-                (_l, __l, localdp) = aCTUtils.datapointFromURL(str(localdir + f), self.uc)
+                localdp = aCTUtils.DataPoint(str(localdir + f), self.uc)
                 # do the copy
-                status = dm.Transfer(dp, localdp, arc.FileCache(), arc.URLMap())
+                status = dm.Transfer(dp, localdp.h, arc.FileCache(), arc.URLMap())
                 if not status:
                     if status.Retryable():
                         self.log.warning('Failed to download but will retry %s: %s', dp.GetURL().str(), str(status))
@@ -170,8 +171,8 @@ class aCTFetcher(aCTProcess):
                     # Check if job still exists
                     fileinfo = arc.FileInfo()
                     self.uc.CredentialString(self.db.getProxy(proxyid))
-                    (_, __, dp) = aCTUtils.datapointFromURL(job.JobID, self.uc)
-                    status = dp.Stat(fileinfo)
+                    dp = aCTUtils.DataPoint(job.JobID, self.uc)
+                    status = dp.h.Stat(fileinfo)
                     # TODO Check other permanent errors
                     if not status and status.GetErrno() == errno.ENOENT:
                         self.log.warning("%s: Job %s no longer exists" % (appjobid, job.JobID))

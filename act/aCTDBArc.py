@@ -1,6 +1,5 @@
 import re
 import os
-import time
 import arc
 from aCTDB import aCTDB
 import aCTConfig
@@ -19,11 +18,11 @@ class aCTDBArc(aCTDB):
         self.jobattrmap = {int: 'integer',
                       str: 'varchar(255)',
                       arc.JobState: 'varchar(255)',
-                      arc.StringList: 'text',
-                      arc.URL: 'text',
+                      arc.StringList: 'varchar(1024)',
+                      arc.URL: 'varchar(255)',
                       arc.Period: 'int',
                       arc.Time: 'datetime',
-                      arc.StringStringMap:'text'}
+                      arc.StringStringMap: 'varchar(1024)'}
         ignoremems=['STDIN',
                     'STDOUT',
                     'STDERR',
@@ -31,7 +30,8 @@ class aCTDBArc(aCTDB):
                     'STAGEOUTDIR',
                     'SESSIONDIR',
                     'JOBLOG',
-                    'JOBDESCRIPTION']
+                    'JOBDESCRIPTION',
+                    'JobDescriptionDocument']
         
         # Attributes of Job class mapped to DB column type
         self.jobattrs={}
@@ -59,7 +59,7 @@ class aCTDBArc(aCTDB):
           - cluster: hostname of the cluster chosen for the job
           - clusterlist: comma separated list of clusters on which the job may
             run. Can be empty.
-          - jobdesc: job description added by the application engine
+          - jobdesc: Row id in jobdescriptions table
           - attemptsleft: Number of attempts left to run the job
           - downloadfiles: Semicolon-separated list of specific files to download
             after job finished. If empty download all in job desc.
@@ -67,6 +67,9 @@ class aCTDBArc(aCTDB):
           - proxyid: id of corresponding proxies entry of proxy to use for this job
           - appjobid: job identifier of application. Used in log messages to track
             a job through the system
+        jobdescriptions: job description added by the application engine
+          - id: primary key
+          - jobdescription: job description text
         proxies: columns are the following:
           - id:
           - proxy:
@@ -86,20 +89,42 @@ class aCTDBArc(aCTDB):
             created TIMESTAMP,
             arcstate VARCHAR(255),
             tarcstate TIMESTAMP,
-            cluster TEXT,
-            clusterlist TEXT,
-            jobdesc TEXT,
+            cluster VARCHAR(255),
+            clusterlist VARCHAR(1024),
+            jobdesc INT(11),
             attemptsleft INTEGER,
-            rerunable TEXT,
-            downloadfiles TEXT,
+            downloadfiles VARCHAR(255),
             proxyid INTEGER,
             appjobid VARCHAR(255),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
-        c=self.getCursor()
-        try:
+            
+        # First check if table already exists
+        c = self.getCursor()
+        c.execute("show tables like 'arcjobs'")
+        row = c.fetchone()
+        self.conn.commit()
+        if row:
+            answer = raw_input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            if answer != 'y':
+                return
             c.execute("drop table arcjobs")
+
+        # Create arcjobs
+        try:
+            c.execute(create)
+            self.conn.commit()
+        except Exception,x:
+            self.log.error("failed create table %s" %x)
+            
+        # Create job description table
+        create="""CREATE TABLE jobdescriptions (
+            id INTEGER PRIMARY KEY AUTO_INCREMENT,
+            jobdescription mediumtext)
+            """
+        try:
+            c.execute("drop table jobdescriptions")
         except:
-            self.log.warning("no arcjobs table")
+            pass
         try:
             c.execute(create)
             # JobDescriptionDocument needs more than varchar(255)
@@ -109,20 +134,22 @@ class aCTDBArc(aCTDB):
             self.conn.commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            
+        # Create proxies table (can be dropped without asking)
         self.log.info("creating proxies table")
         create="""CREATE TABLE proxies (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             proxy BLOB,
             expirytime DATETIME,
-            proxypath TEXT,
+            proxypath VARCHAR(255),
             dn VARCHAR(255),
             attribute VARCHAR(255),
-            proxytype TEXT,
+            proxytype VARCHAR(255),
             myproxyid VARCHAR(255) )"""
         try:
             c.execute("drop table proxies")
         except:
-            self.log.warning("no proxies table")
+            pass
         try:
             c.execute(create)
             self.conn.commit()
@@ -136,25 +163,39 @@ class aCTDBArc(aCTDB):
                 self.log.warning("Could not release lock: %s"%str(res))
         self.conn.commit()
 
+       
     def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
         '''
         c=self.getCursor()
+        jobdesc = str(job.JobDescriptionDocument)
+        s = "insert into jobdescriptions (jobdescription) values (%s)"
+        c.execute(s, [jobdesc])
+        c.execute("SELECT LAST_INSERT_ID()")
+        jobdescid = c.fetchone()['LAST_INSERT_ID()']
+        
         j = self._job2db(job)
-        c.execute("insert into arcjobs (modified,created,"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (modified,created,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+jobdescid+"','"+"','".join(j.values())+"')")
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.conn.commit()
         return row
-        
+
+
     def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
         '''
-        # todo: find some usefull default for proxyid
+        # todo: find some useful default for proxyid
         c=self.getCursor()
+        
+        s = "insert into jobdescriptions (jobdescription) values (%s)"
+        c.execute(s, [jobdesc])
+        c.execute("SELECT LAST_INSERT_ID()")
+        jobdescid = c.fetchone()['LAST_INSERT_ID()']
+        
         desc = {}
         desc['created'] = self.getTimeStamp()
         desc['modified'] = desc['created']
@@ -162,7 +203,7 @@ class aCTDBArc(aCTDB):
         desc['tarcstate']  = desc['created']
         desc['cluster']  = ''
         desc['clusterlist'] = clusterlist
-        desc['jobdesc'] = jobdesc
+        desc['jobdesc'] = jobdescid
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
         desc['appjobid'] = appjobid
@@ -180,6 +221,9 @@ class aCTDBArc(aCTDB):
         Delete job from ARC table.
         '''
         c=self.getCursor()
+        c.execute("select jobdesc from arcjobs where id="+str(id))
+        row = c.fetchone()
+        c.execute("delete from jobdescriptions where id="+str(row['jobdesc']))
         c.execute("delete from arcjobs where id="+str(id))
         self.conn.commit()
 
@@ -293,6 +337,15 @@ class aCTDBArc(aCTDB):
                 d[row['proxyid']].append((row['id'], row['appjobid'], self._db2job(row)))
             
         return d
+    
+    def getArcJobDescription(self, jobdescid):
+        '''
+        Return the job description for the given id in jobdescriptions
+        '''
+        c=self.getCursor()
+        c.execute("SELECT jobdescription from jobdescriptions where id="+str(jobdescid))
+        row = c.fetchone()
+        return row['jobdescription']
     
     def getNArcJobs(self):
         '''
@@ -483,12 +536,14 @@ class aCTDBArc(aCTDB):
         self.conn.commit()
 
 if __name__ == '__main__':
-    import random
-    import logging
-    import aCTConfig
+    import logging, sys
+    log = logging.getLogger()
+    out = logging.StreamHandler(sys.stdout)
+    log.addHandler(out)
+    
     conf = aCTConfig.aCTConfigARC()
     
-    adb = aCTDBArc(logging.getLogger(),dbname=conf.get(["db","file"]))
+    adb = aCTDBArc(log, dbname=conf.get(["db","file"]))
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")

@@ -41,7 +41,7 @@ class aCTPanda2Arc(aCTATLASProcess):
             parser.parse()
             xrsl = parser.getXrsl()
             if xrsl is not None:
-                print xrsl
+                #print xrsl
                 endpoints = self.sites[job['siteName']]['endpoints']
                 cl = []
                 for e in endpoints:
