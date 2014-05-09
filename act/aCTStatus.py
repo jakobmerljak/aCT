@@ -86,19 +86,10 @@ class aCTStatus(aCTProcess):
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
 
-        # total number of jobs
-        njobs=self.db.getNArcJobs()
-
-        # Do not check too little jobs at once (at least 1% of running jobs)
         njobstocheck = sum(len(v) for v in jobstocheck.itervalues())
-        if njobstocheck < njobs/1000:
-            #self.log.debug("too few to check %d" % len(jobs))
+        if not njobstocheck:
             return
-        if njobstocheck:
-            self.log.info("%d jobs to check" % njobstocheck)
-        else:
-            return
-        
+        self.log.info("%d jobs to check" % njobstocheck)
         self.resetJobs(jobstocheck)
         
         # Loop over proxies
