@@ -48,7 +48,7 @@ class aCTDBPanda(aCTDB):
         modified TIMESTAMP,
         created TIMESTAMP,
         pandaid integer, 
-        pandajob text,
+        pandajob mediumtext,
         siteName VARCHAR(255),
         prodSourceLabel VARCHAR(255),
         arcjobid integer,
