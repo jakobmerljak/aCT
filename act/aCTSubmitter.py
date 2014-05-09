@@ -83,7 +83,7 @@ class aCTSubmitter(aCTProcess):
                 jd={}
                 jd['arcstate']='submitted'
                 # initial offset to 1 minute to force first status check
-                jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+300)
+                jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+120)
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("%s: job id %s" % (t.appjobid, t.job.JobID))
                 jd['cluster']=self.cluster
