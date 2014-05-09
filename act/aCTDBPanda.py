@@ -47,8 +47,8 @@ class aCTDBPanda(aCTDB):
         id INTEGER PRIMARY KEY AUTO_INCREMENT,
         modified TIMESTAMP,
         created TIMESTAMP,
-        pandaid integer, 
         pandajob mediumtext,
+        pandaid bigint, 
         siteName VARCHAR(255),
         prodSourceLabel VARCHAR(255),
         arcjobid integer,
@@ -77,7 +77,7 @@ class aCTDBPanda(aCTDB):
         
         str="""
         create table pandaarchive (
-        pandaid integer, 
+        pandaid bigint, 
         siteName VARCHAR(255),
         actpandastatus VARCHAR(255),
         startTime TIMESTAMP DEFAULT 0,
