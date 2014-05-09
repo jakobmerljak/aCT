@@ -119,7 +119,7 @@ class aCTFetcher(aCTProcess):
     def fetchJobs(self, arcstate, nextarcstate):
         
         # Get list of jobs in the right state
-        jobstofetch = self.db.getArcJobs("arcstate='"+arcstate+"' and cluster='"+self.cluster+"'")
+        jobstofetch = self.db.getArcJobs("arcstate='"+arcstate+"' and cluster='"+self.cluster+"'" + " limit 100")
         
         if not jobstofetch:
             return
