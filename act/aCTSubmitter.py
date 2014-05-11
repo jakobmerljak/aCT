@@ -364,10 +364,13 @@ class aCTSubmitter(aCTProcess):
                 if job.JobID in notresumed:
                     self.log.error("%s: Could not resume job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": "failed",
-                                                   "tarcstate": self.db.getTimeStamp()})
+                                              "tarcstate": self.db.getTimeStamp()})
                 else:
+                    # Force a wait before next status check, to allow the
+                    # infosys to update and avoid the failed state being picked
+                    # up again
                     self.db.updateArcJob(id, {"arcstate": "submitted",
-                                                   "tarcstate": self.db.getTimeStamp()})
+                                              "tarcstate": self.db.getTimeStamp(time.time()+600)})
 
 
     def process(self):
