@@ -462,7 +462,7 @@ class aCTValidator(aCTATLASProcess):
         #   jobSmallFiles is produced and uploaded between checking for it and
         #   cancelling the job.
         select = "actpandastatus='toresubmit' and arcjobs.id=pandajobs.arcjobid limit 100000"
-        columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate"]
+        columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate", "arcjobs.restartstate"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs, pandajobs')
 
         if len(jobstoupdate)==0:
@@ -472,9 +472,9 @@ class aCTValidator(aCTATLASProcess):
         killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed']
         
         self.downloadSmallFiles(killedbymanual)
-        # Cancel the jobs manually set toresubmit (when the jobs eventually go 
-        # to cancelled they will be cleaned by ATLASStatus but pandastatus will
-        # not be changed because the arc id will not be in pandajobs any more)
+        # Cancel the jobs manually set toresubmit (TODO: when the jobs eventually go 
+        # to cancelled the arc id will not be in pandajobs any more so they will
+        # never be cleaned up)
         for job in killedbymanual:
             self.log.info('%s: manually asked to resubmit, cancelling arc job %s' %
                           (job['pandaid'], job['JobID']))
@@ -487,8 +487,10 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                if job in killedbymanual:
-                    # Nothing to clean - just let it be resubmitted
+                if job in killedbymanual or job['restartstate'] != 'Finishing':
+                    # If job failed before finishing there is probably no
+                    # jobSmallFiles, but also nothing to clean. Just let it be
+                    # resubmitted
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)
