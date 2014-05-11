@@ -330,13 +330,11 @@ class aCTATLASStatus(aCTATLASProcess):
         arcjobs = self.dbarc.getArcJobsInfo(select, columns)
         if arcjobs:
             for aj in arcjobs:
-                downloadfiles = ''
+                downloadfiles = 'jobSmallFiles.tgz'
                 if aj['stdout']:
-                    downloadfiles = aj['stdout']
-                    if aj['logdir']:
-                        downloadfiles += ';' + aj['logdir'] + '/*'
-                elif aj['logdir']:
-                    downloadfiles = aj['logdir'] + '/*'
+                    downloadfiles += ';' + aj['stdout']
+                if aj['logdir']:
+                    downloadfiles += ';' + aj['logdir'] + '/*'
                 select = "id='"+str(aj["id"])+"'"
                 desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
                 self.dbarc.updateArcJobsLazy(desc, select)
