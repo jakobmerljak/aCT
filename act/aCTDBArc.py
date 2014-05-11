@@ -12,7 +12,7 @@ class aCTDBArc(aCTDB):
         conf = aCTConfig.aCTConfigARC()
         self.proxydir=conf.get(["voms","proxystoredir"])
         if not os.path.isdir(self.proxydir):
-            os.mkdir(self.proxydir)
+            os.makedirs(self.proxydir)
                 
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
