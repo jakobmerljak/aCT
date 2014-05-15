@@ -475,7 +475,7 @@ class aCTValidator(aCTATLASProcess):
             # nothing to do
             return
 
-        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed']
+        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed' and j['arcstate'] != 'done']
         
         self.downloadSmallFiles(killedbymanual)
         # Cancel the jobs manually set toresubmit (when the jobs eventually go 
