@@ -462,15 +462,16 @@ class aCTValidator(aCTATLASProcess):
         #   jobSmallFiles is produced and uploaded between checking for it and
         #   cancelling the job.
         select = "actpandastatus='toresubmit' and arcjobs.id=pandajobs.arcjobid limit 100000"
-        columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate"]
+        columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate", "arcjobs.restartstate"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs, pandajobs')
 
         if len(jobstoupdate)==0:
             # nothing to do
             return
 
-        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed']
+        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed' and j['arcstate'] != 'lost' and j['arcstate'] != 'cancelled']
         
+        # TODO: make data transfer separate from main validator thread
         self.downloadSmallFiles(killedbymanual)
         # Cancel the jobs manually set toresubmit (when the jobs eventually go 
         # to cancelled they will be cleaned by ATLASStatus but pandastatus will
@@ -487,7 +488,7 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                if job in killedbymanual:
+                if job in killedbymanual or job['restartstate'] != arc.JobState.FINISHING:
                     # Nothing to clean - just let it be resubmitted
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
