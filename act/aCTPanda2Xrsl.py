@@ -4,7 +4,7 @@ import re
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,schedconfig,catalog,corecount=1):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -15,6 +15,7 @@ class aCTPanda2Xrsl:
         self.defaults={}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
+        self.sitename=sitename
         self.schedconfig=schedconfig
         self.catalog = catalog
 
@@ -63,8 +64,11 @@ class aCTPanda2Xrsl:
             cpucount = 2*24*3600
 
         # shorten installation jobs
-        if self.jobdesc['prodSourceLabel'][0] == 'install':
-            cpucount = 6*3600
+        try:
+            if self.jobdesc['prodSourceLabel'][0] == 'install':
+                cpucount = 6*3600
+        except:
+            pass
 
         if int(cpucount) <= 0 :
             cpucount = self.defaults['cputime']
@@ -97,7 +101,7 @@ class aCTPanda2Xrsl:
 
         atlasrtes = []
         for (package,cache) in zip(self.jobdesc['swRelease'][0].split('\n'),self.jobdesc['homepackage'][0].split('\n')):
-            if cache.find('Production') > 1:
+            if cache.find('Production') > 1 and cache.find('AnalysisTransforms') < 0 :
                 rte = package.split('-')[0].upper()  + '-' \
                       + cache.split('/')[1]
             elif cache.find('AnalysisTransforms') != -1:
@@ -114,9 +118,10 @@ class aCTPanda2Xrsl:
             rte=rte.replace('ATLAS-','')
             rte += "-"+self.jobdesc['cmtConfig'][0].upper()
 
-            rte=rte.replace('PHYSICS-','ATLASPHYSICS-')
-            rte=rte.replace('PROD2-','ATLASPROD2-')
-            rte=rte.replace('PROD1-','ATLASPROD1-')
+            if cache.find('AnalysisTransforms') < 0 :
+                rte=rte.replace('PHYSICS-','ATLASPHYSICS-')
+                rte=rte.replace('PROD2-','ATLASPROD2-')
+                rte=rte.replace('PROD1-','ATLASPROD1-')
 
             if rte.find('NULL') != -1:
                 rte='PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
@@ -140,7 +145,8 @@ class aCTPanda2Xrsl:
         if self.artes is None:
                 self.setRTE()
 
-        pargs='"pilot3/pilot.py" "-h" "NDGF-condor" "-s" "Nordugrid" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"'
+        #pargs='"pilot3/pilot.py" "-h" "NDGF-condor" "-s" "Nordugrid" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"'
+        pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
         self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
 
@@ -149,9 +155,9 @@ class aCTPanda2Xrsl:
 
         x = ""        
         x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
-        #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
+        x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
         #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
-        x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
+        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
         x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.pilot.json")' % self.schedconfig
 
