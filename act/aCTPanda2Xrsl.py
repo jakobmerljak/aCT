@@ -64,8 +64,11 @@ class aCTPanda2Xrsl:
             cpucount = 2*24*3600
 
         # shorten installation jobs
-        if self.jobdesc['prodSourceLabel'][0] == 'install':
-            cpucount = 6*3600
+        try:
+            if self.jobdesc['prodSourceLabel'][0] == 'install':
+                cpucount = 6*3600
+        except:
+            pass
 
         if int(cpucount) <= 0 :
             cpucount = self.defaults['cputime']

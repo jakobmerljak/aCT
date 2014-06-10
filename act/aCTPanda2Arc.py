@@ -39,7 +39,10 @@ class aCTPanda2Arc(aCTATLASProcess):
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'])
             parser.parse()
-            xrsl = parser.getXrsl()
+            try:
+                xrsl = parser.getXrsl()
+            except:
+                pass
             if xrsl is not None:
                 #print xrsl
                 endpoints = self.sites[job['siteName']]['endpoints']

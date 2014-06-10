@@ -33,6 +33,7 @@ class aCTValidator(aCTATLASProcess):
             
         self.uc = arc.UserConfig()
         self.uc.ProxyPath(str(proxyfile))
+        self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
         
         # Possible file status
         self.ok = 0
@@ -239,16 +240,21 @@ class aCTValidator(aCTATLASProcess):
                                              (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
                                               int(files[i].GetSize()), int(surllist[i]['fsize'])))
                             result[surllist[i]['arcjobid']] = self.failed
+                            continue
+                        if not files[i].CheckCheckSum():
+                            self.log.warning("File %s for %s: no checksum information available" %
+                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
                         elif surllist[i]['checksum'] != files[i].GetCheckSum():
                             self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
                                              (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
                                               files[i].GetCheckSum(), surllist[i]['checksum']))
                             result[surllist[i]['arcjobid']] = self.failed
-                        else:
-                            self.log.info("File %s validated for %s" % (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
-                            # don't overwrite previous failed file for this job
-                            if surllist[i]['arcjobid'] not in result:
-                                result[surllist[i]['arcjobid']] = self.ok
+                            continue
+                       
+                        self.log.info("File %s validated for %s" % (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
+                        # don't overwrite previous failed file for this job
+                        if surllist[i]['arcjobid'] not in result:
+                            result[surllist[i]['arcjobid']] = self.ok
                             
             # Clear lists and go to next round
             datapointlist = arc.DataPointList()
@@ -469,8 +475,9 @@ class aCTValidator(aCTATLASProcess):
             # nothing to do
             return
 
-        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed']
+        killedbymanual = [j for j in jobstoupdate if j['arcstate'] != 'donefailed' and j['arcstate'] != 'done' and j['arcstate'] != 'lost' and j['arcstate'] != 'cancelled']
         
+        # TODO: make data transfer separate from main validator thread
         self.downloadSmallFiles(killedbymanual)
         # Cancel the jobs manually set toresubmit (TODO: when the jobs eventually go 
         # to cancelled the arc id will not be in pandajobs any more so they will
