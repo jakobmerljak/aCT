@@ -36,7 +36,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
         for job in jobs:
             
-            parser = aCTPanda2Xrsl(job['pandajob'], self.sites[job['siteName']]['schedconfig'],
+            parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'])
             parser.parse()
             xrsl = parser.getXrsl()
@@ -48,7 +48,10 @@ class aCTPanda2Arc(aCTATLASProcess):
                     cl.append(urlparse(e).hostname + urlparse(e).path)
                 cls = ",".join(cl)
                 self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))
-                aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=5, clusterlist=cls,
+                maxattempts = 5
+                if job['siteName'] == 'BOINC':
+                    maxattempts = 30
+                aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']))
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
