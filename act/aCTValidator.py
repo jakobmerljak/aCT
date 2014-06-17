@@ -489,7 +489,6 @@ class aCTValidator(aCTATLASProcess):
         self.dbpanda.Commit()
             
         # pull out output file info from metadata.xml into dict, order by SE
-        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         surls = {}
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
@@ -501,9 +500,6 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)
-                    # If job wasn't killed manually, clean it
-                    if job not in killedbymanual:
-                        self.dbarc.updateArcJobLazy(id, cleandesc)
                 else:
                     # Can't clean outputs so mark as failed (see more detail below)
                     self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
@@ -533,8 +529,6 @@ class aCTValidator(aCTATLASProcess):
                     # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobsLazy(select, desc)
-                    # set arcjobs state toclean
-                    self.dbarc.updateArcJobLazy(id, cleandesc)
                 elif result == self.failed:
                     # If we couldn't clean outputs the next try of the job will
                     # also fail. Better to return to panda for an increased

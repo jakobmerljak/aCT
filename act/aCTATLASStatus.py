@@ -320,8 +320,9 @@ class aCTATLASStatus(aCTATLASProcess):
     def updateFailedJobs(self):
         """
         Query jobs in arcstate failed, set to tofetch
-        Query jobs in arcstate donefailed, cancelled and lost, set to toclean.
-        If they should be resubmitted, set arcjobid to null in pandajobs
+        Query jobs in arcstate donefailed, cancelled and lost.
+        If they should be resubmitted, set arcjobid to null in pandajobs and
+        cleanupLeftovers() will take care of cleaning up the old jobs.
         If not do post-processing and fill status in pandajobs
         """
         # Get outputs to download for failed jobs
@@ -363,7 +364,6 @@ class aCTATLASStatus(aCTATLASProcess):
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
         self.processFailed(failedjobs)
-        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
 
         for aj in failedjobs:
             select = "arcjobid='"+str(aj["arcjobid"])+"'"
@@ -382,9 +382,6 @@ class aCTATLASStatus(aCTATLASProcess):
             desc['actpandastatus'] = 'starting'
             desc['arcjobid'] = None
             self.dbpanda.updateJobsLazy(select,desc)
-            # Clean arc job (the cleaning from the CE will fail but at least it
-            # will be cleaned fom the DB)
-            self.dbarc.updateArcJobLazy(aj["arcjobid"], cleandesc)
 
         for aj in cancelledjobs:
             # For jobs that panda cancelled, don't do anything, they already
@@ -396,14 +393,34 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["actpandastatus"] = "starting"
             desc["arcjobid"] = None
             self.dbpanda.updateJobsLazy(select, desc)
-            self.dbarc.updateArcJobLazy(aj["arcjobid"], cleandesc)
 
         if failedjobs or lostjobs or cancelledjobs:
             self.dbpanda.Commit()
-            if lostjobs or cancelledjobs:
-                self.dbarc.Commit()
 
-    
+
+    def cleanupLeftovers(self):
+        """
+        Clean jobs left behind in arcjobs table:
+         - arcstate=tocancel or cancelling when cluster is empty
+         - arcstate=cancelled or lost or donefailed when id not in pandajobs
+        """
+        select = "(arcstate='tocancel' or arcstate='cancelling') and cluster=''"
+        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
+        for job in jobs:
+            self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
+            self.dbarc.deleteArcJob(job['id'])
+
+        select = "(arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
+                  and arcjobs.id not in (select arcjobid from pandajobs)"
+        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate'])
+        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+        for job in jobs:
+            self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
+            self.dbarc.updateArcJobLazy(job['id'], cleandesc)
+        if jobs:
+            self.dbarc.Commit()
+
+
     def process(self):
         """
         Main loop
@@ -425,6 +442,8 @@ class aCTATLASStatus(aCTATLASProcess):
             # If they should be resubmitted, set arcjobid to null in pandajobs
             # If not do post-processing and fill status in pandajobs
             self.updateFailedJobs()
+            # Clean up jobs left behind in arcjobs table
+            self.cleanupLeftovers()
             
         except aCTSignal.ExceptInterrupt,x:
             print x
