@@ -390,7 +390,7 @@ class aCTValidator(aCTATLASProcess):
         Delete the output files in metadata.xml.
         Move actpandastatus to failed. 
         '''
-        # get all jobs with pandastatus running and actpandastatus tovalidate
+        # get all jobs with pandastatus transferring and actpandastatus toclean
         select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
         columns = ["arcjobid", "pandaid"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
@@ -402,6 +402,7 @@ class aCTValidator(aCTATLASProcess):
         # pull out output file info from metadata.xml into dict, order by SE
 
         surls = {}
+        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
@@ -411,8 +412,7 @@ class aCTValidator(aCTATLASProcess):
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
                 # set arcjobs state toclean
-                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                self.dbarc.updateArcJob(job["arcjobid"], desc)
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
             else:
                 surls.update(jobsurls)
 
@@ -429,8 +429,7 @@ class aCTValidator(aCTATLASProcess):
                     desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
-                    desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                    self.dbarc.updateArcJobLazy(id, desc)
+                    self.dbarc.updateArcJobLazy(id, cleandesc)
                 else:
                     # Retry next time
                     pass
@@ -490,6 +489,7 @@ class aCTValidator(aCTATLASProcess):
         self.dbpanda.Commit()
             
         # pull out output file info from metadata.xml into dict, order by SE
+        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         surls = {}
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
@@ -497,10 +497,13 @@ class aCTValidator(aCTATLASProcess):
                 if job in killedbymanual or job['restartstate'] != 'Finishing':
                     # If job failed before finishing there is probably no
                     # jobSmallFiles, but also nothing to clean. Just let it be
-                    # resubmitted
+                    # resubmitted and clean arc job
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)
+                    # If job wasn't killed manually, clean it
+                    if job not in killedbymanual:
+                        self.dbarc.updateArcJobLazy(id, cleandesc)
                 else:
                     # Can't clean outputs so mark as failed (see more detail below)
                     self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
@@ -531,12 +534,11 @@ class aCTValidator(aCTATLASProcess):
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
-                    desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                    self.dbarc.updateArcJobLazy(id, desc)
+                    self.dbarc.updateArcJobLazy(id, cleandesc)
                 elif result == self.failed:
                     # If we couldn't clean outputs the next try of the job will
                     # also fail. Better to return to panda for an increased
-                    # attempt no. Setting to tovalidate and pandastatus=failed
+                    # attempt no. Setting to toclean and pandastatus=transferring
                     # means it will be processed by cleanFailedJobs() so don't 
                     # clean the arc job here
                     select = "arcjobid='"+str(id)+"'"
