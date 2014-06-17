@@ -363,6 +363,7 @@ class aCTATLASStatus(aCTATLASProcess):
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
         self.processFailed(failedjobs)
+        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
 
         for aj in failedjobs:
             select = "arcjobid='"+str(aj["arcjobid"])+"'"
@@ -373,34 +374,35 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
+            # There is no cleaning to do for lost jobs so just resubmit them
             self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc={}
-            # Validator processes this state before setting back to starting
             desc['pandastatus'] = 'starting'
-            desc['actpandastatus'] = 'toresubmit'
+            desc['actpandastatus'] = 'starting'
+            desc['arcjobid'] = None
             self.dbpanda.updateJobsLazy(select,desc)
+            # Clean arc job (the cleaning from the CE will fail but at least it
+            # will be cleaned fom the DB)
+            self.dbarc.updateArcJobLazy(aj["arcjobid"], cleandesc)
 
         for aj in cancelledjobs:
             # For jobs that panda cancelled, don't do anything, they already
             # have actpandastatus=cancelled. For jobs that were killed in arc,
-            # resubmit
+            # resubmit and clean
             select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
             desc["arcjobid"] = None
             self.dbpanda.updateJobsLazy(select, desc)
-        
-        if len(failedjobs)+len(lostjobs)+len(cancelledjobs)!=0:
-            self.dbpanda.Commit()
+            self.dbarc.updateArcJobLazy(aj["arcjobid"], cleandesc)
 
-        # set arcjobs state toclean for cancelled jobs
-        desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-        for aj in cancelledjobs:
-            self.dbarc.updateArcJobLazy(aj["arcjobid"], desc)
-        if len(cancelledjobs)!=0:
-            self.dbarc.Commit()            
+        if failedjobs or lostjobs or cancelledjobs:
+            self.dbpanda.Commit()
+            if lostjobs or cancelledjobs:
+                self.dbarc.Commit()
+
     
     def process(self):
         """
