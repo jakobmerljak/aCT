@@ -106,7 +106,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
         nthreads=int(self.conf.get(["panda","threads"]))
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and "+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime'])), columns)
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat)", columns)
         if not jobs:
             return
         
@@ -139,7 +139,8 @@ class aCTAutopilot(aCTATLASProcess):
             jd={}
             if changed_pstatus:
                 jd['pandastatus']=pstatus
-            jd['theartbeat']=self.dbpanda.getTimeStamp()
+            # Make sure heartbeat is ahead of modified time so it is not picked up again
+            jd['theartbeat']=self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
             if (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr"):

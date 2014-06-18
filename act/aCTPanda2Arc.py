@@ -61,9 +61,6 @@ class aCTPanda2Arc(aCTATLASProcess):
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting 
                 jd['actpandastatus'] = 'sent'
-
-                # Make sure heartbeat is updated straight away when job goes to starting
-                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()-int(self.conf.get(['panda', 'heartbeattime'])))
                 self.dbpanda.updateJob(job['pandaid'], jd)
                 
 
