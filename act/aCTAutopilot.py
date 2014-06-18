@@ -110,7 +110,7 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
         
-        self.log.info("Update heartbeat for %d jobs in state %s" % (len(jobs), pstatus))
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
 
         changed_pstatus = False
         if pstatus == 'sent':
@@ -144,6 +144,7 @@ class aCTAutopilot(aCTATLASProcess):
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
             if (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr"):
+                self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
             self.dbpanda.updateJob(t.id,jd)
@@ -161,7 +162,7 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
         
-        self.log.info("Updating panda for %d finished jobs" % len(jobs))
+        self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
         tlist=[]
         for j in jobs:
