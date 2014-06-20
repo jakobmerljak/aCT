@@ -11,7 +11,7 @@ class aCTCleaner(aCTProcess):
     
     def processToClean(self):
         
-        jobstoclean = self.db.getArcJobs("arcstate='toclean' and cluster='"+self.cluster+"'")
+        jobstoclean = self.db.getArcJobs("arcstate='toclean' and cluster='"+self.cluster+"' limit 100")
         
         if not jobstoclean:
             return
