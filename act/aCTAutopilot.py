@@ -1,4 +1,5 @@
 from threading import Thread
+import os
 import pickle
 import re
 import time
@@ -177,6 +178,8 @@ class aCTAutopilot(aCTATLASProcess):
                 self.log.error('%s: %s' % (j['pandaid'], x))
                 # TODO create fake pickle to send back to panda 
                 jd = {}
+            finally:
+                os.remove(fname)
 
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
             tlist.append(t)

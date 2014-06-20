@@ -97,13 +97,6 @@ class aCTValidator(aCTATLASProcess):
         f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
         pickle.dump(pupdate, f)
         f.close()
-        try:
-            os.mkdir(self.conf.get(['tmp','dir'])+"/xml")
-        except:
-            pass
-        f=open(self.conf.get(['tmp','dir'])+"/xml/"+str(j['pandaid'])+".xml","w")
-        f.write(pupdate['xml'])
-        f.close()
 
         # copy files to joblog dir
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
