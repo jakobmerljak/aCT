@@ -179,7 +179,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.log.error('%s: %s' % (j['pandaid'], x))
                 # TODO create fake pickle to send back to panda 
                 jd = {}
-            finally:
+            else:
                 os.remove(fname)
 
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
