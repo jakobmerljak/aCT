@@ -123,8 +123,6 @@ class aCTValidator(aCTATLASProcess):
                         os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
-        # unlink localdir
-        shutil.rmtree(localdir, ignore_errors=True)
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
@@ -310,7 +308,19 @@ class aCTValidator(aCTATLASProcess):
             status = dm.Transfer(source.h, dest.h, arc.FileCache(), arc.URLMap())
             if not status:
                 self.log.debug('%s: Failed to download %s: %s' % (job['pandaid'], source.h.GetURL().str(), str(status)))
-        
+
+
+    def cleanDownloadedJob(self, arcjobid):
+        '''
+        Remove directory to which job was downloaded.
+        '''
+
+        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        if job and job['JobID']:
+            sessionid = job['JobID'][job['JobID'].rfind('/'):]
+            localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+            shutil.rmtree(localdir, ignore_errors=True)
+
 
     def validateFinishedJobs(self):
         '''
@@ -364,6 +374,7 @@ class aCTValidator(aCTATLASProcess):
                     # set arcjobs state toclean
                     desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                     self.dbarc.updateArcJobLazy(id, desc)
+                    self.cleanDownloadedJob(id)
                 elif result == self.failed:
                     select = "arcjobid='"+str(id)+"'"
                     # output file failed, set to toresubmit to clean up output and resubmit
@@ -406,6 +417,7 @@ class aCTValidator(aCTATLASProcess):
                 self.dbpanda.updateJobs(select, desc)
                 # set arcjobs state toclean
                 self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                self.cleanDownloadedJob(job["arcjobid"])
             else:
                 surls.update(jobsurls)
 
@@ -423,6 +435,7 @@ class aCTValidator(aCTATLASProcess):
                     self.dbpanda.updateJobsLazy(select, desc)
                     # set arcjobs state toclean
                     self.dbarc.updateArcJobLazy(id, cleandesc)
+                    self.cleanDownloadedJob(id)
                 else:
                     # Retry next time
                     pass
@@ -490,6 +503,7 @@ class aCTValidator(aCTATLASProcess):
                     # If job failed before finishing there is probably no
                     # jobSmallFiles, but also nothing to clean. Just let it be
                     # resubmitted and clean arc job
+                    self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)
@@ -518,6 +532,7 @@ class aCTValidator(aCTATLASProcess):
                     continue
                 
                 if result == self.ok:
+                    self.cleanDownloadedJob(id)
                     select = "arcjobid='"+str(id)+"'"
                     # Setting arcjobid to NULL lets Panda2Arc pick up the job for resubmission
                     desc = {"actpandastatus": "starting", "arcjobid": None}
