@@ -101,7 +101,7 @@ class aCTValidator(aCTATLASProcess):
         # copy files to joblog dir
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
-            os.makedirs(outd)
+            os.makedirs(outd, 0755)
         except:
             pass
         # copy from tmp to outd.
@@ -300,7 +300,7 @@ class aCTValidator(aCTATLASProcess):
             localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
             
             try:
-                os.makedirs(localdir)
+                os.makedirs(localdir, 0755)
             except:
                 pass
             

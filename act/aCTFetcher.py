@@ -88,11 +88,11 @@ class aCTFetcher(aCTProcess):
                 files = list(set(expandedfiles))
 
             for f in files:
-                localfile = jobid + '/' + f
+                localfile = str(localdir + f)
                 localfiledir = localfile[:localfile.rfind('/')]
                 # create required local dirs
                 try:
-                    os.makedirs(localfiledir)
+                    os.makedirs(localfiledir, 0755)
                 except OSError as e:
                     if e.errno != errno.EEXIST or not os.path.isdir(localfiledir):
                         self.log.warning('Failed to create directory %s: %s', localfiledir, os.strerror(e.errno))
@@ -100,7 +100,7 @@ class aCTFetcher(aCTProcess):
                         break
                 remotefile = arc.URL(str(jobid + '/' + f))
                 dp.SetURL(remotefile)
-                localdp = aCTUtils.DataPoint(str(localdir + f), self.uc)
+                localdp = aCTUtils.DataPoint(localfile, self.uc)
                 # do the copy
                 status = dm.Transfer(dp, localdp.h, arc.FileCache(), arc.URLMap())
                 if not status:
