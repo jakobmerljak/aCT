@@ -107,7 +107,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
         nthreads=int(self.conf.get(["panda","threads"]))
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat)", columns)
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -158,7 +158,7 @@ class aCTAutopilot(aCTATLASProcess):
         Final status update for completed jobs (finished or failed in athena)
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed'");
+        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' limit 1000");
 
         if not jobs:
             return
