@@ -56,6 +56,7 @@ class aCTDBArc(aCTDB):
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
           - tarcstate: time stamp of last arcstate
+          - tstate: time stamp of last arc Job state change
           - cluster: hostname of the cluster chosen for the job
           - clusterlist: comma separated list of clusters on which the job may
             run. Can be empty.
@@ -89,6 +90,7 @@ class aCTDBArc(aCTDB):
             created TIMESTAMP,
             arcstate VARCHAR(255),
             tarcstate TIMESTAMP,
+            tstate TIMESTAMP,
             cluster VARCHAR(255),
             clusterlist VARCHAR(1024),
             jobdesc INT(11),
@@ -174,7 +176,7 @@ class aCTDBArc(aCTDB):
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
         
         j = self._job2db(job)
-        c.execute("insert into arcjobs (modified,created,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+jobdescid+"','"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (created,tstate,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+str(jobdescid)+"','"+"','".join(j.values())+"')")
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.conn.commit()
@@ -196,9 +198,9 @@ class aCTDBArc(aCTDB):
         
         desc = {}
         desc['created'] = self.getTimeStamp()
-        desc['modified'] = desc['created']
         desc['arcstate'] = "tosubmit"
         desc['tarcstate']  = desc['created']
+        desc['tstate'] = desc['created']
         desc['cluster']  = ''
         desc['clusterlist'] = clusterlist
         desc['jobdesc'] = jobdescid

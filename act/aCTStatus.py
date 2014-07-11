@@ -2,6 +2,7 @@
 #
 # Process to check the status of running ARC jobs
 #
+import re
 import time
 import arc
 
@@ -144,7 +145,7 @@ class aCTStatus(aCTProcess):
                     # unexpected
                     arcstate = 'failed'
                     
-                self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp()}, updatedjob)
+                self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()}, updatedjob)
                     
         self.log.info('Done')
         
@@ -161,13 +162,42 @@ class aCTStatus(aCTProcess):
         for job in jobs:
             self.log.warning("%s: Job %s lost from information system, marking as lost" % (job['appjobid'], job['JobID']))
             self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
+
+
+    def checkStuckJobs(self):
+        '''
+        check jobs with tstate too long ago and set them tocancel
+        maxtimestate can be set in arc config file for any state in arc.JobState,
+        e.g. maxtimerunning, maxtimequeuing
+        '''
+        
+        # Loop over possible states
+        # Note: MySQL is case-insensitive. Need to watch out with other DBs
+        for jobstate in [state.lower() for state in dir(arc.JobState) if re.match('^[A-Z][A-Z]', state)]:
+            maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate])
+            if not maxtime:
+                continue
             
+            select = "state='%s' and %s" % (jobstate, self.db.timeStampLessThan("tstate", maxtime))
+            jobs = self.db.getArcJobsInfo(select, columns=['id', 'JobID', 'appjobid'])
+            
+            for job in jobs:
+                self.log.warning("%s: Job %s too long in state %s, cancelling" % (job['appjobid'], job['JobID'], jobstate))
+                if job['JobID']:
+                    # If jobid is defined, cancel
+                    self.db.updateArcJob(job['id'], {'arcstate': 'tocancel', 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()})
+                else:
+                    # Otherwise delete it
+                    self.db.deleteArcJob(job['id'])
+        
     
     def process(self):
         # check job status
         self.checkJobs()
         # check for lost jobs
         self.checkLostJobs()
+        # check for stuck jobs too long in one state and kill them
+        self.checkStuckJobs()
 
 if __name__ == '__main__':
     st=aCTStatus()
