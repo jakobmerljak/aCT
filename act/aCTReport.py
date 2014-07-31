@@ -18,7 +18,7 @@ class aCTStatus:
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
 
     def ProcessReport(self):
-        actprocscmd = 'ps ax -ww -o args'
+        actprocscmd = 'ps ax -ww -o etime,args'
         p = subprocess.Popen(actprocscmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         
@@ -28,15 +28,19 @@ class aCTStatus:
         
         # Group processes by cluster
         cluster_procs = {}
+        longprocesses = []
         for line in out.split('\n'):
-            reg = re.match('.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            reg = re.match('\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
             if reg:
-                process, cluster = reg.groups()
+                runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
                 if process == 'aCTReport' or process == 'aCTMain':
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
+                elif not re.match('\d\d:\d\d', runningtime):
+                    # Check for overrunning processes
+                    longprocesses.append((process, cluster))
                 if cluster in cluster_procs:
                     cluster_procs[cluster].append(process)
                 else:
@@ -47,6 +51,9 @@ class aCTStatus:
             procs.sort()
             print '%28s: %s' % (cluster, ' '.join(procs))
         print
+        for proc in longprocesses:
+            print 'WARNING: %s for %s running for more than one hour' % proc
+        print
 
     def JobReport(self):
         c=self.db.conn.cursor()
@@ -54,8 +61,12 @@ class aCTStatus:
         rows=c.fetchall()
         rep={}
         rtot={}
+        states = ["Undefined", "Accepted", "Preparing", "Submitting",
+                 "Queuing", "Running", "Finishing", "Finished", "Hold", "Killed",
+                 "Failed", "Deleted", "Other"]
 
         print "All jobs: %d" % len(rows)
+        print "%29s %s" % (' ', ' '.join(['%9s' % s for s in states]))
         for r in rows:
 
             reg=re.search('.+//([^:]+)',str(r[0]))
@@ -66,8 +77,8 @@ class aCTStatus:
                 cl='WaitingSubmission'
 
             jid=str(r[1])
-            if jid is None:
-                jid="Waiting state"
+            if jid == 'None':
+                jid="Other"
 
             try:
                 rep[cl][jid]+=1
@@ -83,16 +94,24 @@ class aCTStatus:
                 rtot[jid]=1
 
         for k in rep.keys():
-            log="%28s:" % k
-            for s in rep[k].keys():
-                log += " "+s+": %d" % rep[k][s]
+            log="%28s:" % k[:28]
+            for s in states:
+                try:
+                    log += '%10s' % str(rep[k][s])
+                except KeyError:
+                    log += '%10s' % '-'
             print log
-        print "Totals:"
-        for k in rtot.keys():
-            print "  %s: %d" % (k,rtot[k])
+        log = "%28s:" % "Totals"
+        for s in states:
+            try:
+                log += '%10s' % str(rtot[s])
+            except:
+                log += '%10s' % '-'
+        print log
 
         
 
 acts=aCTStatus()
 acts.ProcessReport()
 acts.JobReport()
+
