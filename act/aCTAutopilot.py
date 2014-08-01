@@ -135,7 +135,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
             self.log.debug('%s: %s' % (t.id, t.result))
-            if t.result['command'][0] != "NULL":
+            if t.result.has_key('command')  and t.result['command'][0] != "NULL":
                 self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
             if changed_pstatus:
@@ -144,7 +144,7 @@ class aCTAutopilot(aCTATLASProcess):
             jd['theartbeat']=self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr"):
+            if t.result.has_key('command') and ( (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr") ):
                 self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
