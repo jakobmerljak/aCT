@@ -252,6 +252,12 @@ class aCTAutopilot(aCTATLASProcess):
                         t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
+                    nall += 1
+                    if nall >= self.sites[site]['maxjobs']:
+                        self.log.info("Site %s: reached max job limit of %d" % (site, self.sites[site]['maxjobs']))
+                        stopflag = True
+                        break
+                    
                 for t in tlist:
                     t.join()
                     (pandaid,pandajob)=t.result
