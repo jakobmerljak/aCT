@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
-import aCTDBArc
 import aCTConfig
 import re
 import subprocess
 import aCTLogger
+from act.arc import aCTDBArc
 
 class aCTStatus:
     

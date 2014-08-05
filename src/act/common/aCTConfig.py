@@ -1,7 +1,6 @@
 import os
-import re
-from xml.dom import minidom
 import time
+from xml.dom import minidom
 
 class aCTConfig:
 

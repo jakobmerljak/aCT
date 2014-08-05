@@ -3,7 +3,7 @@ import time
 import arc
 from urlparse import urlparse
 from threading import Thread
-from aCTProcess import aCTProcess
+from act.common.aCTProcess import aCTProcess
 
 class SubmitThr(Thread):
     def __init__ (self,func,id,appjobid,jobdescs,uc,logger):

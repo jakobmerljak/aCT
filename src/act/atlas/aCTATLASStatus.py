@@ -8,8 +8,8 @@ import re
 import os
 import shutil
 
-import aCTSignal
-import aCTUtils
+from act.common import aCTSignal
+from act.common import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
 

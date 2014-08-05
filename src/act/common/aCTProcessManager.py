@@ -1,9 +1,8 @@
 import subprocess
-import sys
 import os
 
 import aCTUtils
-import aCTDBArc
+from act.arc import aCTDBArc
 
 class aCTProcessManager:
     '''
@@ -21,7 +20,7 @@ class aCTProcessManager:
         # list of processes to run per cluster
         self.processes = ['aCTSubmitter', 'aCTStatus', 'aCTFetcher', 'aCTCleaner']
         # dictionary of processes:aCTProcessHandler of which to run a single instance
-        #self.processes_single = {'aCTAutopilot': None}
+        # TODO: app-specific processes in conf file instead of hard-coded
         self.processes_single = {'aCTAutopilot':None, 
                                  'aCTPanda2Arc':None,
                                  'aCTProxyHandler':None,
@@ -36,7 +35,7 @@ class aCTProcessManager:
         
         # Start single instance processes
         for process in self.processes_single:
-            proc = self.aCTProcessHandler(process, self.logdir, actlocation=self.actlocation)
+            proc = self.aCTProcessHandler('act/atlas/'+process, self.logdir, actlocation=self.actlocation)
             proc.start()
             self.processes_single[process] = proc
         
@@ -107,7 +106,7 @@ class aCTProcessManager:
                 self.running[cluster] = []
                 for proc in self.processes:
                     self.log.info("Starting process %s for %s", proc, cluster)
-                    ph = self.aCTProcessHandler(proc, self.logdir, cluster, actlocation=self.actlocation)
+                    ph = self.aCTProcessHandler('act/arc/'+proc, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
                     self.running[cluster].append(ph)
             
@@ -115,7 +114,7 @@ class aCTProcessManager:
         for cluster in clusterlist:
             if cluster not in self.submitters and cluster not in self.running:
                 self.log.info("Starting process aCTSubmitter for %s", cluster)
-                ph = self.aCTProcessHandler('aCTSubmitter', self.logdir, cluster, actlocation=self.actlocation)
+                ph = self.aCTProcessHandler('act/arc/aCTSubmitter', self.logdir, cluster, actlocation=self.actlocation)
                 ph.start()
                 self.submitters[cluster] = ph
         
@@ -130,7 +129,7 @@ class aCTProcessManager:
             self.child = None
             self.actlocation = actlocation
             # Redirect stdout and stderr to process log
-            self.fdout = open(os.path.join(logdir, name+'.log'), 'a')            
+            self.fdout = open(os.path.join(logdir, name[name.rfind('/')+1:]+'.log'), 'a')            
         def __del__(self):
             self.kill()
         def start(self):

@@ -6,7 +6,7 @@ import re
 import time
 import arc
 
-from aCTProcess import aCTProcess
+from act.common.aCTProcess import aCTProcess
 
 class aCTStatus(aCTProcess):
     '''

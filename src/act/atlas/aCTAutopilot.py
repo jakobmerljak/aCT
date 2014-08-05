@@ -5,8 +5,8 @@ import re
 import time
 import arc
 import aCTPanda
-import aCTProxy
-import aCTUtils
+from act.common import aCTProxy
+from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
 
 class PandaThr(Thread):

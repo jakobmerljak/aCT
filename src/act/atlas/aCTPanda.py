@@ -1,12 +1,9 @@
-import os
-import ssl
 import cgi
 import urllib2, urllib, socket, httplib
-from threading import Thread,enumerate
-import aCTConfig
+from threading import Thread
 import pickle
 import re
-import random
+from act.common import aCTConfig
 
 class PThr(Thread):
     def __init__(self):
