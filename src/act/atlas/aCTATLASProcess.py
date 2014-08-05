@@ -3,12 +3,12 @@ import os
 import sys
 import traceback
 
-import aCTLogger
-import aCTConfig
-import aCTDBArc
+from act.common import aCTLogger
+from act.common import aCTConfig
+from act.common import aCTUtils
+from act.common import aCTSignal
+from act.arc import aCTDBArc
 import aCTDBPanda
-import aCTUtils
-import aCTSignal
 
 
 class aCTATLASProcess:

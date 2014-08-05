@@ -1,4 +1,4 @@
-import aCTConfig
+from act.common import aCTConfig
 
 supported_dbms={}
 

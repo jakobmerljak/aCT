@@ -1,4 +1,4 @@
-from aCTDB import aCTDB
+from act.db.aCTDB import aCTDB
 
 class aCTDBPanda(aCTDB):
     

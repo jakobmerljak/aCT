@@ -1,6 +1,6 @@
 from aCTATLASProcess import aCTATLASProcess
-from aCTProxy import aCTProxy
-import aCTUtils
+from act.common.aCTProxy import aCTProxy
+from act.common import aCTUtils
 import os
 import shutil
 import time

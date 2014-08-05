@@ -5,7 +5,7 @@
 
 import arc
 
-from aCTProcess import aCTProcess
+from act.common.aCTProcess import aCTProcess
 
 class aCTCleaner(aCTProcess):
     

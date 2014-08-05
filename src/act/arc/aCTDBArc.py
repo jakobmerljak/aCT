@@ -1,8 +1,8 @@
 import re
 import os
 import arc
-from aCTDB import aCTDB
-import aCTConfig
+from act.db.aCTDB import aCTDB
+from act.common import aCTConfig
 
 class aCTDBArc(aCTDB):
     

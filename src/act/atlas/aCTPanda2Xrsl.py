@@ -1,4 +1,3 @@
-import arc
 import cgi
 import re
 

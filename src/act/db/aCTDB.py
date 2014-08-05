@@ -1,5 +1,3 @@
-import os
-import time
 import datetime
 from aCTDBMS import aCTDBMS
 

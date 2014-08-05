@@ -10,8 +10,8 @@ import arc
 import shutil
 import fnmatch, re
 
-from aCTProcess import aCTProcess
-import aCTUtils
+from act.common.aCTProcess import aCTProcess
+from act.common import aCTUtils
 
 class aCTFetcher(aCTProcess):
     '''
