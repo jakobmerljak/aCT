@@ -38,9 +38,9 @@ class aCTStatus:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
-                elif not re.match('\d\d:\d\d', runningtime):
+                elif not re.match('\d\d:\d\d$', runningtime):
                     # Check for overrunning processes
-                    longprocesses.append((process, cluster))
+                    longprocesses.append((process, cluster, runningtime))
                 if cluster in cluster_procs:
                     cluster_procs[cluster].append(process)
                 else:
@@ -52,7 +52,7 @@ class aCTStatus:
             print '%28s: %s' % (cluster, ' '.join(procs))
         print
         for proc in longprocesses:
-            print 'WARNING: %s for %s running for more than one hour' % proc
+            print 'WARNING: %s for %s running for more than one hour (%s)' % proc
         print
 
     def JobReport(self):
@@ -93,7 +93,7 @@ class aCTStatus:
             except:
                 rtot[jid]=1
 
-        for k in rep.keys():
+        for k in sorted(rep.keys()):
             log="%28s:" % k[:28]
             for s in states:
                 try:
