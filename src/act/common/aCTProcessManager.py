@@ -18,14 +18,14 @@ class aCTProcessManager:
         # DB connection
         self.db = aCTDBArc.aCTDBArc(self.log, conf.get(["db","file"]))
         # list of processes to run per cluster
-        self.processes = ['aCTSubmitter', 'aCTStatus', 'aCTFetcher', 'aCTCleaner']
+        self.processes = ['act/arc/aCTSubmitter', 'act/arc/aCTStatus', 'act/arc/aCTFetcher', 'act/arc/aCTCleaner']
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         # TODO: app-specific processes in conf file instead of hard-coded
-        self.processes_single = {'aCTAutopilot':None, 
-                                 'aCTPanda2Arc':None,
-                                 'aCTProxyHandler':None,
-                                 'aCTATLASStatus':None,
-                                 'aCTValidator':None
+        self.processes_single = {'act/atlas/aCTAutopilot':None, 
+                                 'act/atlas/aCTPanda2Arc':None,
+                                 'act/common/aCTProxyHandler':None,
+                                 'act/atlas/aCTATLASStatus':None,
+                                 'act/atlas/aCTValidator':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
@@ -35,7 +35,7 @@ class aCTProcessManager:
         
         # Start single instance processes
         for process in self.processes_single:
-            proc = self.aCTProcessHandler('act/atlas/'+process, self.logdir, actlocation=self.actlocation)
+            proc = self.aCTProcessHandler(process, self.logdir, actlocation=self.actlocation)
             proc.start()
             self.processes_single[process] = proc
         
@@ -106,7 +106,7 @@ class aCTProcessManager:
                 self.running[cluster] = []
                 for proc in self.processes:
                     self.log.info("Starting process %s for %s", proc, cluster)
-                    ph = self.aCTProcessHandler('act/arc/'+proc, self.logdir, cluster, actlocation=self.actlocation)
+                    ph = self.aCTProcessHandler(proc, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
                     self.running[cluster].append(ph)
             

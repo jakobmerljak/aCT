@@ -6,9 +6,9 @@ import traceback
 
 import aCTLogger
 import aCTConfig
-import aCTDBArc
 import aCTUtils
 import aCTSignal
+from act.arc import aCTDBArc
 
 
 class aCTProcess:
