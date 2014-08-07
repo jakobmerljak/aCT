@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import logging
-from aCTDBArc import aCTDBArc
-from aCTProxy import aCTProxy
+from act.arc.aCTDBArc import aCTDBArc
+from act.common.aCTProxy import aCTProxy
 
 db = aCTDBArc(logging.getLogger(), "act")
 
