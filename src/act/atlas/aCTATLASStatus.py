@@ -17,22 +17,42 @@ class aCTATLASStatus(aCTATLASProcess):
                  
     def checkJobstoKill(self):
         """
-        Check for jobs with pandastatus tobekilled and cancel them in ARC.
+        Check for jobs with pandastatus tobekilled and cancel them in ARC:
+        - pandastatus NULL: job was killed by panda so nothing to report
+        - pandastatus something else: job was manually killed, so create pickle
+          and report failed back to panda
         """
         
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'")
+        # Get jobs killed by panda
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return
         
-        self.log.info("Found %d jobs to cancel" % len(jobs))
         for job in jobs:
-            self.log.info("Cancelling job %d", job['pandaid'])
-            # check if arcjobid is set before cancelling the job
-            if job['arcjobid']:
-                self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            self.log.info("Cancelling arc job for %d", job['pandaid'])
+            select = 'id=%s' % job['id']
+            
+            # Check if arcjobid is set before cancelling the job
+            if not job['arcjobid']:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+                continue
+            
+            # Check if job was manually killed
+            if job['pandastatus'] is not None:
+                self.log.info('%s: Manually killed, will report failure to panda' % job['pandaid'])
+                arcjobs = self.dbarc.getArcJobsInfo("arcjobid='%s'" % job['arcjobid'], tables='arcjobs,pandajobs')
+                self.processFailed(arcjobs)
+                # Skip validator since there is no metadata.xml
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+            else:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+
+            # Finally cancel the arc job                
+            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
-        self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
-           
+        self.dbpanda.Commit()
+
+
     def getStartTime(self, endtime, walltime):
         """
         Get starttime from endtime-walltime where endtime is datetime.datetime and walltime is in seconds
