@@ -332,9 +332,12 @@ class aCTATLASStatus(aCTATLASProcess):
                     os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
                 except:
                     pass
-                f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
-                pickle.dump(pupdate,f)
-                f.close()
+                try:
+                    f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
+                    pickle.dump(pupdate,f)
+                    f.close()
+                except:
+                    pass
 
     
     def updateFailedJobs(self):
