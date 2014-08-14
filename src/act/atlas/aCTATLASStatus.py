@@ -426,7 +426,7 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         Clean jobs left behind in arcjobs table:
          - arcstate=tocancel or cancelling when cluster is empty
-         - arcstate=cancelled or lost or donefailed when id not in pandajobs
+         - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
          - arcstate=cancelled and actpandastatus=cancelled/failed/donefailed
         """
         select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
@@ -435,12 +435,16 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
             self.dbarc.deleteArcJob(job['id'])
 
-        select = "(arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
+        select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
                   and arcjobs.id not in (select arcjobid from pandajobs)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:
-            self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
+            # done jobs should not be there, log a warning
+            if job['arcstate'] == 'done':
+                self.log.warning("%s: Removing orphaned done job %d", job['appjobid'], job['id'])
+            else:
+                self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
         if jobs:
             self.dbarc.Commit()
@@ -473,7 +477,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Set to toclean
             self.updateFinishedJobs()
             # Query jobs in arcstate failed, set to tofetch
-            # Query jobs in arcstate donefailed, cancelled and lost, set to toclean.
+            # Query jobs in arcstate done, donefailed, cancelled and lost, set to toclean.
             # If they should be resubmitted, set arcjobid to null in pandajobs
             # If not do post-processing and fill status in pandajobs
             self.updateFailedJobs()
