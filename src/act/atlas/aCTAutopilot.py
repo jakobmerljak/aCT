@@ -3,6 +3,7 @@ import os
 import pickle
 import re
 import time
+import random
 import arc
 import aCTPanda
 from act.common import aCTProxy
@@ -249,7 +250,11 @@ class aCTAutopilot(aCTATLASProcess):
                     if attrs['type'] == "analysis":
                         t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
-                        t=PandaGetThr(self.getPanda(site).getJob,site)
+                        r=random.Random()
+                        if r.randint(0,100) <= 1:
+                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        else:
+                          t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                     nall += 1
