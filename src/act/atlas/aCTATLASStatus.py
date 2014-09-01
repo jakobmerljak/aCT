@@ -267,7 +267,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 except:
                     pass
                 try:
-                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log","w"))
+                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log"),"w")
                     f.write(log)
                     f.close()
                 except:
