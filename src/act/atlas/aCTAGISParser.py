@@ -51,8 +51,8 @@ class aCTAGISParser:
 
     def getSites(self):
         agisfile = self.conf.get(['agis','jsonfilename'])
-        # check if json file changed before parsing
-        if self.tparse<os.stat(agisfile).st_mtime:
+        # check if json file or config file changed before parsing
+        if (self.tparse<os.stat(agisfile).st_mtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
             self.sites = self._parseAgisJson(agisfile)
         return self.sites
     
@@ -62,6 +62,6 @@ if __name__ == '__main__':
     agisparser=aCTAGISParser()
     while 1:
         sites = agisparser.getSites()
-        pprint.pprint(sites)
+        pprint.pprint(sites.keys())
         exit(1)
         time.sleep(1)

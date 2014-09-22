@@ -23,7 +23,7 @@ class aCTAGISFetcher(aCTATLASProcess):
     def fetchFromAgis(self):
         response = urllib2.urlopen(self.srv+'/query/list/?json&preset=schedconf.all')
         urldata = response.read()
-        self.log.info(urldata)
+        self.log.debug("Fetched "+self.srv+'/query/list/?json&preset=schedconf.all')
         return urldata
     
     def storeToFile(self, agisjson):
@@ -33,6 +33,7 @@ class aCTAGISFetcher(aCTATLASProcess):
         f.write(agisjson)
         f.close()
         os.rename(tmpfile, filename)
+        self.log.debug("Wrote "+filename)
 
     def process(self):
         """
@@ -45,7 +46,7 @@ class aCTAGISFetcher(aCTATLASProcess):
             # store data to file
             self.storeToFile(agisjson)
         except aCTSignal.ExceptInterrupt,x:
-            print x
+            self.log.error(x)
             return
 
         
