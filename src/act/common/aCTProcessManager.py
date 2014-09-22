@@ -25,7 +25,8 @@ class aCTProcessManager:
                                  'act/atlas/aCTPanda2Arc':None,
                                  'act/common/aCTProxyHandler':None,
                                  'act/atlas/aCTATLASStatus':None,
-                                 'act/atlas/aCTValidator':None
+                                 'act/atlas/aCTValidator':None,
+                                 'act/atlas/aCTAGISFetcher':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
