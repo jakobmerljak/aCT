@@ -24,6 +24,11 @@
   <dir>/data/user/act/www/jobs</dir>
 </joblog>
 
+<agis>
+  <server>http://atlas-agis-api.cern.ch/request/pandaqueue</server>
+  <jsonfilename>/data/user/atlact1/act-test1/tmp/agis.json</jsonfilename>
+</agis>
+
 <panda>
   <server>https://pandaserver.cern.ch:25443/server/panda/</server>
   <schedconfigurl>http://pandaserver.cern.ch:25085/cache/schedconfig/</schedconfigurl>
