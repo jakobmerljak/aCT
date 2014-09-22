@@ -1,6 +1,7 @@
 from urlparse import urlparse
 from aCTATLASProcess import aCTATLASProcess
 from aCTPanda2Xrsl import aCTPanda2Xrsl
+from aCTAGISParser import aCTAGISParser
 
 class aCTPanda2Arc(aCTATLASProcess):
     '''
@@ -9,25 +10,14 @@ class aCTPanda2Arc(aCTATLASProcess):
 
     def __init__(self):
         aCTATLASProcess.__init__(self)
+        self.agisparser = aCTAGISParser()
         
         self.sites = {}
         self.setSites()
         print self.sites
 
     def setSites(self):
-        for sitename in self.conf.getList(["sites","site","name"]):
-            self.sites[sitename] = {}
-            self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
-            self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-            try:
-                self.sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
-            except:
-                self.sites[sitename]['corecount'] = 1
-            try:
-                self.sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
-            except:
-                self.sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
-                        
+        self.sites = self.agisparser.getSites()                        
 
     def createArcJobs(self):
 

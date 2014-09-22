@@ -8,6 +8,7 @@ import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
+from aCTAGISParser import aCTAGISParser
 
 class PandaThr(Thread):
     """
@@ -54,7 +55,7 @@ class aCTAutopilot(aCTATLASProcess):
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
         self.log.info("Running under DN %s" % dn)
-
+        self.agisparser = aCTAGISParser()
         # Keep a panda object per proxy. The site "type" maps to a specific
         # proxy role
         self.pandas = {}
@@ -86,15 +87,7 @@ class aCTAutopilot(aCTATLASProcess):
 
 
     def setSites(self):
-        for sitename in self.conf.getList(["sites","site","name"]):
-            self.sites[sitename] = {}
-            self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
-            self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-            self.sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
-            try:
-                self.sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
-            except:
-                self.sites[sitename]['maxjobs'] = 1000000
+        self.sites = self.agisparser.getSites()
 
 
     def getPanda(self, sitename):
