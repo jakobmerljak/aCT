@@ -10,7 +10,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
     def __init__(self):
         aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser()
+        self.agisparser = aCTAGISParser(self.log)
         
         self.sites = {}
         self.setSites()

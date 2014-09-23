@@ -55,7 +55,7 @@ class aCTAutopilot(aCTATLASProcess):
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
         self.log.info("Running under DN %s" % dn)
-        self.agisparser = aCTAGISParser()
+        self.agisparser = aCTAGISParser(self.log)
         # Keep a panda object per proxy. The site "type" maps to a specific
         # proxy role
         self.pandas = {}
