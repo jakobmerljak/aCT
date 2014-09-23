@@ -17,22 +17,43 @@ class aCTATLASStatus(aCTATLASProcess):
                  
     def checkJobstoKill(self):
         """
-        Check for jobs with pandastatus tobekilled and cancel them in ARC.
+        Check for jobs with pandastatus tobekilled and cancel them in ARC:
+        - pandastatus NULL: job was killed by panda so nothing to report
+        - pandastatus something else: job was manually killed, so create pickle
+          and report failed back to panda
         """
         
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'")
+        # Get jobs killed by panda
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return
         
-        self.log.info("Found %d jobs to cancel" % len(jobs))
         for job in jobs:
-            self.log.info("Cancelling job %d", job['pandaid'])
-            # check if arcjobid is set before cancelling the job
-            if job['arcjobid']:
-                self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            self.log.info("Cancelling arc job for %d", job['pandaid'])
+            select = 'id=%s' % job['id']
+            
+            # Check if arcjobid is set before cancelling the job
+            if not job['arcjobid']:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+                continue
+            
+            # Check if job was manually killed
+            if job['pandastatus'] is not None:
+                self.log.info('%s: Manually killed, will report failure to panda' % job['pandaid'])
+                arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
+                arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
+                self.processFailed(arcjobs)
+                # Skip validator since there is no metadata.xml
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+            else:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+
+            # Finally cancel the arc job                
+            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
-        self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
-           
+        self.dbpanda.Commit()
+
+
     def getStartTime(self, endtime, walltime):
         """
         Get starttime from endtime-walltime where endtime is datetime.datetime and walltime is in seconds
@@ -246,7 +267,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 except:
                     pass
                 try:
-                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log","w"))
+                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log"),"w")
                     f.write(log)
                     f.close()
                 except:
@@ -312,9 +333,12 @@ class aCTATLASStatus(aCTATLASProcess):
                     os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
                 except:
                     pass
-                f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
-                pickle.dump(pupdate,f)
-                f.close()
+                try:
+                    f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
+                    pickle.dump(pupdate,f)
+                    f.close()
+                except:
+                    pass
 
     
     def updateFailedJobs(self):
@@ -385,9 +409,9 @@ class aCTATLASStatus(aCTATLASProcess):
 
         for aj in cancelledjobs:
             # For jobs that panda cancelled, don't do anything, they already
-            # have actpandastatus=cancelled. For jobs that were killed in arc,
-            # resubmit and clean
-            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled'"
+            # have actpandastatus=cancelled or failed. For jobs that were
+            # killed in arc, resubmit and clean
+            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled' and actpandastatus!='failed' and actpandastatus!='donefailed'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
@@ -402,8 +426,8 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         Clean jobs left behind in arcjobs table:
          - arcstate=tocancel or cancelling when cluster is empty
-         - arcstate=cancelled or lost or donefailed when id not in pandajobs
-         - arcstate=cancelled and actpandastatus=cancelled
+         - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
+         - arcstate=cancelled and actpandastatus=cancelled/failed/donefailed
         """
         select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
@@ -411,18 +435,22 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
             self.dbarc.deleteArcJob(job['id'])
 
-        select = "(arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
+        select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
                   and arcjobs.id not in (select arcjobid from pandajobs)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:
-            self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
+            # done jobs should not be there, log a warning
+            if job['arcstate'] == 'done':
+                self.log.warning("%s: Removing orphaned done job %d", job['appjobid'], job['id'])
+            else:
+                self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
         if jobs:
             self.dbarc.Commit()
             
-        select = "arcstate='cancelled' and actpandastatus='cancelled' and " \
-                 "pandajobs.arcjobid = arcjobs.id"
+        select = "arcstate='cancelled' and (actpandastatus='cancelled' or actpandastatus!='failed' or actpandastatus!='donefailed') " \
+                 "and pandajobs.arcjobid = arcjobs.id"
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid'], tables='arcjobs, pandajobs')
         for job in jobs:
@@ -449,7 +477,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Set to toclean
             self.updateFinishedJobs()
             # Query jobs in arcstate failed, set to tofetch
-            # Query jobs in arcstate donefailed, cancelled and lost, set to toclean.
+            # Query jobs in arcstate done, donefailed, cancelled and lost, set to toclean.
             # If they should be resubmitted, set arcjobid to null in pandajobs
             # If not do post-processing and fill status in pandajobs
             self.updateFailedJobs()

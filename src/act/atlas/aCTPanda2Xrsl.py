@@ -77,6 +77,11 @@ class aCTPanda2Xrsl:
         if self.getNCores() > 1:
             walltime = int (walltime / self.getNCores() ) + 60
 
+        if self.sitename.find("MPPMU-HYDRA_MCORE") != -1:
+            walltime=90
+
+        # JEDI analysis hack
+        walltime = max(60,walltime)
         cputime = self.getNCores() * walltime
         
 
@@ -154,11 +159,19 @@ class aCTPanda2Xrsl:
 
         x = ""        
         x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
-        x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
+        if self.sitename.find("LRZ-LMU_MUC_MCORE") != -1:
+            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
+        elif self.jobdesc['prodSourceLabel'][0] == 'rc_test':
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
+        else:
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
         #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
         #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
-        x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
-        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.pilot.json")' % self.schedconfig
+        if self.sitename.find("ARC-TEST") != -1:
+            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+        else:
+            x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
+        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles')):
             inf={}
@@ -169,7 +182,8 @@ class aCTPanda2Xrsl:
             elif self.catalog.find('rucio://') == 0:
                 for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
                     # Hard-coded pilot rucio account - should change based on proxy
-                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch;rucioaccount=pilot/replicas", s, f])
+                    # Rucio does not expose mtime, set cache=invariant so not to download too much
+                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
                     inf[f]=lfn
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)
