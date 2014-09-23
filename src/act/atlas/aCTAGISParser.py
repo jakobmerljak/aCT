@@ -8,22 +8,23 @@
 ## endpoints should be pulled out of "queues" (ce_endpoints)
 ## corecount defaults to 1
 ## catalog defaults to panda config value
+import logging
 import time
-import os
+import os, sys
 import json
 from act.common import aCTConfig
 
 class aCTAGISParser:
     
-    def __init__(self):
-        self.tparse = time.time()
+    def __init__(self, logger):
+        self.log=logger
         self.conf=aCTConfig.aCTConfigATLAS()
         agisfile = self.conf.get(['agis','jsonfilename'])
         pilotmgr = self.conf.get(['agis','pilotmanager'])
         self.sites = self._parseAgisJson(agisfile, pilotmgr)
         self._mergeSiteDicts(self.sites, self._parseConfigSites())
-        
-        
+        self.tparse = time.time()
+                
     def _parseConfigSites(self):
         sites = {}
         for sitename in self.conf.getList(["sites","site","name"]):
@@ -46,9 +47,10 @@ class aCTAGISParser:
                 sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
                 sites[sitename]['maxjobs'] = 1000000
-               
+        self.log.debug("Parsed sites from config: %s"%str(sites.keys()))
         return sites 
-                                
+
+  
     def _parseAgisJson(self, agisfilename, pilotmgr):
         # todo: first read from config, then read from agis and update if not already in sites list
         agisfile=open(agisfilename)
@@ -66,6 +68,7 @@ class aCTAGISParser:
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
                 sites[sitename]['endpoints'] = [queue['ce_endpoint'] for queue in sites[sitename]['queues']]
+        self.log.debug("Parsed sites from AGIS: %s"%str(sites.keys()))
         return sites
 
     def _mergeSiteDicts(self, dict1, dict2):
@@ -80,16 +83,24 @@ class aCTAGISParser:
         pilotmgr = self.conf.get(['agis','pilotmanager'])
         # check if json file or config file changed before parsing
         if (self.tparse<os.stat(agisfile).st_mtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
+            self.log.info("AGIS file and/or config modified, reparsing site info")
+            start_parsing = time.time()
             self.sites = self._parseAgisJson(agisfile, pilotmgr)
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
+            self.tparse = time.time()
+            self.log.debug("Time to parse site info: %g s"%(self.tparse-start_parsing))
         return self.sites
     
 if __name__ == '__main__':
 
     import pprint
-    agisparser=aCTAGISParser()
+    log = logging.getLogger()
+    log.setLevel("DEBUG")
+    out = logging.StreamHandler(sys.stdout)
+    log.addHandler(out)
+    agisparser=aCTAGISParser(log)
     while 1:
         sites = agisparser.getSites()
         pprint.pprint(sites.keys())
-        exit(1)
-        time.sleep(1)
+        #exit(1)
+        time.sleep(10)
