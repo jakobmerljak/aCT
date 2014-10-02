@@ -34,7 +34,11 @@ class aCTAGISParser:
                 sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             except:
                 sites[sitename]['schedconfig'] = sitename
-            sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+            try:
+                sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+            except:
+                # ignore missing type and hope agis has the info
+                pass
             try:
                 sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
             except:
@@ -102,5 +106,6 @@ if __name__ == '__main__':
     while 1:
         sites = agisparser.getSites()
         pprint.pprint(sites.keys())
-        #exit(1)
+        print len(sites)
+        exit(1)
         time.sleep(10)
