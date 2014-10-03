@@ -29,7 +29,9 @@ class aCTAGISParser:
         sites = {}
         for sitename in self.conf.getList(["sites","site","name"]):
             sites[sitename] = {}
-            sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
+            configendpoints = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
+            if configendpoints:
+                sites[sitename]['endpoints'] = configendpoints
             try:
                 sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             except:
