@@ -3,7 +3,6 @@
 
 import time
 import datetime
-import pickle
 import re
 import os
 import shutil
@@ -12,6 +11,7 @@ from act.common import aCTSignal
 from act.common import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
+from aCTPandaJob import aCTPandaJob
 
 class aCTATLASStatus(aCTATLASProcess):
                  
@@ -182,43 +182,95 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.Commit()
         return failedjobs
 
+    def createPilotLog(self, outd, pandaid):
+        '''
+        Create the pilot log messages to appear on panda logger. Takes the gmlog
+        'failed' file and errors from the pilot log if available. Creates a
+        local copy under tmp/failedlogs.
+        '''
+        nlines=20
+        log=""
+        try:
+            f=open(outd+"/gmlog/failed","r")
+            log+="---------------------------------------------------------------\n"
+            log+="GMLOG: failed\n"
+            log+="---------------------------------------------------------------\n"
+            log+=''.join(f.readlines())
+            f.close()
+        except:
+            pass
+        
+
+        import glob
+        lf=glob.glob(outd+"/log*")
+        try:
+            f=open(lf[0],"r")
+            lines=f.readlines()
+            log+="---------------------------------------------------------------\n"
+            log+="LOGFILE: tail\n"
+            log+="---------------------------------------------------------------\n"
+            lns=[]
+            for l in lines:
+                if re.match('.*error',l,re.IGNORECASE):
+                    lns.append(l)
+                if re.match('.*warning',l,re.IGNORECASE):
+                    lns.append(l)
+                if re.match('.*failed',l,re.IGNORECASE):
+                    lns.append(l)
+            log+=''.join(lns[:nlines])
+            # copy logfiles to failedlogs dir
+            failedlogsd = self.conf.get(["tmp","dir"])+"/failedlogs"
+            try:
+                os.mkdir(failedlogsd)
+            except:
+                pass
+            try:
+                f=open(os.path.join(failedlogsd, str(pandaid)+".log"),"w")
+                f.write(log)
+                f.close()
+            except:
+                pass
+        except:
+            pass
+        return log
+
+
     def processFailed(self, arcjobs):
         """
         process jobs failed for other reasons than athena (log_extracts was not created by pilot)
         """
-        if len(arcjobs):
-            self.log.info("processing %d failed jobs" % len(arcjobs))
-        else:
+        if not arcjobs:
             return
 
-
+        self.log.info("processing %d failed jobs" % len(arcjobs))
         for aj in arcjobs:
-            xml=""
-            log=""
             cluster=aj['cluster'].split('/')[0]
             jobid=aj['JobID']
-            sessionid=jobid[jobid.rfind('/'):]
+            if not jobid or not cluster:
+                # Job was not even submitted, there is no more information
+                self.log.warning("%s: Job has not been submitted yet so no information to report", aj['appjobid'])
+                continue
+            
+            sessionid=jobid[jobid.rfind('/')+1:]
             date = time.strftime('%Y%m%d')
+            outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
+            self.log.info(outd)
+            # Make sure the path up to outd exists
             try:
-                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
+                os.makedirs(os.path.dirname(outd), 0755)
             except:
                 pass
-            try:
-                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
-            except:
-                pass
-            outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + "/" + sessionid
             try:
                 shutil.rmtree(outd)
             except:
                 pass
             # copy from tmp to outd.
-            localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
-            # Sometimes fetcher fails to get output, so just make empty dir
+            localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
                 self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
+                # Sometimes fetcher fails to get output, so just make empty dir
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
@@ -229,116 +281,46 @@ class aCTATLASStatus(aCTATLASProcess):
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
-            # prepare extracts
-            nlines=20
-            log=""
-            try:
-                f=open(outd+"/gmlog/failed","r")
-                log+="---------------------------------------------------------------\n"
-                log+="GMLOG: failed\n"
-                log+="---------------------------------------------------------------\n"
-                log+=''.join(f.readlines())
-                f.close()
-            except:
-                pass
-            
-
-            import glob
-            lf=glob.glob(outd+"/log*")
-            try:
-                f=open(lf[0],"r")
-                lines=f.readlines()
-                log+="---------------------------------------------------------------\n"
-                log+="LOGFILE: tail\n"
-                log+="---------------------------------------------------------------\n"
-                lns=[]
-                for l in lines:
-                    if re.match('.*error',l,re.IGNORECASE):
-                        lns.append(l)
-                    if re.match('.*warning',l,re.IGNORECASE):
-                        lns.append(l)
-                    if re.match('.*failed',l,re.IGNORECASE):
-                        lns.append(l)
-                log+=''.join(lns[:nlines])
-                # copy logfiles to failedlogs dir
-                failedlogsd = self.conf.get(["tmp","dir"])+"/failedlogs"
-                try:
-                    os.mkdir(failedlogsd)
-                except:
-                    pass
-                try:
-                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log","w"))
-                    f.write(log)
-                    f.close()
-                except:
-                    pass
-
-            except:
-                pass
-
-            #print log
-
-            xml=""
-            # xml and log
-
             # set update, pickle from pilot is not available
             # some values might not be properly set
             # TODO synchronize error codes with the rest of production
-            pupdate={}
-            pupdate['xml']=str(xml)
-            pupdate['siteName']='ARC'
-            pupdate['computingElement']=aj['cluster'].split('/')[0]
-            pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
-            pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid+"|Unknown|Unknown|Unknown|Unknown"
-            try:
-                pupdate['node']=aj['ExecutionNode']
-            except:
-                pass
-            pupdate['pilotLog']=log
-            pupdate['cpuConsumptionTime']=aj['UsedTotalCPUTime']
-            pupdate['cpuConsumptionUnit']='seconds'
-            pupdate['cpuConversionFactor']=1
-            pupdate['pilotTiming']="0|0|%s|0" % aj['UsedTotalWallTime']
-            pupdate['exeErrorCode']=aj['ExitCode']
-            pupdate['exeErrorDiag']=aj['Error']
-            pupdate['pilotErrorCode']=1008
-            codes=[]
+            pupdate = aCTPandaJob()
+            pupdate.siteName = aj['siteName']
+            pupdate.computingElement = cluster
+            pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
+            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+'/'+sessionid+"|Unknown|Unknown|Unknown|Unknown"
+            pupdate.node = aj['ExecutionNode']
+            pupdate.pilotLog = self.createPilotLog(outd, aj['pandaid'])
+            pupdate.cpuConsumptionTime = aj['UsedTotalCPUTime']
+            pupdate.cpuConsumptionUnit = 'seconds'
+            pupdate.cpuConversionFactor = 1
+            pupdate.pilotTiming = "0|0|%s|0" % aj['UsedTotalWallTime']
+            pupdate.exeErrorCode = aj['ExitCode']
+            pupdate.exeErrorDiag = aj['Error']
+            pupdate.pilotErrorCode = 1008
+            codes = []
             codes.append("Job timeout")
             codes.append("qmaster enforced h_rt limit")
             codes.append("job killed: wall")
             codes.append("Job exceeded time limit")
-            for errcode in codes:
-                res=re.match(".*"+errcode+".*",aj['Error'])
-                if res is not None:
-                    pupdate['pilotErrorCode']=1213
-                    #print pupdate['pilotErrorCode'],aj['Error']
+            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
+                pupdate.pilotErrorCode = 1213
             codes=[]
             codes.append("Job probably exceeded memory limit")
             codes.append("job killed: vmem")
             codes.append("pvmem exceeded")
-            for errcode in codes:
-                res=re.match(".*"+errcode+".*",aj['Error'])
-                if res is not None:
-                    pupdate['pilotErrorCode']=1212
-                    #print pupdate['pilotErrorCode'],aj['Error']
-            pupdate['pilotErrorDiag']=aj['Error']
+            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
+                pupdate.pilotErrorCode = 1212
+            pupdate.pilotErrorDiag = aj['Error']
             # set start/endtime
-            pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
-            pupdate['endTime']=aj['EndTime']
-            # save the pickle file to be used by aCTMain panda update
-            select="arcjobid='"+str(aj["arcjobid"])+"'"
-            j = self.dbpanda.getJobs(select, ["pandaid"])
-            if j: # panda job could be missing for whatever reason
-                try:
-                    os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
-                except:
-                    pass
-                try:
-                    f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
-                    pickle.dump(pupdate,f)
-                    f.close()
-                except:
-                    pass
+            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
+            pupdate.endTime = aj['EndTime']
+            # save the pickle file to be used by aCTAutopilot panda update
+            try:
+                picklefile = os.path.join(self.conf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
+                pupdate.writeToFile(picklefile)
+            except Exception as e:
+                self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))
 
     
     def updateFailedJobs(self):
@@ -369,8 +351,11 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
         select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
+        columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
+                   'cluster', 'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
+                   'UsedTotalWallTime', 'ExitCode']
 
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, tables='arcjobs,pandajobs')
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
         if len(jobstoupdate) == 0:
             return
