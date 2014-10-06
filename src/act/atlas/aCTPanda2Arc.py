@@ -55,6 +55,10 @@ class aCTPanda2Arc(aCTATLASProcess):
                     maxattempts = 30
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']))
+                if not aid:
+                    self.log.error("%s: Failed to insert arc job description: %s" % (job['pandaid'], xrsl))
+                    continue
+                
                 jd = {}
                 jd['arcjobid'] = aid['LAST_INSERT_ID()']
                 jd['pandastatus'] = 'starting'
