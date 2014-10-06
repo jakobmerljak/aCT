@@ -253,7 +253,7 @@ class aCTAutopilot(aCTATLASProcess):
                         t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
-                        if r.randint(0,100) <= 1:
+                        if r.randint(0,100) <= 10:
                           t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
                           t=PandaGetThr(self.getPanda(site).getJob,site)

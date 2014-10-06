@@ -494,7 +494,7 @@ class aCTValidator(aCTATLASProcess):
                     # If job failed before finishing there is probably no
                     # jobSmallFiles, but also nothing to clean. Just let it be
                     # resubmitted and clean arc job
-                    self.cleanDownloadedJob(job['arcjobid'])
+                    #self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)
