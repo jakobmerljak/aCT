@@ -357,6 +357,8 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("SELECT jobdescription from jobdescriptions where id="+str(jobdescid))
         row = c.fetchone()
+        if not row:
+            return None
         return row['jobdescription']
     
     def getNArcJobs(self):

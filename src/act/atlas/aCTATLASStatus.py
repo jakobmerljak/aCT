@@ -3,7 +3,6 @@
 
 import time
 import datetime
-import pickle
 import re
 import os
 import shutil
@@ -12,27 +11,49 @@ from act.common import aCTSignal
 from act.common import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
+from aCTPandaJob import aCTPandaJob
 
 class aCTATLASStatus(aCTATLASProcess):
                  
     def checkJobstoKill(self):
         """
-        Check for jobs with pandastatus tobekilled and cancel them in ARC.
+        Check for jobs with pandastatus tobekilled and cancel them in ARC:
+        - pandastatus NULL: job was killed by panda so nothing to report
+        - pandastatus something else: job was manually killed, so create pickle
+          and report failed back to panda
         """
         
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'")
+        # Get jobs killed by panda
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return
         
-        self.log.info("Found %d jobs to cancel" % len(jobs))
         for job in jobs:
-            self.log.info("Cancelling job %d", job['pandaid'])
-            # check if arcjobid is set before cancelling the job
-            if job['arcjobid']:
-                self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            self.log.info("Cancelling arc job for %d", job['pandaid'])
+            select = 'id=%s' % job['id']
+            
+            # Check if arcjobid is set before cancelling the job
+            if not job['arcjobid']:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+                continue
+            
+            # Check if job was manually killed
+            if job['pandastatus'] is not None:
+                self.log.info('%s: Manually killed, will report failure to panda' % job['pandaid'])
+                arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
+                arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
+                self.processFailed(arcjobs)
+                # Skip validator since there is no metadata.xml
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+            else:
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+
+            # Finally cancel the arc job                
+            self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
-        self.dbpanda.updateJobs("actpandastatus='tobekilled'", {'actpandastatus': 'cancelled'})
-           
+        self.dbpanda.Commit()
+
+
     def getStartTime(self, endtime, walltime):
         """
         Get starttime from endtime-walltime where endtime is datetime.datetime and walltime is in seconds
@@ -161,43 +182,95 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.Commit()
         return failedjobs
 
+    def createPilotLog(self, outd, pandaid):
+        '''
+        Create the pilot log messages to appear on panda logger. Takes the gmlog
+        'failed' file and errors from the pilot log if available. Creates a
+        local copy under tmp/failedlogs.
+        '''
+        nlines=20
+        log=""
+        try:
+            f=open(outd+"/gmlog/failed","r")
+            log+="---------------------------------------------------------------\n"
+            log+="GMLOG: failed\n"
+            log+="---------------------------------------------------------------\n"
+            log+=''.join(f.readlines())
+            f.close()
+        except:
+            pass
+        
+
+        import glob
+        lf=glob.glob(outd+"/log*")
+        try:
+            f=open(lf[0],"r")
+            lines=f.readlines()
+            log+="---------------------------------------------------------------\n"
+            log+="LOGFILE: tail\n"
+            log+="---------------------------------------------------------------\n"
+            lns=[]
+            for l in lines:
+                if re.match('.*error',l,re.IGNORECASE):
+                    lns.append(l)
+                if re.match('.*warning',l,re.IGNORECASE):
+                    lns.append(l)
+                if re.match('.*failed',l,re.IGNORECASE):
+                    lns.append(l)
+            log+=''.join(lns[:nlines])
+            # copy logfiles to failedlogs dir
+            failedlogsd = self.conf.get(["tmp","dir"])+"/failedlogs"
+            try:
+                os.mkdir(failedlogsd)
+            except:
+                pass
+            try:
+                f=open(os.path.join(failedlogsd, str(pandaid)+".log"),"w")
+                f.write(log)
+                f.close()
+            except:
+                pass
+        except:
+            pass
+        return log
+
+
     def processFailed(self, arcjobs):
         """
         process jobs failed for other reasons than athena (log_extracts was not created by pilot)
         """
-        if len(arcjobs):
-            self.log.info("processing %d failed jobs" % len(arcjobs))
-        else:
+        if not arcjobs:
             return
 
-
+        self.log.info("processing %d failed jobs" % len(arcjobs))
         for aj in arcjobs:
-            xml=""
-            log=""
             cluster=aj['cluster'].split('/')[0]
             jobid=aj['JobID']
-            sessionid=jobid[jobid.rfind('/'):]
+            if not jobid or not cluster:
+                # Job was not even submitted, there is no more information
+                self.log.warning("%s: Job has not been submitted yet so no information to report", aj['appjobid'])
+                continue
+            
+            sessionid=jobid[jobid.rfind('/')+1:]
             date = time.strftime('%Y%m%d')
+            outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
+            self.log.info(outd)
+            # Make sure the path up to outd exists
             try:
-                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date)
+                os.makedirs(os.path.dirname(outd), 0755)
             except:
                 pass
-            try:
-                os.mkdir(self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster )
-            except:
-                pass
-            outd = self.conf.get(['joblog','dir']) + "/" + date + "/" + cluster + "/" + sessionid
             try:
                 shutil.rmtree(outd)
             except:
                 pass
             # copy from tmp to outd.
-            localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
-            # Sometimes fetcher fails to get output, so just make empty dir
+            localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
             try:
                 shutil.copytree(localdir, outd)
             except OSError, e:
                 self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
+                # Sometimes fetcher fails to get output, so just make empty dir
                 try:
                     os.makedirs(outd, 0755)
                 except OSError, e:
@@ -208,113 +281,46 @@ class aCTATLASStatus(aCTATLASProcess):
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
-            # prepare extracts
-            nlines=20
-            log=""
-            try:
-                f=open(outd+"/gmlog/failed","r")
-                log+="---------------------------------------------------------------\n"
-                log+="GMLOG: failed\n"
-                log+="---------------------------------------------------------------\n"
-                log+=''.join(f.readlines())
-                f.close()
-            except:
-                pass
-            
-
-            import glob
-            lf=glob.glob(outd+"/log*")
-            try:
-                f=open(lf[0],"r")
-                lines=f.readlines()
-                log+="---------------------------------------------------------------\n"
-                log+="LOGFILE: tail\n"
-                log+="---------------------------------------------------------------\n"
-                lns=[]
-                for l in lines:
-                    if re.match('.*error',l,re.IGNORECASE):
-                        lns.append(l)
-                    if re.match('.*warning',l,re.IGNORECASE):
-                        lns.append(l)
-                    if re.match('.*failed',l,re.IGNORECASE):
-                        lns.append(l)
-                log+=''.join(lns[:nlines])
-                # copy logfiles to failedlogs dir
-                failedlogsd = self.conf.get(["tmp","dir"])+"/failedlogs"
-                try:
-                    os.mkdir(failedlogsd)
-                except:
-                    pass
-                try:
-                    f=open(os.path.join(failedlogsd, str(aj['pandaid'])+".log","w"))
-                    f.write(log)
-                    f.close()
-                except:
-                    pass
-
-            except:
-                pass
-
-            #print log
-
-            xml=""
-            # xml and log
-
             # set update, pickle from pilot is not available
             # some values might not be properly set
             # TODO synchronize error codes with the rest of production
-            pupdate={}
-            pupdate['xml']=str(xml)
-            pupdate['siteName']='ARC'
-            pupdate['computingElement']=aj['cluster'].split('/')[0]
-            pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
-            pupdate['pilotID']=self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+sessionid+"|Unknown|Unknown|Unknown|Unknown"
-            try:
-                pupdate['node']=aj['ExecutionNode']
-            except:
-                pass
-            pupdate['pilotLog']=log
-            pupdate['cpuConsumptionTime']=aj['UsedTotalCPUTime']
-            pupdate['cpuConsumptionUnit']='seconds'
-            pupdate['cpuConversionFactor']=1
-            pupdate['pilotTiming']="0|0|%s|0" % aj['UsedTotalWallTime']
-            pupdate['exeErrorCode']=aj['ExitCode']
-            pupdate['exeErrorDiag']=aj['Error']
-            pupdate['pilotErrorCode']=1008
-            codes=[]
+            pupdate = aCTPandaJob()
+            pupdate.siteName = aj['siteName']
+            pupdate.computingElement = cluster
+            pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
+            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+'/'+sessionid+"|Unknown|Unknown|Unknown|Unknown"
+            pupdate.node = aj['ExecutionNode']
+            pupdate.pilotLog = self.createPilotLog(outd, aj['pandaid'])
+            pupdate.cpuConsumptionTime = aj['UsedTotalCPUTime']
+            pupdate.cpuConsumptionUnit = 'seconds'
+            pupdate.cpuConversionFactor = 1
+            pupdate.pilotTiming = "0|0|%s|0" % aj['UsedTotalWallTime']
+            pupdate.exeErrorCode = aj['ExitCode']
+            pupdate.exeErrorDiag = aj['Error']
+            pupdate.pilotErrorCode = 1008
+            codes = []
             codes.append("Job timeout")
             codes.append("qmaster enforced h_rt limit")
             codes.append("job killed: wall")
             codes.append("Job exceeded time limit")
-            for errcode in codes:
-                res=re.match(".*"+errcode+".*",aj['Error'])
-                if res is not None:
-                    pupdate['pilotErrorCode']=1213
-                    #print pupdate['pilotErrorCode'],aj['Error']
+            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
+                pupdate.pilotErrorCode = 1213
             codes=[]
             codes.append("Job probably exceeded memory limit")
             codes.append("job killed: vmem")
             codes.append("pvmem exceeded")
-            for errcode in codes:
-                res=re.match(".*"+errcode+".*",aj['Error'])
-                if res is not None:
-                    pupdate['pilotErrorCode']=1212
-                    #print pupdate['pilotErrorCode'],aj['Error']
-            pupdate['pilotErrorDiag']=aj['Error']
+            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
+                pupdate.pilotErrorCode = 1212
+            pupdate.pilotErrorDiag = aj['Error']
             # set start/endtime
-            pupdate['startTime']=self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
-            pupdate['endTime']=aj['EndTime']
-            # save the pickle file to be used by aCTMain panda update
-            select="arcjobid='"+str(aj["arcjobid"])+"'"
-            j = self.dbpanda.getJobs(select, ["pandaid"])
-            if j: # panda job could be missing for whatever reason
-                try:
-                    os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
-                except:
-                    pass
-                f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j[0]['pandaid'])+".pickle","w")
-                pickle.dump(pupdate,f)
-                f.close()
+            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
+            pupdate.endTime = aj['EndTime']
+            # save the pickle file to be used by aCTAutopilot panda update
+            try:
+                picklefile = os.path.join(self.conf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
+                pupdate.writeToFile(picklefile)
+            except Exception as e:
+                self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))
 
     
     def updateFailedJobs(self):
@@ -345,8 +351,11 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
         select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
+        columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
+                   'cluster', 'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
+                   'UsedTotalWallTime', 'ExitCode']
 
-        jobstoupdate=self.dbarc.getArcJobsInfo(select, tables='arcjobs,pandajobs')
+        jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
         if len(jobstoupdate) == 0:
             return
@@ -385,9 +394,9 @@ class aCTATLASStatus(aCTATLASProcess):
 
         for aj in cancelledjobs:
             # For jobs that panda cancelled, don't do anything, they already
-            # have actpandastatus=cancelled. For jobs that were killed in arc,
-            # resubmit and clean
-            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled'"
+            # have actpandastatus=cancelled or failed. For jobs that were
+            # killed in arc, resubmit and clean
+            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled' and actpandastatus!='failed' and actpandastatus!='donefailed'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
@@ -402,8 +411,8 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         Clean jobs left behind in arcjobs table:
          - arcstate=tocancel or cancelling when cluster is empty
-         - arcstate=cancelled or lost or donefailed when id not in pandajobs
-         - arcstate=cancelled and actpandastatus=cancelled
+         - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
+         - arcstate=cancelled and actpandastatus=cancelled/failed/donefailed
         """
         select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
@@ -411,18 +420,22 @@ class aCTATLASStatus(aCTATLASProcess):
             self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
             self.dbarc.deleteArcJob(job['id'])
 
-        select = "(arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
+        select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
                   and arcjobs.id not in (select arcjobid from pandajobs)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:
-            self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
+            # done jobs should not be there, log a warning
+            if job['arcstate'] == 'done':
+                self.log.warning("%s: Removing orphaned done job %d", job['appjobid'], job['id'])
+            else:
+                self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
         if jobs:
             self.dbarc.Commit()
             
-        select = "arcstate='cancelled' and actpandastatus='cancelled' and " \
-                 "pandajobs.arcjobid = arcjobs.id"
+        select = "arcstate='cancelled' and (actpandastatus='cancelled' or actpandastatus!='failed' or actpandastatus!='donefailed') " \
+                 "and pandajobs.arcjobid = arcjobs.id"
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid'], tables='arcjobs, pandajobs')
         for job in jobs:
@@ -449,7 +462,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Set to toclean
             self.updateFinishedJobs()
             # Query jobs in arcstate failed, set to tofetch
-            # Query jobs in arcstate donefailed, cancelled and lost, set to toclean.
+            # Query jobs in arcstate done, donefailed, cancelled and lost, set to toclean.
             # If they should be resubmitted, set arcjobid to null in pandajobs
             # If not do post-processing and fill status in pandajobs
             self.updateFailedJobs()
