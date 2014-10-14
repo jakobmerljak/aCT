@@ -41,10 +41,13 @@ class aCTAGISFetcher(aCTATLASProcess):
         """        
         try:
             self.log.info("Running")
+            # todo: check if agis.json exists and return if too new
             # fetch data from AGIS
             agisjson = self.fetchFromAgis()
             # store data to file
             self.storeToFile(agisjson)
+            # temporary hack to avoid too much agis fetching
+            time.sleep(3600)
         except aCTSignal.ExceptInterrupt,x:
             self.log.error(x)
             return
