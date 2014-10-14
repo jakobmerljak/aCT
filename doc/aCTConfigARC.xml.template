@@ -7,6 +7,8 @@
   <name>act</name>
   <user>user</user>
   <password>password</password>
+  <host>host.name</host>
+  <port>42</port>
 </db>
 
 <loop>

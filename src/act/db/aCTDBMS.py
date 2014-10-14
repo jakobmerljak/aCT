@@ -36,6 +36,8 @@ class aCTDBMS(supported_dbms[dbtype]):
             self.dbname=str(config.get(('db', 'name')))
             self.user=str(config.get(('db', 'user')))
             self.passwd=str(config.get(('db', 'password')))
+            self.host=str(config.get(('db', 'host')))
+            self.port=str(config.get(('db', 'port')))
             aCTDBMySQL.__init__(self, logger)
         elif self.dbtype=='oracle':
             aCTDBOracle.__init__(self, logger)

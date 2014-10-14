@@ -28,7 +28,10 @@ class aCTDBMySQL(object):
         if self.socket != 'None':
             self.conn=mysql.connect(unix_socket=self.socket,db=dbname)
         elif self.user and self.passwd:
-            self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)
+            if self.host and self.port:
+                self.conn=mysql.connect(user=self.user, password=self.passwd, host=self.host, port=self.port, db=dbname)
+            else:
+                self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)
         
     def getCursor(self):
         # make sure cursor reads newest db state
