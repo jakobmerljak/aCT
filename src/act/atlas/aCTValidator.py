@@ -1,7 +1,8 @@
-from aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.common.aCTProxy import aCTProxy
 from act.common import aCTUtils
 from act.common.aCTSignal import ExceptInterrupt
+from act.atlas.aCTPandaJob import aCTPandaJob
 import signal
 import os
 import shutil
@@ -9,7 +10,6 @@ import time
 import tarfile
 import arc
 from xml.dom import minidom
-import pickle
 import re
 
 class aCTValidator(aCTATLASProcess):
@@ -57,15 +57,15 @@ class aCTValidator(aCTATLASProcess):
         - copy .job.log file to jobs/date/cluster/jobid
         - copy gmlog dir to jobs/date/cluster/jobid
         """
-        aj = self.dbarc.getArcJobInfo(arcjobid)
-        if not aj.has_key('JobID'):
+        
+        columns = ['JobID', 'appjobid', 'cluster', 'StartTime', 'EndTime', 'ExecutionNode', 'stdout']
+        aj = self.dbarc.getArcJobInfo(arcjobid, columns=columns)
+        if not aj.has_key('JobID') or not aj['JobID']:
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
-        select="arcjobid='"+str(arcjobid)+"'"
-        j = self.dbpanda.getJobs(select, ["pandaid", "sitename"])[0]
         try:
             pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
@@ -73,49 +73,39 @@ class aCTValidator(aCTATLASProcess):
             self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
 
         # update pickle and dump to tmp/pickle
-        cluster=aj['cluster'].split('/')[0]
-        pupdate = pickle.load(pandapickle)
-        pupdate['xml'] = str(metadata.read())
-        pupdate['siteName']=j["sitename"]
-        pupdate['computingElement']=cluster
-        pupdate['schedulerID']=self.conf.get(['panda','schedulerid'])
-        pupdate['startTime'] = aj['StartTime']
-        pupdate['endTime'] = aj['EndTime']
-        t=pupdate['pilotID'].split("|")
-        logurl=os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
+        cluster = aj['cluster'].split('/')[0]
+        jobinfo = aCTPandaJob(filehandle=pandapickle)
+        jobinfo.xml = str(metadata.read())
+        jobinfo.computingElement = cluster
+        jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
+        jobinfo.startTime = aj['StartTime']
+        jobinfo.endTime = aj['EndTime']
+        jobinfo.node = aj['ExecutionNode']
+        
+        # Add url of logs
+        t = jobinfo.pilotID.split("|")
+        logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
         if len(t) > 4:
-            pupdate['pilotID']=logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
+            jobinfo.pilotID = logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
         else:
-            pupdate['pilotID']=logurl+"|Unknown|Unknown|Unknown|Unknown"
-        try:
-            pupdate['node']=aj['ExecutionNode']
-        except:
-            pass
+            jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
 
-        try:
-            os.mkdir(self.conf.get(['tmp','dir'])+"/pickle")
-        except:
-            pass
-        f=open(self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle","w")
-        pickle.dump(pupdate, f)
-        f.close()
+        jobinfo.writeToFile(self.conf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
 
-        # copy files to joblog dir
+        # copy to joblog dir files downloaded for the job: gmlog dir and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
             os.makedirs(outd, 0755)
         except:
             pass
-        # copy from tmp to outd.
+
         localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
         gmlogdir = os.path.join(localdir,"gmlog")
         
         if not os.path.exists(os.path.join(outd,"gmlog")):
             shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
 
-        pilotlog = ''
-        if aj.has_key('stdout'):
-            pilotlog = aj['stdout']
+        pilotlog = aj['stdout']
         if not pilotlog:
             pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
             if pilotlogs:
@@ -176,7 +166,6 @@ class aCTValidator(aCTATLASProcess):
         
         return surls
             
-
     def checkOutputFiles(self, surls):
         '''
         Check if SURLs are working. Returns a dict of arcjobid:file status
@@ -501,11 +490,11 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                if job in killedbymanual or job['restartstate'] != 'Finishing':
+                if job in killedbymanual or (job['restartstate'] != 'Finishing' and job['arcstate'] != 'done'):
                     # If job failed before finishing there is probably no
                     # jobSmallFiles, but also nothing to clean. Just let it be
                     # resubmitted and clean arc job
-                    self.cleanDownloadedJob(job['arcjobid'])
+                    #self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)

@@ -68,6 +68,7 @@ class aCTDBArc(aCTDB):
           - proxyid: id of corresponding proxies entry of proxy to use for this job
           - appjobid: job identifier of application. Used in log messages to track
             a job through the system
+          - priority: ARC job priority, extracted from the job description
         jobdescriptions: job description added by the application engine
           - id: primary key
           - jobdescription: job description text
@@ -98,6 +99,7 @@ class aCTDBArc(aCTDB):
             downloadfiles VARCHAR(255),
             proxyid INTEGER,
             appjobid VARCHAR(255),
+            priority SMALLINT,
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
             
         # First check if table already exists
@@ -188,6 +190,15 @@ class aCTDBArc(aCTDB):
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
         '''
+        # extract priority from job desc (also checks if desc is valid)
+        jobdescs = arc.JobDescriptionList()
+        if not arc.JobDescription_Parse(jobdesc, jobdescs):
+            self.log.error("%s: Failed to prepare job description" % appjobid)
+            return None
+        priority = jobdescs[0].Application.Priority
+        if priority == -1: # use nicer default priority
+            priority = 50
+
         # todo: find some useful default for proxyid
         c=self.getCursor()
         
@@ -207,6 +218,7 @@ class aCTDBArc(aCTDB):
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
         desc['appjobid'] = appjobid
+        desc['priority'] = priority
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
@@ -345,6 +357,8 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("SELECT jobdescription from jobdescriptions where id="+str(jobdescid))
         row = c.fetchone()
+        if not row:
+            return None
         return row['jobdescription']
     
     def getNArcJobs(self):

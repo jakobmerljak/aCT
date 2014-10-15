@@ -112,7 +112,7 @@ class aCTSubmitter(aCTProcess):
 
         if self.cluster:
             # Lock row for update in case multiple clusters are specified
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' limit 10",
+            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' order by priority desc limit 10",
                                         columns=["id", "jobdesc", "proxyid", "appjobid"], lock=True)
             if jobs:
                 self.log.debug("started lock for writing %d jobs"%len(jobs))
@@ -148,7 +148,6 @@ class aCTSubmitter(aCTProcess):
             # Endpoint and type will come from cluster table eventually
             aris = 'ldap://'+clusterhost+'/mds-vo-name=local,o=grid'
             infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
-                          
         else:
             giises = self.conf.getList(['atlasgiis','item'])
             infoendpoints = []

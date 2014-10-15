@@ -44,7 +44,7 @@ class aCTPanda2Xrsl:
             jobname = self.jobdesc['jobName'][0]
         else:
             jobname = "pandajob"
-        self.xrsl['jobname'] = "(jobname = %s)" % jobname
+        self.xrsl['jobname'] = '(jobname = "%s")' % jobname
 
     def setDisk(self):
 
@@ -62,6 +62,10 @@ class aCTPanda2Xrsl:
         else:
             cpucount = 2*24*3600
 
+        # JEDI issues
+        if cpucount > 345600:
+            cpucount = 345600
+
         # shorten installation jobs
         try:
             if self.jobdesc['prodSourceLabel'][0] == 'install':
@@ -77,8 +81,8 @@ class aCTPanda2Xrsl:
         if self.getNCores() > 1:
             walltime = int (walltime / self.getNCores() ) + 60
 
-        if self.sitename.find("MPPMU-HYDRA_MCORE") != -1:
-            walltime=90
+        #if self.sitename.find("MPPMU-HYDRA_MCORE") != -1:
+        #    walltime=90
 
         # JEDI analysis hack
         walltime = max(60,walltime)
@@ -97,6 +101,13 @@ class aCTPanda2Xrsl:
 
         if memory <= 0:
             memory = self.defaults['memory']
+
+        if self.sitename == 'BOINC':
+            memory=1536
+
+        # hack mcore pile
+        if self.getNCores() > 1 and memory > 2500:
+            memory=2500
 
         self.xrsl['memory']='(memory = %d)' % (memory)
 
@@ -126,6 +137,7 @@ class aCTPanda2Xrsl:
                 rte=rte.replace('PHYSICS-','ATLASPHYSICS-')
                 rte=rte.replace('PROD2-','ATLASPROD2-')
                 rte=rte.replace('PROD1-','ATLASPROD1-')
+                rte=rte.replace('DERIVATION-','ATLASDERIVATION-')
 
             if rte.find('NULL') != -1:
                 rte='PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
@@ -160,10 +172,12 @@ class aCTPanda2Xrsl:
         x = ""        
         x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
         if self.sitename.find("LRZ-LMU_MUC_MCORE") != -1:
-            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
         elif self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
+            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
         #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
         #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
@@ -201,7 +215,7 @@ class aCTPanda2Xrsl:
         else:
             logfile = "LOGFILE"
 
-        self.xrsl['log'] = "(stdout = " + logfile.replace('.tgz','') + ")(join = yes)"
+        self.xrsl['log'] = '(stdout = "' + logfile.replace('.tgz','') + '")(join = yes)'
 
 
     def setGMLog(self):
@@ -226,7 +240,23 @@ class aCTPanda2Xrsl:
         if self.jobdesc.has_key('currentPriority'):
             #self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'][0])/100) + ')'
             # need a better number
-            self.xrsl['priority'] = '("priority" = 60 )'
+            prio = 50
+            try:
+                prio = int(self.jobdesc['currentPriority'][0])
+                if prio < 1:
+                    prio = 1
+                if prio > 0 and prio < 1001:
+                    prio = prio * 90 / 1000.
+                    prio = int(prio)
+                if prio > 1000 and prio < 10001:
+                    prio = 90 + ( prio - 1000 ) / 900.
+                    prio = int(prio)
+                if prio > 10000:
+                    prio = 100
+            except:
+                pass
+            #self.xrsl['priority'] = '("priority" = 60 )'
+            self.xrsl['priority'] = '("priority" = %d )' % prio
             pass
             
 
