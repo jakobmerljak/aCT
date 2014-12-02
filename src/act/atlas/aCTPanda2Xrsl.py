@@ -169,7 +169,8 @@ class aCTPanda2Xrsl:
             elif self.catalog.find('rucio://') == 0:
                 for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
                     # Hard-coded pilot rucio account - should change based on proxy
-                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch;rucioaccount=pilot/replicas", s, f])
+                    # Rucio does not expose mtime, set cache=invariant so not to download too much
+                    lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
                     inf[f]=lfn
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)
