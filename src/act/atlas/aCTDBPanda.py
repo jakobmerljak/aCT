@@ -36,6 +36,7 @@ class aCTDBPanda(aCTDB):
            - endTime: Job end time
            - computingElement: CE where the job is running
            - proxyid: ID of proxy in proxies table to use for this job
+           - sendhb: Flag to say whether or not to send heartbeat
            
         pandaarchive:
           - Selected fields from above list:
@@ -60,7 +61,8 @@ class aCTDBPanda(aCTDB):
         startTime TIMESTAMP,
         endTime TIMESTAMP,
         computingElement VARCHAR(255),
-        proxyid integer
+        proxyid integer,
+        sendhb TINYINT(1) DEFAULT 1
     )
 """
         c=self.getCursor()
@@ -107,6 +109,7 @@ class aCTDBPanda(aCTDB):
         desc['created']=self.getTimeStamp()
         desc['pandaid']=pandaid
         desc['pandajob']=pandajob
+        desc['sendhb']=1
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.getCursor()
         c.execute(s,desc.values())

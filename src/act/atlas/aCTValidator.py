@@ -323,13 +323,23 @@ class aCTValidator(aCTATLASProcess):
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
-        columns = ["arcjobid", "pandaid"]
+        columns = ["arcjobid", "pandaid", "sendhb"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
             # nothing to do
             return
         
+        # Skip validation for the true pilot jobs, just copy logs and set to done
+        for job in jobstoupdate[:]:
+            if not job['sendhb']:
+                if not self.copyFinishedFiles(job["arcjobid"]):
+                    self.log.warning("%s: Failed to copy log files" % job['pandaid'])
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"pandastatus": None, "actpandastatus": "done"}
+                self.dbpanda.updateJobs(select, desc)
+                jobstoupdate.remove(job)
+
         # pull out output file info from metadata.xml into dict, order by SE
 
         surls = {}

@@ -108,8 +108,12 @@ class aCTAutopilot(aCTATLASProcess):
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
+        # Check if we should send heartbeats
+        hb = ''
+        if pstatus == 'running' or pstatus == 'transferring':
+            hb = ' and sendhb=1'
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         

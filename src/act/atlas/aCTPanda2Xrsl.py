@@ -3,7 +3,7 @@ import re
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -17,6 +17,7 @@ class aCTPanda2Xrsl:
         self.sitename=sitename
         self.schedconfig=schedconfig
         self.catalog = catalog
+        self.truepilot = truepilot
 
         #print self.jobdesc.keys()
 
@@ -149,6 +150,10 @@ class aCTPanda2Xrsl:
         for rte in atlasrtes[-1:]:
             self.xrsl['rtes'] += "(runtimeenvironment = APPS/HEP/ATLAS-" + rte + ")"
 
+        # Set proxy environment for truepilot jobs
+        if self.truepilot:
+            atlasrtes.append('ENV/PROXY')
+
         self.artes = ",".join(atlasrtes)
         
 
@@ -160,6 +165,9 @@ class aCTPanda2Xrsl:
         
         if self.artes is None:
                 self.setRTE()
+
+        # Set options for NG/true pilot
+        #if truepilot:
 
         #pargs='"pilot3/pilot.py" "-h" "NDGF-condor" "-s" "Nordugrid" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"'
         pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
@@ -187,7 +195,7 @@ class aCTPanda2Xrsl:
             x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
         x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
-        if(self.jobdesc.has_key('inFiles')):
+        if(self.jobdesc.has_key('inFiles') and not self.truepilot):
             inf={}
             if self.catalog.find('lfc://') == 0:
                 for f,g in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['GUID'][0].split(",")):
