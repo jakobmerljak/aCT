@@ -150,12 +150,13 @@ class aCTPanda2Xrsl:
         for rte in atlasrtes[-1:]:
             self.xrsl['rtes'] += "(runtimeenvironment = APPS/HEP/ATLAS-" + rte + ")"
 
-        # Set proxy environment for truepilot jobs
-        if self.truepilot:
-            atlasrtes.append('ENV/PROXY')
 
         self.artes = ",".join(atlasrtes)
         
+        # Set proxy environment for truepilot jobs
+        if self.truepilot:
+            self.artes = ""
+            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
 
     def setExecutable(self):
 
@@ -173,12 +174,18 @@ class aCTPanda2Xrsl:
         pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
         self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
+        if self.truepilot:
+            pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.sitename,self.sitename)
+            self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
 
     def setInputs(self):
 
         x = ""        
-        x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
+        if self.truepilot:
+            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
+        else:
+            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'
         if self.sitename.find("LRZ-LMU_MUC_MCORE") != -1:
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
             #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
@@ -192,8 +199,9 @@ class aCTPanda2Xrsl:
         if self.sitename.find("ARC-TEST") != -1:
             x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
         else:
-            x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
-        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+        if not self.truepilot:
+            x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles') and not self.truepilot):
             inf={}
@@ -241,6 +249,9 @@ class aCTPanda2Xrsl:
         # generated output file list"
         x += '("output.list" "")' 
         self.xrsl['outputs'] = "(outputfiles = %s )" % x
+
+        if self.truepilot:
+            self.xrsl['outputs'] = ""
 
 
     def setPriority(self):

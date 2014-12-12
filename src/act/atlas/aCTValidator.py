@@ -71,11 +71,17 @@ class aCTValidator(aCTATLASProcess):
             metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
         except Exception,x:
             self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+            pandapickle = None
+            metadata = None
 
         # update pickle and dump to tmp/pickle
         cluster = aj['cluster'].split('/')[0]
-        jobinfo = aCTPandaJob(filehandle=pandapickle)
-        jobinfo.xml = str(metadata.read())
+        if pandapickle:
+            jobinfo = aCTPandaJob(filehandle=pandapickle)
+        else:
+            jobinfo = aCTPandaJob()
+        if metadata:
+            jobinfo.xml = str(metadata.read())
         jobinfo.computingElement = cluster
         jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
         jobinfo.startTime = aj['StartTime']
@@ -83,7 +89,10 @@ class aCTValidator(aCTATLASProcess):
         jobinfo.node = aj['ExecutionNode']
         
         # Add url of logs
-        t = jobinfo.pilotID.split("|")
+        if jobinfo.pilotID:
+            t = jobinfo.pilotID.split("|")
+        else:
+            t = []
         logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
         if len(t) > 4:
             jobinfo.pilotID = logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
@@ -330,14 +339,19 @@ class aCTValidator(aCTATLASProcess):
             # nothing to do
             return
         
-        # Skip validation for the true pilot jobs, just copy logs and set to done
+        # Skip validation for the true pilot jobs, just copy logs, set to done and clean arc job
         for job in jobstoupdate[:]:
             if not job['sendhb']:
+                self.log.info('%s: Skip validation' % job['pandaid'])
                 if not self.copyFinishedFiles(job["arcjobid"]):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
                 self.dbpanda.updateJobs(select, desc)
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
+                self.cleanDownloadedJob(job['arcjobid'])
                 jobstoupdate.remove(job)
 
         # pull out output file info from metadata.xml into dict, order by SE

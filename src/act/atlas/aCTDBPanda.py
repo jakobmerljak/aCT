@@ -173,7 +173,7 @@ class aCTDBPanda(aCTDB):
 
 if __name__ == '__main__':
     import logging
-    import aCTConfig
+    from act.common import aCTConfig
     logging.basicConfig(level=logging.DEBUG)
 
     conf = aCTConfig.aCTConfigATLAS()
