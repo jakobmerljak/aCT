@@ -175,7 +175,7 @@ class aCTPanda2Xrsl:
         self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
         if self.truepilot:
-            pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.sitename,self.sitename)
+            pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig,self.sitename)
             self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
 
