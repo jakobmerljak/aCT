@@ -106,7 +106,8 @@ class aCTATLASStatus(aCTATLASProcess):
         # internally by the ARC part.
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
         select += " limit 100000"
-        columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode", "arcjobs.cluster"]
+        columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
+                   "arcjobs.cluster", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
@@ -122,6 +123,13 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["node"] = aj["ExecutionNode"]
             desc["computingElement"] = aj["cluster"].split('/')[0]
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
+            # When true pilot job has started running, turn of aCT heartbeats
+            try:
+                if int(self.conf.getListCond(["sites", "site"], "name=" + aj['siteName'], ["truepilot"])[0]):
+                    self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
+                    desc['sendhb'] = 0
+            except:
+                pass
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 

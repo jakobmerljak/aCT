@@ -27,10 +27,6 @@ class aCTPanda2Arc(aCTATLASProcess):
                 self.sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
             except:
                 self.sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
-            try:
-                self.sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites", "site"], "name=" + sitename, ["truepilot"])[0])
-            except:
-                self.sites[sitename]['truepilot'] = 0
 
     def createArcJobs(self):
 
@@ -68,8 +64,6 @@ class aCTPanda2Arc(aCTATLASProcess):
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting 
                 jd['actpandastatus'] = 'sent'
-                if self.sites[job['siteName']]['truepilot']:
-                    jd['sendhb'] = 0
                 self.dbpanda.updateJob(job['pandaid'], jd)
                 
 
