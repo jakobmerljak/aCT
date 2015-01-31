@@ -27,6 +27,10 @@ class aCTPanda2Arc(aCTATLASProcess):
                 self.sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
             except:
                 self.sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
+            try:
+                self.sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites", "site"], "name=" + sitename, ["truepilot"])[0])
+            except:
+                self.sites[sitename]['truepilot'] = 0
 
     def createArcJobs(self):
 
