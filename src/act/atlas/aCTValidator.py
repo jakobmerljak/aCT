@@ -67,6 +67,7 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
+        cluster = aj['cluster'].split('/')[0]
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
@@ -77,7 +78,6 @@ class aCTValidator(aCTATLASProcess):
                 metadata = None
 
             # update pickle and dump to tmp/pickle
-            cluster = aj['cluster'].split('/')[0]
             if pandapickle:
                 jobinfo = aCTPandaJob(filehandle=pandapickle)
             else:
@@ -113,8 +113,8 @@ class aCTValidator(aCTATLASProcess):
         localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
         gmlogerrors = os.path.join(localdir,"gmlog","errors")
         
-        if not os.path.exists(os.path.join(outd,"arc-ce.err")):
-            shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.err"))
+        if not os.path.exists(os.path.join(outd,"arc-ce.log")):
+            shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.log"))
 
         pilotlog = aj['stdout']
         if not pilotlog:
