@@ -185,7 +185,7 @@ class aCTDBArc(aCTDB):
         return row
 
 
-    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid=''):
+    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', downloadfiles=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
@@ -218,6 +218,7 @@ class aCTDBArc(aCTDB):
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
         desc['appjobid'] = appjobid
+        desc['downloadfiles'] = downloadfiles
         desc['priority'] = priority
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "

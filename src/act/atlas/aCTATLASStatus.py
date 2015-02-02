@@ -341,17 +341,12 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         # Get outputs to download for failed jobs
         select = "arcstate='failed'"
-        columns = ['id', 'stdout', 'logdir']
+        columns = ['id']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns)
         if arcjobs:
             for aj in arcjobs:
-                downloadfiles = 'jobSmallFiles.tgz'
-                if aj['stdout']:
-                    downloadfiles += ';' + aj['stdout']
-                if aj['logdir']:
-                    downloadfiles += ';' + aj['logdir'] + '/*'
                 select = "id='"+str(aj["id"])+"'"
-                desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
+                desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJobsLazy(desc, select)
             self.dbarc.Commit()
         

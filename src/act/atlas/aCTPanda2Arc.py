@@ -57,8 +57,19 @@ class aCTPanda2Arc(aCTATLASProcess):
                 maxattempts = 5
                 if job['siteName'] == 'BOINC':
                     maxattempts = 30
+
+                # Set the list of files to download at the end of the job
+                downloadfiles = 'gmlog/errors'
+                if not self.sites[job['siteName']]['truepilot']:
+                    downloadfiles += ';jobSmallFiles.tgz'
+                try:
+                    downloadfiles += ';%s' % parser.jobdesc['logFile'][0].replace('.tgz', '')
+                except:
+                    pass
+
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
-                                                         proxyid=job['proxyid'], appjobid=str(job['pandaid']))
+                                                         proxyid=job['proxyid'], appjobid=str(job['pandaid']),
+                                                         downloadfiles=downloadfiles)
                 if not aid:
                     self.log.error("%s: Failed to insert arc job description: %s" % (job['pandaid'], xrsl))
                     continue
