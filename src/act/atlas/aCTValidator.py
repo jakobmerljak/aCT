@@ -50,10 +50,11 @@ class aCTValidator(aCTATLASProcess):
         return smallfiles.extractfile(filename)
         
     
-    def copyFinishedFiles(self, arcjobid):
+    def copyFinishedFiles(self, arcjobid, extractmetadata):
         """
-        - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
-        - extract metadata-surl.xml and update pickle. store xml under tmp/xml
+        - if extractmetadata: (normal arc jobs, not true pilot jobs) 
+           - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
+           - extract metadata-surl.xml and update pickle. store xml under tmp/xml
         - copy .job.log file to jobs/date/cluster/jobid
         - copy gmlog dir to jobs/date/cluster/jobid
         """
@@ -66,42 +67,43 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
-        try:
-            pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
-            metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
-        except Exception,x:
-            self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
-            pandapickle = None
-            metadata = None
+        if extractmetadata:
+            try:
+                pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
+                metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
+            except Exception,x:
+                self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                pandapickle = None
+                metadata = None
 
-        # update pickle and dump to tmp/pickle
-        cluster = aj['cluster'].split('/')[0]
-        if pandapickle:
-            jobinfo = aCTPandaJob(filehandle=pandapickle)
-        else:
-            jobinfo = aCTPandaJob()
-        if metadata:
-            jobinfo.xml = str(metadata.read())
-        jobinfo.computingElement = cluster
-        jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
-        jobinfo.startTime = aj['StartTime']
-        jobinfo.endTime = aj['EndTime']
-        jobinfo.node = aj['ExecutionNode']
-        
-        # Add url of logs
-        if jobinfo.pilotID:
-            t = jobinfo.pilotID.split("|")
-        else:
-            t = []
-        logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
-        if len(t) > 4:
-            jobinfo.pilotID = logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
-        else:
-            jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
+            # update pickle and dump to tmp/pickle
+            cluster = aj['cluster'].split('/')[0]
+            if pandapickle:
+                jobinfo = aCTPandaJob(filehandle=pandapickle)
+            else:
+                jobinfo = aCTPandaJob()
+            if metadata:
+                jobinfo.xml = str(metadata.read())
+            jobinfo.computingElement = cluster
+            jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
+            jobinfo.startTime = aj['StartTime']
+            jobinfo.endTime = aj['EndTime']
+            jobinfo.node = aj['ExecutionNode']
 
-        jobinfo.writeToFile(self.conf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
+            # Add url of logs
+            if jobinfo.pilotID:
+                t = jobinfo.pilotID.split("|")
+            else:
+                t = []
+            logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
+            if len(t) > 4:
+                jobinfo.pilotID = logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
+            else:
+                jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
 
-        # copy to joblog dir files downloaded for the job: gmlog dir and pilot log
+            jobinfo.writeToFile(self.conf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
+
+        # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
             os.makedirs(outd, 0755)
@@ -109,10 +111,10 @@ class aCTValidator(aCTATLASProcess):
             pass
 
         localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
-        gmlogdir = os.path.join(localdir,"gmlog")
+        gmlogerrors = os.path.join(localdir,"gmlog","errors")
         
-        if not os.path.exists(os.path.join(outd,"gmlog")):
-            shutil.copytree(gmlogdir, os.path.join(outd,"gmlog"))
+        if not os.path.exists(os.path.join(outd,"arc-ce.err")):
+            shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.err"))
 
         pilotlog = aj['stdout']
         if not pilotlog:
@@ -120,7 +122,7 @@ class aCTValidator(aCTATLASProcess):
             if pilotlogs:
                 pilotlog = pilotlogs[0]
         if pilotlog:
-            shutil.copy(os.path.join(localdir,pilotlog), 
+            shutil.copy(os.path.join(localdir,pilotlog),
                         os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
@@ -343,7 +345,7 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate[:]:
             if not job['sendhb']:
                 self.log.info('%s: Skip validation' % job['pandaid'])
-                if not self.copyFinishedFiles(job["arcjobid"]):
+                if not self.copyFinishedFiles(job["arcjobid"], False):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
@@ -383,7 +385,7 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc) 
-                    if not self.copyFinishedFiles(id):
+                    if not self.copyFinishedFiles(id, True):
                         # id was gone already
                         continue
                     # set arcjobs state toclean
