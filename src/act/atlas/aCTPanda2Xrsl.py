@@ -183,12 +183,17 @@ class aCTPanda2Xrsl:
 
     def setInputs(self):
 
-        x = ""        
-        ###AF x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
-        x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'
+        x = ""
+        if self.truepilot:
+            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
+        else:
+            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'      
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles') and not self.truepilot):
             inf={}
