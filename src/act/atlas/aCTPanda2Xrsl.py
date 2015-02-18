@@ -59,17 +59,20 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc.has_key('maxCpuCount'):
             cpucount = int(self.jobdesc['maxCpuCount'][0])
+            cpucount = int(1.5 * cpucount )
         else:
             cpucount = 2*24*3600
 
+        if cpucount < 50000:
+            cpucount = 50000
         # JEDI issues
-        if cpucount > 345600:
-            cpucount = 345600
+        if cpucount > 172800: 
+            cpucount = 172800
 
         # shorten installation jobs
         try:
             if self.jobdesc['prodSourceLabel'][0] == 'install':
-                cpucount = 6*3600
+                cpucount = 12*3600
         except:
             pass
 
@@ -79,10 +82,7 @@ class aCTPanda2Xrsl:
         walltime = int( cpucount  / 60)
 
         if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() ) + 60
-
-        #if self.sitename.find("MPPMU-HYDRA_MCORE") != -1:
-        #    walltime=90
+            walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
         walltime = max(60,walltime)
@@ -96,6 +96,8 @@ class aCTPanda2Xrsl:
         
         if self.jobdesc.has_key('minRamCount'):
             memory = int(self.jobdesc['minRamCount'][0])
+        elif not self.sitename.beginswith('ANALY'):
+            memory = 4000
         else:
             memory = 2000
 
@@ -170,21 +172,13 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""        
-        x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
-        if self.sitename.find("LRZ-LMU_MUC_MCORE") != -1:
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
-        elif self.jobdesc['prodSourceLabel'][0] == 'rc_test':
+        ###AF x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
+        x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'
+        if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
-        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
-        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
-        if self.sitename.find("ARC-TEST") != -1:
-            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
-        else:
-            x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
         x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles')):
@@ -197,7 +191,7 @@ class aCTPanda2Xrsl:
                 for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
                     # Hard-coded pilot rucio account - should change based on proxy
                     # Rucio does not expose mtime, set cache=invariant so not to download too much
-                    lfn='/'.join(["rucio://voatlasrucio-server-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
+                    lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
                     inf[f]=lfn
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)
