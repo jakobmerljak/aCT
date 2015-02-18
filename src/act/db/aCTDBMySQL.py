@@ -28,7 +28,7 @@ class aCTDBMySQL(object):
         if self.socket != 'None':
             self.conn=mysql.connect(unix_socket=self.socket,db=dbname)
         elif self.user and self.passwd:
-            if self.host and self.port:
+            if self.host != 'None' and self.port != 'None':
                 self.conn=mysql.connect(user=self.user, password=self.passwd, host=self.host, port=self.port, db=dbname)
             else:
                 self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)

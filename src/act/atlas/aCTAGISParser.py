@@ -19,11 +19,8 @@ class aCTAGISParser:
     def __init__(self, logger):
         self.log=logger
         self.conf=aCTConfig.aCTConfigATLAS()
-        agisfile = self.conf.get(['agis','jsonfilename'])
-        pilotmgr = self.conf.get(['agis','pilotmanager'])
-        self.sites = self._parseAgisJson(agisfile, pilotmgr)
-        self._mergeSiteDicts(self.sites, self._parseConfigSites())
-        self.tparse = time.time()
+        self.tparse = 0
+        self.getSites()
                 
     def _parseConfigSites(self):
         sites = {}
@@ -59,8 +56,8 @@ class aCTAGISParser:
   
     def _parseAgisJson(self, agisfilename, pilotmgr):
         # todo: first read from config, then read from agis and update if not already in sites list
-        agisfile=open(agisfilename)
-        agisjson=json.load(agisfile)
+        with open(agisfilename) as f:
+            agisjson=json.load(f)
         sites=dict([(entry,agisjson[entry]) for entry in agisjson if agisjson[entry]['pilot_manager']==pilotmgr])
         for sitename in sites:
             if not sites[sitename].has_key('catalog'):
@@ -68,12 +65,12 @@ class aCTAGISParser:
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
             if not sites[sitename].has_key('maxjobs'):
-                sites[sitename]['maxjobs'] = 1000000
+                sites[sitename]['maxjobs'] = self.conf.get(["agis", "maxjobs"])
             if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
                 sites[sitename]['corecount'] = 1
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
-                sites[sitename]['endpoints'] = [queue['ce_endpoint'] for queue in sites[sitename]['queues']]
+                sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
         self.log.debug("Parsed sites from AGIS: %s"%str(sites.keys()))
         return sites
 
@@ -86,10 +83,14 @@ class aCTAGISParser:
 
     def getSites(self):
         agisfile = self.conf.get(['agis','jsonfilename'])
-        pilotmgr = self.conf.get(['agis','pilotmanager'])
+        if not agisfile:
+            # No AGIS, only manually configured sites
+            return self._parseConfigSites()
+        
         # check if json file or config file changed before parsing
         if (self.tparse<os.stat(agisfile).st_mtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
             self.log.info("AGIS file and/or config modified, reparsing site info")
+            pilotmgr = self.conf.get(['agis','pilotmanager'])
             start_parsing = time.time()
             self.sites = self._parseAgisJson(agisfile, pilotmgr)
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     agisparser=aCTAGISParser(log)
     while 1:
         sites = agisparser.getSites()
-        pprint.pprint(sites.keys())
+        pprint.pprint(sites)
         print len(sites)
         exit(1)
         time.sleep(10)
