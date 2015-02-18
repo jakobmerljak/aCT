@@ -167,18 +167,15 @@ class aCTPanda2Xrsl:
     def setArguments(self):
         
         if self.artes is None:
-                self.setRTE()
+            self.setRTE()
 
         # Set options for NG/true pilot
-        #if truepilot:
-
-        #pargs='"pilot3/pilot.py" "-h" "NDGF-condor" "-s" "Nordugrid" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"'
-        pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
-        self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
-
         if self.truepilot:
             pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig,self.sitename)
-            self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
+        else:
+            pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
+
+        self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
 
     def setInputs(self):
@@ -193,7 +190,8 @@ class aCTPanda2Xrsl:
         else:
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
-        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+        if not self.truepilot:
+            x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles') and not self.truepilot):
             inf={}
