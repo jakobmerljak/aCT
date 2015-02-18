@@ -3,11 +3,13 @@ import os
 import pickle
 import re
 import time
+import random
 import arc
 import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
+from aCTPandaJob import aCTPandaJob
 
 class PandaThr(Thread):
     """
@@ -170,19 +172,20 @@ class aCTAutopilot(aCTATLASProcess):
 
             jd={}
             try:
-                # pilot status update is stored in pickle format
-                fname=self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                f=open(fname,"r")
-                jd=pickle.load(f)
-                f.close()
+                # Load pickled information from pilot
+                fname = self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                jobinfo = aCTPandaJob(filename=fname)
             except Exception,x:
                 self.log.error('%s: %s' % (j['pandaid'], x))
-                # TODO create fake pickle to send back to panda 
-                jd = {}
+                # Send some basic info back to panda
+                info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
+                jobinfo = aCTPandaJob(jobinfo=info)
+                jobinfo.pilotErrorCode = 1008
+                jobinfo.pilotErrorDiag = 'Job failed for unknown reason'
             else:
                 os.remove(fname)
 
-            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jd)
+            t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
@@ -249,7 +252,11 @@ class aCTAutopilot(aCTATLASProcess):
                     if attrs['type'] == "analysis":
                         t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
-                        t=PandaGetThr(self.getPanda(site).getJob,site)
+                        r=random.Random()
+                        if r.randint(0,100) <= 10:
+                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        else:
+                          t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                     nall += 1

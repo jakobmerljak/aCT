@@ -44,7 +44,7 @@ class aCTPanda2Xrsl:
             jobname = self.jobdesc['jobName'][0]
         else:
             jobname = "pandajob"
-        self.xrsl['jobname'] = "(jobname = %s)" % jobname
+        self.xrsl['jobname'] = '(jobname = "%s")' % jobname
 
     def setDisk(self):
 
@@ -59,13 +59,20 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc.has_key('maxCpuCount'):
             cpucount = int(self.jobdesc['maxCpuCount'][0])
+            cpucount = int(1.5 * cpucount )
         else:
             cpucount = 2*24*3600
+
+        if cpucount < 50000:
+            cpucount = 50000
+        # JEDI issues
+        if cpucount > 172800: 
+            cpucount = 172800
 
         # shorten installation jobs
         try:
             if self.jobdesc['prodSourceLabel'][0] == 'install':
-                cpucount = 6*3600
+                cpucount = 12*3600
         except:
             pass
 
@@ -75,8 +82,10 @@ class aCTPanda2Xrsl:
         walltime = int( cpucount  / 60)
 
         if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() ) + 60
+            walltime = int (walltime / self.getNCores() )
 
+        # JEDI analysis hack
+        walltime = max(60,walltime)
         cputime = self.getNCores() * walltime
         
 
@@ -87,11 +96,20 @@ class aCTPanda2Xrsl:
         
         if self.jobdesc.has_key('minRamCount'):
             memory = int(self.jobdesc['minRamCount'][0])
+        elif not self.sitename.beginswith('ANALY'):
+            memory = 4000
         else:
             memory = 2000
 
         if memory <= 0:
             memory = self.defaults['memory']
+
+        if self.sitename == 'BOINC':
+            memory=1536
+
+        # hack mcore pile
+        if self.getNCores() > 1 and memory > 2500:
+            memory=2500
 
         self.xrsl['memory']='(memory = %d)' % (memory)
 
@@ -121,6 +139,7 @@ class aCTPanda2Xrsl:
                 rte=rte.replace('PHYSICS-','ATLASPHYSICS-')
                 rte=rte.replace('PROD2-','ATLASPROD2-')
                 rte=rte.replace('PROD1-','ATLASPROD1-')
+                rte=rte.replace('DERIVATION-','ATLASDERIVATION-')
 
             if rte.find('NULL') != -1:
                 rte='PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
@@ -153,12 +172,14 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""        
-        x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
-        x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz")'
-        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58fp1.tar.gz")'
-        #x += '(pilotcode.tar.gz "http://www-f9.ijs.si;cache=check/grid/pilotcode-58j1.tar.gz")'
-        x += '(ARCpilot-test.tar.gz "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test.tar.gz")'
-        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.pilot.json")' % self.schedconfig
+        ###AF x += '(ARCpilot-test "http://www-f9.ijs.si;cache=check/grid/ARCpilot-test")'
+        x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'
+        if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
+        else:
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if(self.jobdesc.has_key('inFiles')):
             inf={}
@@ -188,7 +209,7 @@ class aCTPanda2Xrsl:
         else:
             logfile = "LOGFILE"
 
-        self.xrsl['log'] = "(stdout = " + logfile.replace('.tgz','') + ")(join = yes)"
+        self.xrsl['log'] = '(stdout = "' + logfile.replace('.tgz','') + '")(join = yes)'
 
 
     def setGMLog(self):
@@ -213,7 +234,23 @@ class aCTPanda2Xrsl:
         if self.jobdesc.has_key('currentPriority'):
             #self.xrsl['priority'] = '("priority" = ' + str(int(self.jobdesc['currentPriority'][0])/100) + ')'
             # need a better number
-            self.xrsl['priority'] = '("priority" = 60 )'
+            prio = 50
+            try:
+                prio = int(self.jobdesc['currentPriority'][0])
+                if prio < 1:
+                    prio = 1
+                if prio > 0 and prio < 1001:
+                    prio = prio * 90 / 1000.
+                    prio = int(prio)
+                if prio > 1000 and prio < 10001:
+                    prio = 90 + ( prio - 1000 ) / 900.
+                    prio = int(prio)
+                if prio > 10000:
+                    prio = 100
+            except:
+                pass
+            #self.xrsl['priority'] = '("priority" = 60 )'
+            self.xrsl['priority'] = '("priority" = %d )' % prio
             pass
             
 
