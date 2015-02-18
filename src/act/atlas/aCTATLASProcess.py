@@ -55,6 +55,7 @@ class aCTATLASProcess:
             while 1:
                 # parse config file
                 self.conf.parse()
+                self.arcconf.parse()
                 # do class-specific things
                 self.process()
                 # sleep
