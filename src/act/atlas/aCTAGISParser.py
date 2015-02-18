@@ -61,7 +61,7 @@ class aCTAGISParser:
         # todo: first read from config, then read from agis and update if not already in sites list
         agisfile=open(agisfilename)
         agisjson=json.load(agisfile)
-        sites=dict([(entry,agisjson[entry]) for entry in agisjson if agisjson[entry]['pilot_manager']==pilotmgr])
+        sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry]['pilot_manager']==pilotmgr and agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
             if not sites[sitename].has_key('catalog'):
                 sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
