@@ -123,9 +123,9 @@ class aCTPanda2Xrsl:
                       + cache.split('/')[1]
             elif cache.find('AnalysisTransforms') != -1:
                 rte=package.upper()
-    	        res=re.match('AnalysisTransforms-(.+)_(.+)',cache)
+                res=re.match('AnalysisTransforms-(.+)_(.+)',cache)
                 if res is not None:
-    	            if res.group(1).find('AtlasProduction') != -1:
+                    if res.group(1).find('AtlasProduction') != -1:
                         rte="ATLAS-"+res.group(2)
                     else:
                         rte="ATLAS-"+res.group(1).upper()+"-"+res.group(2)
