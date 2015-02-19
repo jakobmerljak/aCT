@@ -244,7 +244,11 @@ class aCTATLASStatus(aCTATLASProcess):
 
         self.log.info("processing %d failed jobs" % len(arcjobs))
         for aj in arcjobs:
-            cluster=aj['cluster'].split('/')[0]
+            cluster=aj['cluster']
+            try:
+                cluster=cluster.split('/')[0]
+            except:
+                pass
             jobid=aj['JobID']
             if not jobid or not cluster:
                 # Job was not even submitted, there is no more information

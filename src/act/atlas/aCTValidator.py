@@ -111,8 +111,12 @@ class aCTValidator(aCTATLASProcess):
             if pilotlogs:
                 pilotlog = pilotlogs[0]
         if pilotlog:
-            shutil.copy(os.path.join(localdir,pilotlog), 
-                        os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
+            try:
+                shutil.copy(os.path.join(localdir,pilotlog),
+                            os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
+            except Exception, e:
+                self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
+                return False
         # set right permissions
         aCTUtils.setFilePermissionsRecursive(outd)
         return True
@@ -185,7 +189,11 @@ class aCTValidator(aCTATLASProcess):
         bulklimit = 100
         for surl in surls:
             count += 1
+            if not surl['surl']:
+                continue
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            if not dp or not dp.h:
+                continue
             datapointlist.append(dp.h)
             dummylist.append(dp) # to not destroy objects
             surllist.append(surl)
@@ -494,7 +502,7 @@ class aCTValidator(aCTATLASProcess):
                     # If job failed before finishing there is probably no
                     # jobSmallFiles, but also nothing to clean. Just let it be
                     # resubmitted and clean arc job
-                    #self.cleanDownloadedJob(job['arcjobid'])
+                    self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid="+str(job['arcjobid'])
                     desc = {"actpandastatus": "starting", "arcjobid": None}
                     self.dbpanda.updateJobs(select, desc)

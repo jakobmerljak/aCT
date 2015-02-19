@@ -142,9 +142,9 @@ class aCTPanda:
             return None
         return urldesc
 
-    def queryJobInfo(self):
+    def queryJobInfo(self, cloud='ND'):
         node={}
-        node['cloud']="ND"
+        node['cloud']=cloud
         node['schedulerID']=self.conf.get(['panda','schedulerid'])
         urldesc=None
         try:
