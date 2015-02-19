@@ -73,7 +73,7 @@ class aCTProxy:
             proxyid = self.updateProxy("", dn, attribute, expirytime)
         dbproxypath = self.db.getProxyPath(proxyid)
         retries = 3
-        while self._createVomsProxyFromFile(proxypath, dbproxypath, validTime, voms, attribute):
+        while self._createVomsProxyFromFile(proxypath, dbproxypath, validTime, voms, attribute).returncode:
             # todo: check that attribute is actually set in the new proxy.
             retries -= 1
             if retries == 0:
