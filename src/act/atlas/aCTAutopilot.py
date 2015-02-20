@@ -89,7 +89,23 @@ class aCTAutopilot(aCTATLASProcess):
 
 
     def setSites(self):
+<<<<<<< HEAD
         self.sites = self.agisparser.getSites()
+=======
+        for sitename in self.conf.getList(["sites","site","name"]):
+            self.sites[sitename] = {}
+            self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
+            self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
+            self.sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+            try:
+                self.sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
+            except:
+                self.sites[sitename]['maxjobs'] = 1000000
+            try:
+                self.sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites", "site"], "name=" + sitename, ["truepilot"])[0])
+            except:
+                self.sites[sitename]['truepilot'] = 0
+>>>>>>> dev
 
 
     def getPanda(self, sitename):
@@ -101,8 +117,12 @@ class aCTAutopilot(aCTATLASProcess):
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
+        # Check if we should send heartbeats
+        hb = ''
+        if pstatus == 'running' or pstatus == 'transferring':
+            hb = ' and sendhb=1'
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -119,6 +139,7 @@ class aCTAutopilot(aCTATLASProcess):
             jd['endTime'] = j['endTime']
             jd['computingElement'] = j['computingElement']
             jd['node'] = j['node']
+            jd['siteName'] = j['siteName']
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
@@ -136,7 +157,12 @@ class aCTAutopilot(aCTATLASProcess):
             if changed_pstatus:
                 jd['pandastatus']=pstatus
             # Make sure heartbeat is ahead of modified time so it is not picked up again
-            jd['theartbeat']=self.dbpanda.getTimeStamp(time.time()+1)
+            if self.sites[t.args['siteName']]['truepilot'] and pstatus == 'starting':
+                # Set theartbeat 4h in the future to allow job to start
+                # running and avoid race conditions with heartbeats
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+3600*4)
+            else:
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
             if t.result.has_key('command') and ( (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr") ):

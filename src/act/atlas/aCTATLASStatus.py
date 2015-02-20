@@ -106,7 +106,8 @@ class aCTATLASStatus(aCTATLASProcess):
         # internally by the ARC part.
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
         select += " limit 100000"
-        columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode", "arcjobs.cluster"]
+        columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
+                   "arcjobs.cluster", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
@@ -122,6 +123,13 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["node"] = aj["ExecutionNode"]
             desc["computingElement"] = aj["cluster"].split('/')[0]
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
+            # When true pilot job has started running, turn of aCT heartbeats
+            try:
+                if int(self.conf.getListCond(["sites", "site"], "name=" + aj['siteName'], ["truepilot"])[0]):
+                    self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
+                    desc['sendhb'] = 0
+            except:
+                pass
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -244,7 +252,11 @@ class aCTATLASStatus(aCTATLASProcess):
 
         self.log.info("processing %d failed jobs" % len(arcjobs))
         for aj in arcjobs:
-            cluster=aj['cluster'].split('/')[0]
+            cluster=aj['cluster']
+            try:
+                cluster=cluster.split('/')[0]
+            except:
+                pass
             jobid=aj['JobID']
             if not jobid or not cluster:
                 # Job was not even submitted, there is no more information
@@ -333,17 +345,12 @@ class aCTATLASStatus(aCTATLASProcess):
         """
         # Get outputs to download for failed jobs
         select = "arcstate='failed'"
-        columns = ['id', 'stdout', 'logdir']
+        columns = ['id']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns)
         if arcjobs:
             for aj in arcjobs:
-                downloadfiles = 'jobSmallFiles.tgz'
-                if aj['stdout']:
-                    downloadfiles += ';' + aj['stdout']
-                if aj['logdir']:
-                    downloadfiles += ';' + aj['logdir'] + '/*'
                 select = "id='"+str(aj["id"])+"'"
-                desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp(), "downloadfiles": downloadfiles}
+                desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJobsLazy(desc, select)
             self.dbarc.Commit()
         
