@@ -89,23 +89,7 @@ class aCTAutopilot(aCTATLASProcess):
 
 
     def setSites(self):
-<<<<<<< HEAD
         self.sites = self.agisparser.getSites()
-=======
-        for sitename in self.conf.getList(["sites","site","name"]):
-            self.sites[sitename] = {}
-            self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
-            self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-            self.sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
-            try:
-                self.sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
-            except:
-                self.sites[sitename]['maxjobs'] = 1000000
-            try:
-                self.sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites", "site"], "name=" + sitename, ["truepilot"])[0])
-            except:
-                self.sites[sitename]['truepilot'] = 0
->>>>>>> dev
 
 
     def getPanda(self, sitename):

@@ -17,26 +17,7 @@ class aCTPanda2Arc(aCTATLASProcess):
         print self.sites
 
     def setSites(self):
-<<<<<<< HEAD
         self.sites = self.agisparser.getSites()                        
-=======
-        for sitename in self.conf.getList(["sites","site","name"]):
-            self.sites[sitename] = {}
-            self.sites[sitename]['endpoints'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
-            self.sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
-            try:
-                self.sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
-            except:
-                self.sites[sitename]['corecount'] = 1
-            try:
-                self.sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
-            except:
-                self.sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
-            try:
-                self.sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites", "site"], "name=" + sitename, ["truepilot"])[0])
-            except:
-                self.sites[sitename]['truepilot'] = 0
->>>>>>> dev
 
     def createArcJobs(self):
 
