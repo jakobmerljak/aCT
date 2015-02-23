@@ -132,12 +132,9 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["computingElement"] = aj["cluster"].split('/')[0]
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             # When true pilot job has started running, turn of aCT heartbeats
-            try:
-                if self.sites[aj['siteName']]['truepilot']:
-                    self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
-                    desc['sendhb'] = 0
-            except:
-                pass
+            if self.sites[aj['siteName']]['truepilot']:
+                self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
+                desc['sendhb'] = 0
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -149,11 +146,16 @@ class aCTATLASStatus(aCTATLASProcess):
         - startTime
         - endTime
         """
-        # don't get jobs already having actpandastatus tovalidate or finished to avoid race conditions with validator
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done' and pandajobs.actpandastatus not like 'tovalidate'"
-        select += " and pandajobs.actpandastatus not like 'finished'"
+
+        # don't get jobs already having actpandastatus states treated by
+        # validator to avoid race conditions
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='done'"
+        select += " and pandajobs.actpandastatus != 'tovalidate'"
+        select += " and pandajobs.actpandastatus != 'toresubmit'"
+        select += " and pandajobs.actpandastatus != 'toclean'"
+        select += " and pandajobs.actpandastatus != 'finished'"
         select += " limit 100000"
-        columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime"]
+        columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime", "arcjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
         
         if len(jobstoupdate) == 0:
@@ -169,6 +171,10 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["actpandastatus"] = "tovalidate"
             desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             desc["endTime"] = aj["EndTime"]
+            # True pilot job may have gone straight to finished, turn off aCT heartbeats if necessary
+            if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
+                self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
+                desc['sendhb'] = 0
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -368,7 +374,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'cluster', 'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
-                   'UsedTotalWallTime', 'ExitCode']
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
@@ -395,6 +401,10 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["pandastatus"] = "transferring"
             desc["actpandastatus"] = "toclean" # to clean up any output
             desc["endTime"] = aj["EndTime"]
+            # True pilot job may have gone straight to failed, turn off aCT heartbeats if necessary
+            if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
+                self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
+                desc['sendhb'] = 0
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
