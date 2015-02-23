@@ -88,14 +88,14 @@ class aCTPandaJob:
         with open(filename, 'w') as f:
             pickle.dump(self.dictionary(), f)
             
-
-pj = aCTPandaJob(jobinfo={'jobId': 1234, 'state': 'running', 'batchID': 1234})  
-print pj.__dict__  
-print pj.dictionary()
-pj.writeToFile('/tmp/x/pickle')
-pj2 = aCTPandaJob(filename='/tmp/x/pickle')
-print pj2.dictionary()
-with open('/tmp/x/pickle') as f:
-    pj3 = aCTPandaJob(filehandle=f)
-    print pj3.dictionary()
-    
+if __name__ == '__main__':
+    pj = aCTPandaJob(jobinfo={'jobId': 1234, 'state': 'running', 'batchID': 1234})  
+    print pj.__dict__  
+    print pj.dictionary()
+    pj.writeToFile('/tmp/x/pickle')
+    pj2 = aCTPandaJob(filename='/tmp/x/pickle')
+    print pj2.dictionary()
+    with open('/tmp/x/pickle') as f:
+        pj3 = aCTPandaJob(filehandle=f)
+        print pj3.dictionary()
+        

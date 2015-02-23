@@ -14,7 +14,6 @@ class aCTPanda2Arc(aCTATLASProcess):
         
         self.sites = {}
         self.setSites()
-        print self.sites
 
     def setSites(self):
         self.sites = self.agisparser.getSites()                        
@@ -34,10 +33,12 @@ class aCTPanda2Arc(aCTATLASProcess):
             except:
                 pass
             if xrsl is not None:
-                #print xrsl
                 endpoints = self.sites[job['siteName']]['endpoints']
                 cl = []
                 for e in endpoints:
+                    if not e.startswith('gsiftp://'):
+                        # gsiftp is not used here, it's just to make a url
+                        e = 'gsiftp://' + e
                     cl.append(urlparse(e).hostname + urlparse(e).path)
                 cls = ",".join(cl)
                 self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))

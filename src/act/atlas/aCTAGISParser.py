@@ -65,13 +65,15 @@ class aCTAGISParser:
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
             if not sites[sitename].has_key('maxjobs'):
-                sites[sitename]['maxjobs'] = self.conf.get(["agis", "maxjobs"])
+                sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
             if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
                 sites[sitename]['corecount'] = 1
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
                 sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
-        self.log.debug("Parsed sites from AGIS: %s"%str(sites.keys()))
+            # true pilot or not
+            sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv')
+        self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
         return sites
 
     def _mergeSiteDicts(self, dict1, dict2):
@@ -87,8 +89,21 @@ class aCTAGISParser:
             # No AGIS, only manually configured sites
             return self._parseConfigSites()
         
+        # wait for AGIS json to be produced
+        i = 0
+        while (True):
+            try:
+                agismtime = os.stat(agisfile).st_mtime
+                break
+            except:
+                i += 1 
+                if i > 2:
+                    self.log.critical("Couldn't get AGIS json")
+                    return {}
+                time.sleep(10)
+        
         # check if json file or config file changed before parsing
-        if (self.tparse<os.stat(agisfile).st_mtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
+        if (self.tparse<agismtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
             self.log.info("AGIS file and/or config modified, reparsing site info")
             pilotmgr = self.conf.get(['agis','pilotmanager'])
             start_parsing = time.time()

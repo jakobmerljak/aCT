@@ -12,9 +12,17 @@ from act.common import aCTUtils
 
 from aCTATLASProcess import aCTATLASProcess
 from aCTPandaJob import aCTPandaJob
+from aCTAGISParser import aCTAGISParser
 
 class aCTATLASStatus(aCTATLASProcess):
+    
+    def __init__(self):
+        aCTATLASProcess.__init__(self)
+        self.agisparser = aCTAGISParser(self.log)
                  
+    def setSites(self):
+        self.sites = self.agisparser.getSites()
+
     def checkJobstoKill(self):
         """
         Check for jobs with pandastatus tobekilled and cancel them in ARC:
@@ -125,7 +133,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             # When true pilot job has started running, turn of aCT heartbeats
             try:
-                if int(self.conf.getListCond(["sites", "site"], "name=" + aj['siteName'], ["truepilot"])[0]):
+                if self.sites[aj['siteName']]['truepilot']:
                     self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
                     desc['sendhb'] = 0
             except:
@@ -458,6 +466,7 @@ class aCTATLASStatus(aCTATLASProcess):
         """        
         try:
             self.log.info("Running")
+            self.setSites()
             # Check for jobs that panda told us to kill and cancel them in ARC
             self.checkJobstoKill()
             # Check status of arcjobs
