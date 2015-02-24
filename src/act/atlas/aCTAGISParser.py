@@ -32,7 +32,7 @@ class aCTAGISParser:
             try:
                 sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             except:
-                sites[sitename]['schedconfig'] = sitename
+                pass
             try:
                 sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
             except:
@@ -41,7 +41,7 @@ class aCTAGISParser:
             try:
                 sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
             except:
-                sites[sitename]['corecount'] = 1
+                pass
             try:
                 sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
             except:
@@ -49,7 +49,7 @@ class aCTAGISParser:
             try:
                 sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
-                sites[sitename]['maxjobs'] = 1000000
+                pass
         self.log.debug("Parsed sites from config: %s"%str(sites.keys()))
         return sites 
 
