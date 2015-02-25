@@ -50,7 +50,11 @@ class aCTAGISParser:
                 sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
                 pass
-        self.log.debug("Parsed sites from config: %s"%str(sites.keys()))
+            try:
+                sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["truepilot"])[0])
+            except:
+                pass
+        self.log.info("Parsed sites from config: %s"%str(sites.keys()))
         return sites 
 
   
@@ -84,6 +88,7 @@ class aCTAGISParser:
                 dict1[d]=dict2[d]
 
     def getSites(self):
+        self.conf.parse()
         agisfile = self.conf.get(['agis','jsonfilename'])
         if not agisfile:
             # No AGIS, only manually configured sites
@@ -111,6 +116,15 @@ class aCTAGISParser:
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
             self.tparse = time.time()
             self.log.debug("Time to parse site info: %g s"%(self.tparse-start_parsing))
+            
+            self.log.info("Queues served:")
+            for site, info in dict(self.sites).items():
+                if not info['endpoints']:
+                    self.log.warning("%s: No CE endpoints defined, this site cannot be used" % site)
+                    del self.sites[site]
+                else:
+                    self.log.info("%s: %s, maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['maxjobs']))
+
         return self.sites
     
 if __name__ == '__main__':
