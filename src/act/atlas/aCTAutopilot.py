@@ -240,7 +240,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.log.info("Site %s: at or above max job limit of %d" % (site, self.sites[site]['maxjobs']))
                 continue
 
-            nthreads=int(self.conf.get(['panda','threads']))
+            nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
 
             # if no jobs available
             stopflag=False
