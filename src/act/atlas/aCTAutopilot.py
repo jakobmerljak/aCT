@@ -142,9 +142,9 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['pandastatus']=pstatus
             # Make sure heartbeat is ahead of modified time so it is not picked up again
             if self.sites[t.args['siteName']]['truepilot'] and pstatus == 'starting':
-                # Set theartbeat 4h in the future to allow job to start
+                # Set theartbeat 1h in the future to allow job to start
                 # running and avoid race conditions with heartbeats
-                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+3600*4)
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+3600)
             else:
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
