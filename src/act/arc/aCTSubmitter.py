@@ -156,7 +156,7 @@ class aCTSubmitter(aCTProcess):
             if len(jobs) == 0:
                 #self.log.debug("No jobs to submit")
                 continue
-            self.log.info("Submitting %d jobs for proxyid %d:" % (len(jobs), proxyid))
+            self.log.info("Submitting %d jobs for proxyid %d" % (len(jobs), proxyid))
     
             # Query infosys - either local or index
             if self.cluster:
@@ -225,7 +225,7 @@ class aCTSubmitter(aCTProcess):
                         queuelist.append(target)
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:
-                        self.log.info("%s/%s already at limit of submitted jobs" % (targethost, targetqueue))
+                        self.log.info("%s/%s already at limit of submitted jobs for proxy %d" % (targethost, targetqueue, proxyid))
     
             # check if any queues are available, if not leave and try again next time
             if not queuelist:
