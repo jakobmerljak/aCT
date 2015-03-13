@@ -110,133 +110,148 @@ class aCTSubmitter(aCTProcess):
         if self.cluster.find('/') != -1:
             (clusterhost, clusterqueue) = self.cluster.split('/', 1)
 
+        # Apply proxyid fair-share
         if self.cluster:
-            # Lock row for update in case multiple clusters are specified
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' limit 10",# order by priority desc limit 10",
-                                        columns=["id", "jobdesc", "proxyid", "appjobid"], lock=True)
-            if jobs:
-                self.log.debug("started lock for writing %d jobs"%len(jobs))
+            proxyids = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['proxyid'])
         else:
-            jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' limit 10", ["id", "jobdesc", "proxyid", "appjobid"])
-
-        # mark submitting in db
-        jobs_taken=[]
-        for j in jobs:
-            jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-            try:
-                self.db.updateArcJobLazy(j['id'],jd)
-            except Exception,x:
-                self.log.error('%s: %s' % (j['id'], x))
-                continue
-            jobs_taken.append(j)
-        jobs=jobs_taken
- 
-        if self.cluster:
-            self.db.Commit(lock=True)
-            if jobs:
-                self.log.debug("ended lock")
-        else:
-            self.db.Commit()
-
-        if len(jobs) == 0:
-            #self.log.debug("No jobs to submit")
+            proxyids = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['proxyid'])
+            
+        if not proxyids:
+            self.log.info('Nothing to submit')
             return 0
-        self.log.info("Submitting %d jobs:" % len(jobs))
-
-        # Query infosys - either local or index
-        if self.cluster:
-            # Endpoint and type will come from cluster table eventually
-            aris = 'ldap://'+clusterhost+'/mds-vo-name=local,o=grid'
-            infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
-        else:
-            giises = self.conf.getList(['atlasgiis','item'])
-            infoendpoints = []
-            for g in giises:
-                # Specify explicitly EGIIS
-                infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
-
-        # retriever contains a list of CE endpoints
-        # TODO: WS info service requires credentials
-        retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
-        retriever.wait()
-        # targets is the list of queues
-        # parse target.ComputingService.ID for the CE hostname
-        # target.ComputingShare.Name is the queue name
-        targets = retriever.GetExecutionTargets()
         
-        # Filter only sites for this process
-        queuelist=[]
-        for target in targets:
-            if not target.ComputingService.ID:
-                self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
-                continue
-            # Check for matching host and queue
-            targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
-            targetqueue = target.ComputingShare.Name
-            if clusterhost and targethost != clusterhost:
-                self.log.debug('Rejecting target host %s as it does not match %s' % (targethost, clusterhost))
-                continue
-            if clusterqueue and targetqueue != clusterqueue:
-                self.log.debug('Rejecting target queue %s as it does not match %s' % (targetqueue, clusterqueue))
-                continue
-            s = self.db.getSchedconfig(targethost)
-            status = 'online'
-            if s is not None:
-                status=s['status']
-            if targetqueue in self.conf.getList(['queuesreject','item']):
-                self.log.debug('Rejecting target queue %s in queuesreject list' % targetqueue)
-                continue
-            elif targethost in self.conf.getList(['clustersreject','item']):
-                self.log.debug('Rejecting target host %s in clustersreject list' % targethost)
-                continue
-            elif status == "XXXoffline":
-                continue
+        proxyids = set([p['proxyid'] for p in proxyids])
+        count = 0
+
+        for proxyid in proxyids:
+
+            if self.cluster:
+                # Lock row for update in case multiple clusters are specified
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + " limit 10", # order by priority desc limit 10",
+                                            columns=["id", "jobdesc", "appjobid"], lock=True)
+                if jobs:
+                    self.log.debug("started lock for writing %d jobs"%len(jobs))
             else:
-                # tmp hack
-                target.ComputingShare.LocalWaitingJobs = 0
-                target.ComputingShare.PreLRMSWaitingJobs = 0
-                target.ExecutionEnvironment.CPUClockSpeed = 2000
-                qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted'", ['id'])
-                rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running'", ['id'])
-
-                # Set number of submitted jobs to running * 0.15 + 20
-                jlimit = len(rjobs)*0.15 + 200
-                if str(self.cluster).find('arc-boinc-01') != -1:
-                    jlimit = len(rjobs)*0.15 + 400
-                target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
-                if len(qjobs) < jlimit:
-                    queuelist.append(target)
-                    self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
-                else:
-                    self.log.debug("%s/%s already at limit of submitted jobs" % (targethost, targetqueue))
-
-        # check if any queues are available, if not leave and try again next time
-        if not queuelist:
-            self.log.info("No free queues available")
-            self.db.Commit()
-            return 0
-
-        self.log.info("start submitting")
-
-        # Just run one thread for each job in sequence. Strange things happen
-        # when trying to create a new UserConfig object for each thread.
-        count=0
-        for j in jobs:
-            self.log.debug("%s: preparing submission" % j['appjobid'])
-            jobdescstr = str(self.db.getArcJobDescription(str(j['jobdesc'])))
-            jobdescs = arc.JobDescriptionList()
-            if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
-                self.log.error("%s: Failed to prepare job description" % j['appjobid'])
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + " limit 10", ["id", "jobdesc", "appjobid"])
+    
+            # mark submitting in db
+            jobs_taken=[]
+            for j in jobs:
+                jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
+                try:
+                    self.db.updateArcJobLazy(j['id'],jd)
+                except Exception,x:
+                    self.log.error('%s: %s' % (j['id'], x))
+                    continue
+                jobs_taken.append(j)
+            jobs=jobs_taken
+     
+            if self.cluster:
+                self.db.Commit(lock=True)
+                if jobs:
+                    self.log.debug("ended lock")
+            else:
+                self.db.Commit()
+    
+            if len(jobs) == 0:
+                #self.log.debug("No jobs to submit")
                 continue
+            self.log.info("Submitting %d jobs for proxyid %d" % (len(jobs), proxyid))
+    
+            # Query infosys - either local or index
+            if self.cluster:
+                # Endpoint and type will come from cluster table eventually
+                aris = 'ldap://'+clusterhost+'/mds-vo-name=local,o=grid'
+                infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
+            else:
+                giises = self.conf.getList(['atlasgiis','item'])
+                infoendpoints = []
+                for g in giises:
+                    # Specify explicitly EGIIS
+                    infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
+    
             # Set UserConfig credential for each proxy
-            self.uc.CredentialString(self.db.getProxy(j['proxyid']))
-            t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
-            self.RunThreadsSplit([t],1)
-            count=count+1
+            self.uc.CredentialString(self.db.getProxy(proxyid))
+            # retriever contains a list of CE endpoints
+            retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
+            retriever.wait()
+            # targets is the list of queues
+            # parse target.ComputingService.ID for the CE hostname
+            # target.ComputingShare.Name is the queue name
+            targets = retriever.GetExecutionTargets()
+            
+            # Filter only sites for this process
+            queuelist=[]
+            for target in targets:
+                if not target.ComputingService.ID:
+                    self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
+                    continue
+                # Check for matching host and queue
+                targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
+                targetqueue = target.ComputingShare.Name
+                if clusterhost and targethost != clusterhost:
+                    self.log.debug('Rejecting target host %s as it does not match %s' % (targethost, clusterhost))
+                    continue
+                if clusterqueue and targetqueue != clusterqueue:
+                    self.log.debug('Rejecting target queue %s as it does not match %s' % (targetqueue, clusterqueue))
+                    continue
+                s = self.db.getSchedconfig(targethost)
+                status = 'online'
+                if s is not None:
+                    status=s['status']
+                if targetqueue in self.conf.getList(['queuesreject','item']):
+                    self.log.debug('Rejecting target queue %s in queuesreject list' % targetqueue)
+                    continue
+                elif targethost in self.conf.getList(['clustersreject','item']):
+                    self.log.debug('Rejecting target host %s in clustersreject list' % targethost)
+                    continue
+                elif status == "XXXoffline":
+                    continue
+                else:
+                    # tmp hack
+                    target.ComputingShare.LocalWaitingJobs = 0
+                    target.ComputingShare.PreLRMSWaitingJobs = 0
+                    target.ExecutionEnvironment.CPUClockSpeed = 2000
+                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id'])
+                    rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
+    
+                    # Set number of submitted jobs to running * 0.15 + 200/num of proxies
+                    # Note: assumes only a few proxies are used
+                    jlimit = len(rjobs)*0.15 + 200/len(proxyids)
+                    if str(self.cluster).find('arc-boinc-01') != -1:
+                        jlimit = len(rjobs)*0.15 + 400
+                    target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
+                    if len(qjobs) < jlimit:
+                        queuelist.append(target)
+                        self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
+                    else:
+                        self.log.info("%s/%s already at limit of submitted jobs for proxy %d" % (targethost, targetqueue, proxyid))
+    
+            # check if any queues are available, if not leave and try again next time
+            if not queuelist:
+                self.log.info("No free queues available")
+                self.db.Commit()
+                continue
+    
+            self.log.info("start submitting")
+    
+            # Just run one thread for each job in sequence. Strange things happen
+            # when trying to create a new UserConfig object for each thread.
+            for j in jobs:
+                self.log.debug("%s: preparing submission" % j['appjobid'])
+                jobdescstr = str(self.db.getArcJobDescription(str(j['jobdesc'])))
+                jobdescs = arc.JobDescriptionList()
+                if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
+                    self.log.error("%s: Failed to prepare job description" % j['appjobid'])
+                    continue
 
-        self.log.info("threads finished")
-        # commit transaction to release row locks
-        self.db.Commit()
+                t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
+                self.RunThreadsSplit([t],1)
+                count=count+1
+    
+            self.log.info("threads finished")
+            # commit transaction to release row locks
+            self.db.Commit()
 
         self.log.info("end submitting")
 
