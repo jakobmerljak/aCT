@@ -24,8 +24,14 @@ class aCTAGISFetcher(aCTATLASProcess):
     def storeToFile(self, agisjson):
         filename = self.conf.get(['agis','jsonfilename'])
         tmpfile=filename+'_'
-        with open(tmpfile, 'w') as f:
-            f.write(agisjson)
+        try:
+            with open(tmpfile, 'w') as f:
+                f.write(agisjson)
+        except:
+            os.makedirs(tmpfile[:tmpfile.rfind('/')], 0755)
+            with open(tmpfile, 'w') as f:
+                f.write(agisjson)
+
         os.rename(tmpfile, filename)
         self.log.debug("Wrote "+filename)
 
