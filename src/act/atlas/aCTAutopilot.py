@@ -219,6 +219,10 @@ class aCTAutopilot(aCTATLASProcess):
 
         for site, attrs in self.sites.iteritems():        
 
+            if attrs['status'] == 'offline':
+                self.log.info("Site %s is offline, will not fetch new jobs" % site)
+                continue
+
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
             # Get total number of active jobs

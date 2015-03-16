@@ -54,6 +54,7 @@ class aCTAGISParser:
                 sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["truepilot"])[0])
             except:
                 pass
+            sites[sitename]['status'] = 'online'
         self.log.info("Parsed sites from config: %s"%str(sites.keys()))
         return sites 
 

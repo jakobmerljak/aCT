@@ -25,11 +25,28 @@ class aCTATLASStatus(aCTATLASProcess):
 
     def checkJobstoKill(self):
         """
+        Get starting jobs for offline sites and kill them.
         Check for jobs with pandastatus tobekilled and cancel them in ARC:
         - pandastatus NULL: job was killed by panda so nothing to report
         - pandastatus something else: job was manually killed, so create pickle
           and report failed back to panda
         """
+
+        sites = [s['name'] for s in self.sites if s['status'] == 'offline']
+        
+        if sites:
+            sites + "'"+"','".join(sites)+"'"
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in (" + sites + ")",
+                                        ['pandaid', 'arcjobid', 'siteName', 'id'])
+
+            for job in jobs:
+                self.log.info("Cancelling starting job for %d for offline site %s", (job['pandaid'], job['siteName']))
+                select = 'id=%s' % job['id']
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+                if job['arcjobid']:
+                    self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
+            
+            self.dbpanda.Commit()
         
         # Get jobs killed by panda
         jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
@@ -60,7 +77,6 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
         self.dbpanda.Commit()
-
 
     def getStartTime(self, endtime, walltime):
         """
