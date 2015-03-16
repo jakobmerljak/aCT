@@ -296,7 +296,6 @@ class aCTATLASStatus(aCTATLASProcess):
             sessionid=jobid[jobid.rfind('/')+1:]
             date = time.strftime('%Y%m%d')
             outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
-            self.log.info(outd)
             # Make sure the path up to outd exists
             try:
                 os.makedirs(os.path.dirname(outd), 0755)
@@ -463,7 +462,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
         select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
                   and arcjobs.id not in (select arcjobid from pandajobs)"
-        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate'])
+        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate', 'JobID'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:
             # done jobs should not be there, log a warning
@@ -472,16 +471,24 @@ class aCTATLASStatus(aCTATLASProcess):
             else:
                 self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
+            if job['JobID'] and job['JobID'].rfind('/') != -1:
+                sessionid = job['JobID'][job['JobID'].rfind('/'):]
+                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()
             
         select = "arcstate='cancelled' and (actpandastatus='cancelled' or actpandastatus!='failed' or actpandastatus!='donefailed') " \
                  "and pandajobs.arcjobid = arcjobs.id"
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-        jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid'], tables='arcjobs, pandajobs')
+        jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid', 'arcjobs.JobID'], tables='arcjobs, pandajobs')
         for job in jobs:
             self.log.info("%s: Cleaning cancelled job %d", job['appjobid'], job['id'])
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
+            if job['JobID'] and job['JobID'].rfind('/') != -1:
+                sessionid = job['JobID'][job['JobID'].rfind('/'):]
+                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()
 
