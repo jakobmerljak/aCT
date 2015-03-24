@@ -32,10 +32,11 @@ class aCTATLASStatus(aCTATLASProcess):
           and report failed back to panda
         """
 
-        sites = [s['name'] for s in self.sites if s['status'] == 'offline']
+        sites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
         
         if sites:
-            sites + "'"+"','".join(sites)+"'"
+            
+            sites = "'"+"','".join(sites)+"'"
             jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in (" + sites + ")",
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
