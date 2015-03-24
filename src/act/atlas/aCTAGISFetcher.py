@@ -47,7 +47,7 @@ class aCTAGISFetcher(aCTATLASProcess):
             # store data to file
             self.storeToFile(agisjson)
             # temporary hack to avoid too much agis fetching
-            time.sleep(3600)
+            time.sleep(600)
         except aCTSignal.ExceptInterrupt,x:
             self.log.error(x)
             return
