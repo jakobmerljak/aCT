@@ -45,6 +45,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 maxattempts = 5
                 if job['siteName'] == 'BOINC':
                     maxattempts = 30
+                if self.sites[job['siteName']]['truepilot']:
+                    # truepilot jobs should never be resubmitted
+                    maxattempts = 0
 
                 # Set the list of files to download at the end of the job
                 downloadfiles = 'gmlog/errors'
