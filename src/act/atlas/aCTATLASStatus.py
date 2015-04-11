@@ -306,7 +306,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 shutil.rmtree(outd)
             except:
                 pass
-            # copy from tmp to outd.
+            # copy from tmp to outd. tmp dir will be cleaned in validator
             localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
             try:
                 shutil.copytree(localdir, outd)
@@ -317,8 +317,6 @@ class aCTATLASStatus(aCTATLASProcess):
                     os.makedirs(outd, 0755)
                 except OSError, e:
                     self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
-            else:
-                shutil.rmtree(localdir, ignore_errors=True)
                 
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
