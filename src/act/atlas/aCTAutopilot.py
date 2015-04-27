@@ -195,6 +195,9 @@ class aCTAutopilot(aCTATLASProcess):
         for t in tlist:
             if t.result == None:
                 continue
+            if t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
+                self.log.error('Error updating panda')
+                continue
             jd={}
             jd['pandastatus']=None
             jd['actpandastatus']='done'
@@ -257,7 +260,11 @@ class aCTAutopilot(aCTATLASProcess):
 
                 for i in range(0,nthreads):
                     if attrs['type'] == "analysis":
-                        t=PandaGetThr(self.getPanda(site).getJob,site,'user')
+                        r=random.Random()
+                        if r.randint(0,100) <= 10:
+                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        else:
+                          t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
                         if r.randint(0,100) <= 10:
