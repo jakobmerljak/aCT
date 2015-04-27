@@ -5,6 +5,7 @@ import re
 import subprocess
 import aCTLogger
 from act.arc import aCTDBArc
+from act.atlas import aCTDBPanda
 
 class aCTStatus:
     
@@ -16,6 +17,7 @@ class aCTStatus:
 
         #self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.pandadb=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
 
     def ProcessReport(self):
         actprocscmd = 'ps ax -ww -o etime,args'
@@ -54,6 +56,61 @@ class aCTStatus:
         for proc in longprocesses:
             print 'WARNING: %s for %s running for more than one hour (%s)' % proc
         print
+        
+    def PandaReport(self):
+        c=self.db.conn.cursor()
+        c.execute("select sitename, actpandastatus from pandajobs")
+        rows=c.fetchall()
+        rep={}
+        rtot={}
+        states = ["sent", "starting", "running", "tovalidate", "toresubmit",
+                  "toclean", "finished", "done", "failed", "donefailed",
+                  "tobekilled", "cancelled"]
+
+        print "All Panda jobs: %d" % len(rows)
+        print "%29s %s" % (' ', ' '.join(['%9s' % s for s in states]))
+        for r in rows:
+
+            site, state = (str(r[0]), str(r[1]))
+            reg=re.search('.+//([^:]+)',str(r[0]))
+            cl=""
+            try:
+                cl=reg.group(1)
+            except:
+                cl='WaitingSubmission'
+
+            jid=str(r[1])
+            if jid == 'None':
+                jid="Other"
+
+            try:
+                rep[site][state]+=1
+            except:
+                try:
+                    rep[site][state]=1
+                except:
+                    rep[site]={}
+                    rep[site][state]=1
+            try:
+                rtot[state]+=1
+            except:
+                rtot[state]=1
+
+        for k in sorted(rep.keys()):
+            log="%28s:" % k[:28]
+            for s in states:
+                try:
+                    log += '%10s' % str(rep[k][s])
+                except KeyError:
+                    log += '%10s' % '-'
+            print log
+        log = "%28s:" % "Totals"
+        for s in states:
+            try:
+                log += '%10s' % str(rtot[s])
+            except:
+                log += '%10s' % '-'
+        print log+'\n\n'
 
     def JobReport(self):
         c=self.db.conn.cursor()
@@ -65,7 +122,7 @@ class aCTStatus:
                  "Queuing", "Running", "Finishing", "Finished", "Hold", "Killed",
                  "Failed", "Deleted", "Other"]
 
-        print "All jobs: %d" % len(rows)
+        print "All ARC jobs: %d" % len(rows)
         print "%29s %s" % (' ', ' '.join(['%9s' % s for s in states]))
         for r in rows:
 
@@ -107,11 +164,12 @@ class aCTStatus:
                 log += '%10s' % str(rtot[s])
             except:
                 log += '%10s' % '-'
-        print log
+        print log+'\n\n'
 
         
 
 acts=aCTStatus()
-acts.ProcessReport()
+acts.PandaReport()
 acts.JobReport()
+acts.ProcessReport()
 
