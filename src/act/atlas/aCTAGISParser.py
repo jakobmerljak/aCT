@@ -70,8 +70,12 @@ class aCTAGISParser:
                 sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
-            sites[sitename]['enabled'] = (sites[sitename]['pilot_manager'] == pilotmgr)
-            sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
+            if sites[sitename]['pilot_manager'] == pilotmgr:
+                sites[sitename]['enabled'] = True
+                sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
+            else:
+                sites[sitename]['enabled'] = False
+                sites[sitename]['maxjobs'] = 0
             if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
                 sites[sitename]['corecount'] = 1
             # pull out endpoints
