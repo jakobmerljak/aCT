@@ -55,6 +55,7 @@ class aCTAGISParser:
             except:
                 pass
             sites[sitename]['status'] = 'online'
+            sites[sitename]['enabled'] = True
         self.log.info("Parsed sites from config: %s"%str(sites.keys()))
         return sites 
 
@@ -63,14 +64,18 @@ class aCTAGISParser:
         # todo: first read from config, then read from agis and update if not already in sites list
         with open(agisfilename) as f:
             agisjson=json.load(f)
-        sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry]['pilot_manager']==pilotmgr and agisjson[entry].has_key('panda_resource')])
+        sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
             if not sites[sitename].has_key('catalog'):
                 sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
-            if not sites[sitename].has_key('maxjobs'):
+            if sites[sitename]['pilot_manager'] == pilotmgr:
+                sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
+            else:
+                sites[sitename]['enabled'] = False
+                sites[sitename]['maxjobs'] = 0
             if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
                 sites[sitename]['corecount'] = 1
             # pull out endpoints
@@ -120,6 +125,8 @@ class aCTAGISParser:
             
             self.log.info("Queues served:")
             for site, info in dict(self.sites).items():
+                if not info['enabled']:
+                    continue
                 if not info['endpoints']:
                     self.log.warning("%s: No CE endpoints defined, this site cannot be used" % site)
                     del self.sites[site]
@@ -138,6 +145,7 @@ if __name__ == '__main__':
     agisparser=aCTAGISParser(log)
     while 1:
         sites = agisparser.getSites()
+        sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
         pprint.pprint(sites)
         print len(sites)
         exit(1)
