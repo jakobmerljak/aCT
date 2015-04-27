@@ -217,7 +217,9 @@ class aCTAutopilot(aCTATLASProcess):
 
         count=0
 
-        for site, attrs in self.sites.iteritems():        
+        for site, attrs in self.sites.iteritems():
+            if not attrs['enabled']:
+                continue        
 
             if attrs['status'] == 'offline':
                 self.log.info("Site %s is offline, will not fetch new jobs" % site)

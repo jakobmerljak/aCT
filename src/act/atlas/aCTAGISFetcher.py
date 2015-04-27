@@ -15,10 +15,9 @@ class aCTAGISFetcher(aCTATLASProcess):
         self.pilotmanager = self.conf.get(['agis','pilotmanager'])
 
     def fetchFromAgis(self):
-        url = '%s&pilot_manager=%s' % (self.srv, self.pilotmanager)
-        response = urllib2.urlopen(url)
+        response = urllib2.urlopen(self.srv)
         urldata = response.read()
-        self.log.debug("Fetched %s" % url)
+        self.log.debug("Fetched %s" % self.srv)
         return urldata
     
     def storeToFile(self, agisjson):
