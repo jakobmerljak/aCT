@@ -127,7 +127,7 @@ class aCTSubmitter(aCTProcess):
 
             if self.cluster:
                 # Lock row for update in case multiple clusters are specified
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + " limit 10", # order by priority desc limit 10",
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
                                             columns=["id", "jobdesc", "appjobid"], lock=True)
                 if jobs:
                     self.log.debug("started lock for writing %d jobs"%len(jobs))
@@ -215,9 +215,9 @@ class aCTSubmitter(aCTProcess):
                     qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
     
-                    # Set number of submitted jobs to running * 0.15 + 200/num of proxies
+                    # Set number of submitted jobs to running * 0.15 + 400/num of proxies
                     # Note: assumes only a few proxies are used
-                    jlimit = len(rjobs)*0.15 + 200/len(proxyids)
+                    jlimit = len(rjobs)*0.15 + 400/len(proxyids)
                     if str(self.cluster).find('arc-boinc-01') != -1:
                         jlimit = len(rjobs)*0.15 + 400
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
