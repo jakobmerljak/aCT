@@ -1,4 +1,5 @@
 from threading import Thread
+import datetime
 import os
 import pickle
 import re
@@ -161,9 +162,10 @@ class aCTAutopilot(aCTATLASProcess):
     def updatePandaFinishedPilot(self):
         """
         Final status update for completed jobs (finished or failed in athena)
+        and cancelled jobs
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' limit 1000");
+        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' or actpandastatus='cancelled' limit 1000");
 
         if not jobs:
             return
@@ -173,23 +175,46 @@ class aCTAutopilot(aCTATLASProcess):
         tlist=[]
         for j in jobs:
 
-            jd={}
-            try:
-                # Load pickled information from pilot
-                fname = self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                jobinfo = aCTPandaJob(filename=fname)
-            except Exception,x:
-                self.log.error('%s: %s' % (j['pandaid'], x))
-                # Send some basic info back to panda
-                info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
-                jobinfo = aCTPandaJob(jobinfo=info)
-                jobinfo.pilotErrorCode = 1008
-                jobinfo.pilotErrorDiag = 'Job failed for unknown reason'
+            # If true pilot skip heartbeat and just update DB
+            if not j['sendhb']:
+                jd={}
+                jd['pandastatus']=None
+                jd['actpandastatus']='done'
+                if j['actpandastatus'] == 'failed':
+                    jd['actpandastatus']='donefailed'
+                if j['actpandastatus'] == 'cancelled':
+                    jd['actpandastatus']='donecancelled'
+                self.dbpanda.updateJob(j['pandaid'], jd)
+                continue
+            
+            # Cancelled jobs have no pickle info
+            if j['actpandastatus'] == 'cancelled':
+                jobinfo = aCTPandaJob(jobinfo = {'jobId': j['pandaid'], 'state': 'failed'})
+                jobinfo.pilotErrorCode = 1144
+                jobinfo.pilotErrorDiag = "This job was killed by panda server"
+                if j['startTime']:
+                    jobinfo.startTime = j['startTime']
+                else:
+                    jobinfo.startTime = datetime.datetime.utcnow()
+                jobinfo.endTime = datetime.datetime.utcnow()
             else:
-                os.remove(fname)
+                try:
+                    # Load pickled information from pilot
+                    fname = self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    jobinfo = aCTPandaJob(filename=fname)
+                except Exception,x:
+                    self.log.error('%s: %s' % (j['pandaid'], x))
+                    # Send some basic info back to panda
+                    info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
+                    jobinfo = aCTPandaJob(jobinfo=info)
+                    jobinfo.pilotErrorCode = 1008
+                    jobinfo.pilotErrorDiag = 'Job failed for unknown reason'
+                else:
+                    os.remove(fname)
 
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
+        
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
         for t in tlist:
@@ -203,6 +228,8 @@ class aCTAutopilot(aCTATLASProcess):
             jd['actpandastatus']='done'
             if t.status == 'failed':
                 jd['actpandastatus']='donefailed'
+            if t.args['pilotErrorCode'] == 1144:
+                jd['actpandastatus']='donecancelled'
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             self.dbpanda.updateJob(t.id,jd)
 
