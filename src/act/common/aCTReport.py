@@ -65,7 +65,7 @@ class aCTStatus:
         rtot={}
         states = ["sent", "starting", "running", "tovalidate", "toresubmit",
                   "toclean", "finished", "done", "failed", "donefailed",
-                  "tobekilled", "cancelled"]
+                  "tobekilled", "cancelled", "donecancelled"]
 
         print "All Panda jobs: %d" % len(rows)
         print "%29s %s" % (' ', ' '.join(['%9s' % s for s in states]))

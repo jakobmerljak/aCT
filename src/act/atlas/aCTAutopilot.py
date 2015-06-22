@@ -184,6 +184,10 @@ class aCTAutopilot(aCTATLASProcess):
                     jd['actpandastatus']='donefailed'
                 if j['actpandastatus'] == 'cancelled':
                     jd['actpandastatus']='donecancelled'
+                if not j['startTime']:
+                    jd['startTime'] = datetime.datetime.utcnow()
+                if not j['endTime']:
+                    jd['endTime'] = datetime.datetime.utcnow()
                 self.dbpanda.updateJob(j['pandaid'], jd)
                 continue
             
@@ -228,7 +232,7 @@ class aCTAutopilot(aCTATLASProcess):
             jd['actpandastatus']='done'
             if t.status == 'failed':
                 jd['actpandastatus']='donefailed'
-            if t.args['pilotErrorCode'] == 1144:
+            if 'pilotErrorCode' in t.args and t.args['pilotErrorCode'] == 1144:
                 jd['actpandastatus']='donecancelled'
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             self.dbpanda.updateJob(t.id,jd)
@@ -401,7 +405,7 @@ class aCTAutopilot(aCTATLASProcess):
         # modified column is reported in local time so may not be exactly one day
         select = self.dbpanda.timeStampLessThan('modified', 60*60*24)
         select += ' and (actpandastatus="done" or actpandastatus="donefailed" or actpandastatus="cancelled")'
-        columns = ['pandaid', 'sitename', 'actpandastatus', 'starttime', 'endtime']
+        columns = ['pandaid', 'sitename', 'actpandastatus', 'starttime', 'endtime', 'modified']
         jobs = self.dbpanda.getJobs(select, columns)
         if not jobs:
             return
@@ -412,7 +416,7 @@ class aCTAutopilot(aCTATLASProcess):
             # Fill out empty start/end time
             if job['starttime']:
                 if not job['endtime']:
-                    job['endtime'] = job['starttime']
+                    job['endtime'] = job['modified']
             elif job['endtime']:
                 job['starttime'] = job['endtime']
             else:
