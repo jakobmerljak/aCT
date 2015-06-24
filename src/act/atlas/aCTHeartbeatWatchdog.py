@@ -25,8 +25,8 @@ dbpanda = aCTDBPanda(log, conf.get(["db","file"]))
 
 # Query for running jobs with theartbeat longer than timelimit seconds ago
 select = "sendhb=1 and " \
-         "pandastatus in ('sent', 'starting', 'running', 'transferring') and " + \
-         dbpanda.timeStampLessThan("theartbeat", timelimit)
+         "pandastatus in ('sent', 'starting', 'running', 'transferring') and " \
+         "theartbeat != 0 and " + dbpanda.timeStampLessThan("theartbeat", timelimit)
 columns = ['pandaid', 'pandastatus', 'proxyid', 'sitename']
 jobs = dbpanda.getJobs(select, columns)
 
