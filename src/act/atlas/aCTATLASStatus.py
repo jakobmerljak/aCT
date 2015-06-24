@@ -460,7 +460,7 @@ class aCTATLASStatus(aCTATLASProcess):
         Clean jobs left behind in arcjobs table:
          - arcstate=tocancel or cancelling when cluster is empty
          - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
-         - arcstate=cancelled and actpandastatus=cancelled/failed/donefailed
+         - arcstate=cancelled and actpandastatus=cancelled/donecancelled/failed/donefailed
         """
         select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
@@ -486,7 +486,7 @@ class aCTATLASStatus(aCTATLASProcess):
         if jobs:
             self.dbarc.Commit()
             
-        select = "arcstate='cancelled' and (actpandastatus='cancelled' or actpandastatus!='failed' or actpandastatus!='donefailed') " \
+        select = "arcstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
                  "and pandajobs.arcjobid = arcjobs.id"
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid', 'arcjobs.JobID'], tables='arcjobs, pandajobs')
