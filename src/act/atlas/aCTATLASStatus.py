@@ -63,16 +63,24 @@ class aCTATLASStatus(aCTATLASProcess):
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
                 continue
             
+            # Put timings in the DB
+            arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
+            arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
+            desc = {}
+            if arcjobs:
+                desc['endTime'] = arcjobs[0]['EndTime']
+                desc["startTime"] = self.getStartTime(arcjobs[0]['EndTime'], arcjobs[0]['UsedTotalWallTime'])
+            
             # Check if job was manually killed
             if job['pandastatus'] is not None:
                 self.log.info('%s: Manually killed, will report failure to panda' % job['pandaid'])
-                arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
-                arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
                 self.processFailed(arcjobs)
                 # Skip validator since there is no metadata.xml
-                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+                desc['actpandastatus'] = 'failed'
+                desc['pandastatus'] = 'failed'
             else:
-                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
+                desc['actpandastatus'] = 'cancelled'
+            self.dbpanda.updateJobsLazy(select, desc)
 
             # Finally cancel the arc job                
             self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
@@ -415,6 +423,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["pandastatus"] = "transferring"
             desc["actpandastatus"] = "toclean" # to clean up any output
             desc["endTime"] = aj["EndTime"]
+            desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
             # True pilot job may have gone straight to failed, turn off aCT heartbeats if necessary
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
@@ -435,7 +444,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # For jobs that panda cancelled, don't do anything, they already
             # have actpandastatus=cancelled or failed. For jobs that were
             # killed in arc, resubmit and clean
-            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus!='cancelled' and actpandastatus!='failed' and actpandastatus!='donefailed'"
+            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus not in ('cancelled', 'donecancelled', 'failed', 'donefailed')"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"

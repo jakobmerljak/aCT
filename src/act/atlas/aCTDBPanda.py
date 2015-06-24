@@ -27,8 +27,10 @@ class aCTDBPanda(aCTDB):
                  toresubmit: job will be resubmitted but first output files
                    should be cleaned
                  done: aCT is finished with this job, nothing more needs to be done
+                 donefailed: aCT is finished, job failed
                  tobekilled: panda requests that the job is cancelled
-                 cancelled: job was cancelled, nothing more needs to be done
+                 cancelled: job was cancelled in ARC, still need to send final heartbeat
+                 donecancelled: job was cancelled, nothing more needs to be done
            - theartbeat: Timestamp of last heartbeat (pstatus set)
            - priority: Job priority
            - node: Worker node on which the job is running

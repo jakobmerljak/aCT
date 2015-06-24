@@ -196,11 +196,8 @@ class aCTAutopilot(aCTATLASProcess):
                 jobinfo = aCTPandaJob(jobinfo = {'jobId': j['pandaid'], 'state': 'failed'})
                 jobinfo.pilotErrorCode = 1144
                 jobinfo.pilotErrorDiag = "This job was killed by panda server"
-                if j['startTime']:
-                    jobinfo.startTime = j['startTime']
-                else:
-                    jobinfo.startTime = datetime.datetime.utcnow()
-                jobinfo.endTime = datetime.datetime.utcnow()
+                jobinfo.startTime = j['startTime'] if j['startTime'] else datetime.datetime.utcnow()
+                jobinfo.endTime = j['endTime'] if j['endTime'] else datetime.datetime.utcnow()
             else:
                 try:
                     # Load pickled information from pilot
@@ -263,7 +260,7 @@ class aCTAutopilot(aCTATLASProcess):
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
             # Get total number of active jobs
             nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' \
-                                          and actpandastatus!='donefailed' and actpandastatus!='cancelled'" % site)
+                                          and actpandastatus!='donefailed' and actpandastatus!='donecancelled'" % site)
             self.log.info("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
             # Limit number of jobs waiting submission to avoid getting too many
