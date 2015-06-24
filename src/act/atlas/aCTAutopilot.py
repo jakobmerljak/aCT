@@ -422,8 +422,11 @@ class aCTAutopilot(aCTATLASProcess):
             else:
                 job['starttime'] = self.dbpanda.getTimeStamp()
                 job['endtime'] = self.dbpanda.getTimeStamp()
-                
-            self.dbpanda.insertJobArchiveLazy(job)
+            
+            # archive table doesn't have modified
+            jobarchive = job.copy()
+            del jobarchive['modified']
+            self.dbpanda.insertJobArchiveLazy(jobarchive)
             self.dbpanda.deleteJob(job['pandaid']) # commit is called here
         
 
