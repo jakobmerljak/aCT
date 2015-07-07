@@ -124,6 +124,10 @@ class aCTAutopilot(aCTATLASProcess):
             jd['computingElement'] = j['computingElement']
             jd['node'] = j['node']
             jd['siteName'] = j['siteName']
+            try:
+                jd['jobMetrics']="coreCount=%s" % self.sites[j['siteName']]['corecount']
+            except Exception,x:
+                pass
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
@@ -144,7 +148,9 @@ class aCTAutopilot(aCTATLASProcess):
             if self.sites[t.args['siteName']]['truepilot'] and pstatus == 'starting':
                 # Set theartbeat 1h in the future to allow job to start
                 # running and avoid race conditions with heartbeats
-                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+3600)
+                # Now heartbeat timeout is 2h so we remove the offset
+                #jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+3600)
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             else:
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
