@@ -204,6 +204,8 @@ class aCTAutopilot(aCTATLASProcess):
                 jobinfo.pilotErrorDiag = "This job was killed by panda server"
                 jobinfo.startTime = j['startTime'] if j['startTime'] else datetime.datetime.utcnow()
                 jobinfo.endTime = j['endTime'] if j['endTime'] else datetime.datetime.utcnow()
+                jobinfo.cpuConsumptionTime = j['UsedTotalCPUTime']
+                jobinfo.cpuConsumptionUnit = 'seconds'
             else:
                 try:
                     # Load pickled information from pilot
