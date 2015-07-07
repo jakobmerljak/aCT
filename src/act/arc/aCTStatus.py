@@ -178,10 +178,17 @@ class aCTStatus(aCTProcess):
             if not maxtime:
                 continue
             
+            # be careful not to cancel jobs that are stuck in cleaning
             select = "state='%s' and %s" % (jobstate, self.db.timeStampLessThan("tstate", maxtime))
-            jobs = self.db.getArcJobsInfo(select, columns=['id', 'JobID', 'appjobid'])
+            jobs = self.db.getArcJobsInfo(select, columns=['id', 'JobID', 'appjobid', 'arcstate'])
             
             for job in jobs:
+                if job['arcstate'] == 'toclean':
+                   # delete jobs stuck in toclean
+                   self.log.info("%s: Job stuck in toclean for too long, deleting" % (job['appjobid']))
+                   self.db.deleteArcJob(job['id'])
+                   continue
+
                 self.log.warning("%s: Job %s too long in state %s, cancelling" % (job['appjobid'], job['JobID'], jobstate))
                 if job['JobID']:
                     # If jobid is defined, cancel
