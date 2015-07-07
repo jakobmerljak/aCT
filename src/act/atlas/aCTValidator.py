@@ -3,6 +3,7 @@ from act.common.aCTProxy import aCTProxy
 from act.common import aCTUtils
 from act.common.aCTSignal import ExceptInterrupt
 from act.atlas.aCTPandaJob import aCTPandaJob
+import datetime
 import signal
 import os
 import shutil
@@ -59,7 +60,7 @@ class aCTValidator(aCTATLASProcess):
         - copy gmlog dir to jobs/date/cluster/jobid
         """
         
-        columns = ['JobID', 'appjobid', 'cluster', 'StartTime', 'EndTime', 'ExecutionNode', 'stdout']
+        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'EndTime', 'ExecutionNode', 'stdout']
         aj = self.dbarc.getArcJobInfo(arcjobid, columns=columns)
         if not aj.has_key('JobID') or not aj['JobID']:
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
@@ -86,7 +87,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.xml = str(metadata.read())
             jobinfo.computingElement = cluster
             jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
-            jobinfo.startTime = aj['StartTime']
+            jobinfo.startTime = aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])
             jobinfo.endTime = aj['EndTime']
             jobinfo.node = aj['ExecutionNode']
 
@@ -274,6 +275,10 @@ class aCTValidator(aCTATLASProcess):
         # As yet there is no bulk remove in ARC
         for surl in surls:
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+            if not dp.h:
+                self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid']))
+                result[surl['arcjobid']] = self.ok
+                continue
             status = dp.h.Remove()
             if not status:
                 if status.Retryable():
