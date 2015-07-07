@@ -212,14 +212,17 @@ class aCTSubmitter(aCTProcess):
                     target.ComputingShare.LocalWaitingJobs = 0
                     target.ComputingShare.PreLRMSWaitingJobs = 0
                     target.ExecutionEnvironment.CPUClockSpeed = 2000
+                    if str(self.cluster).find('ce501.cern.ch') != -1:
+                        target.ComputingShare.MaxMainMemory = 16000
+                        target.ComputingShare.MaxVirtualMemory = 16000
                     qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
     
                     # Set number of submitted jobs to running * 0.15 + 400/num of proxies
                     # Note: assumes only a few proxies are used
-                    jlimit = len(rjobs)*0.15 + 400/len(proxyids)
-                    if str(self.cluster).find('arc-boinc-01') != -1:
-                        jlimit = len(rjobs)*0.15 + 400
+                    jlimit = len(rjobs)*0.15 + 200/len(proxyids)
+                    if str(self.cluster).find('arc-boinc-0') != -1:
+                        jlimit = len(rjobs)*0.25 + 400
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
                     if len(qjobs) < jlimit:
                         queuelist.append(target)
