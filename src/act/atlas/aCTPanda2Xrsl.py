@@ -1,9 +1,10 @@
 import cgi
 import re
+import os
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,inputdir=""):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -18,6 +19,11 @@ class aCTPanda2Xrsl:
         self.schedconfig=schedconfig
         self.catalog = catalog
         self.truepilot = truepilot
+        self.maxwalltime = maxwalltime
+        self.inputdir = inputdir
+        self.longjob = False
+        if len(self.pandajob) > 50000:
+            self.longjob = True
 
         #print self.jobdesc.keys()
 
@@ -60,15 +66,15 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc.has_key('maxCpuCount'):
             cpucount = int(self.jobdesc['maxCpuCount'][0])
-            cpucount = int(1.5 * cpucount )
+            cpucount = int(2 * cpucount )
         else:
             cpucount = 2*24*3600
 
+        if cpucount == 0:
+            cpucount = 2*24*3600*self.getNCores()
+
         if cpucount < 50000:
             cpucount = 50000
-        # JEDI issues
-        if cpucount > 172800: 
-            cpucount = 172800
 
         # shorten installation jobs
         try:
@@ -87,8 +93,8 @@ class aCTPanda2Xrsl:
 
         # JEDI analysis hack
         walltime = max(60,walltime)
+        walltime = min(self.maxwalltime,walltime)
         cputime = self.getNCores() * walltime
-        
 
         self.xrsl['time']='(walltime=%d)(cputime=%d)' % (walltime,cputime)
 
@@ -107,6 +113,9 @@ class aCTPanda2Xrsl:
 
         if self.sitename == 'BOINC':
             memory=1536
+
+        if self.sitename == 'CERN-PROD-preprod':
+            memory=1900
 
         # hack mcore pile
         if self.getNCores() > 1 and memory > 2500:
@@ -162,7 +171,7 @@ class aCTPanda2Xrsl:
 
     def setExecutable(self):
 
-        self.xrsl['executable'] = "(executable = ARCpilot-test)"
+        self.xrsl['executable'] = "(executable = ARCpilot)"
 
     def setArguments(self):
         
@@ -175,21 +184,39 @@ class aCTPanda2Xrsl:
         else:
             pargs='"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename,self.sitename)
 
-        self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
+        pandajobarg = self.pandajob
+        if self.longjob:
+            pandajobarg="FILE"
+        self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + pandajobarg  + '" '+pargs+ ')'
+        #AF self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
 
     def setInputs(self):
 
         x = ""
         if self.truepilot:
-            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
+            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
         else:
-            x += '(ARCpilot-test "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test")'      
+            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot")'      
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+
+        if self.longjob:
+            # TODO create input file
+            pandaid=self.jobdesc['PandaID'][0]
+            try:
+                os.mkdir(self.inputdir, 0755)
+            except:
+                pass
+            tmpfile=self.inputdir+"/pandaJobData.out"
+            f=open(tmpfile,"w")
+            f.write(self.pandajob)
+            f.close()
+            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputdir
+
         if not self.truepilot:
             x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
@@ -203,7 +230,9 @@ class aCTPanda2Xrsl:
                 for f,s in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['scopeIn'][0].split(",")):
                     # Hard-coded pilot rucio account - should change based on proxy
                     # Rucio does not expose mtime, set cache=invariant so not to download too much
-                    lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
+                    lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", s, f])
+                    # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", s, f])
+                    # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https,gsiftp;cache=invariant/replicas", s, f])
                     inf[f]=lfn
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)

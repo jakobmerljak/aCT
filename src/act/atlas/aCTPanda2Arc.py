@@ -23,10 +23,12 @@ class aCTPanda2Arc(aCTATLASProcess):
         jobs = self.dbpanda.getJobs("arcjobid is NULL limit 10000")
 
         for job in jobs:
+
+            inputdir = self.conf.get(["tmp", "dir"]) + "/inputfiles/" + str(job['pandaid'])
             
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'],
-                                   self.sites[job['siteName']]['truepilot'])
+                                   self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'], inputdir)
             parser.parse()
             try:
                 xrsl = parser.getXrsl()

@@ -81,6 +81,32 @@ class aCTAGISParser:
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
                 sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
+            if not sites[sitename].has_key('maxwalltime'):
+                try:
+                    maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
+                except:
+                    maxwalltime = 0
+                # if maxwalltime is not set or is larger than a week, then set to 1 week
+                if maxwalltime <= 0:
+                    maxwalltime = 60*24*7
+                else:
+                    maxwalltime = min(maxwalltime, 60*24*7) 
+                sites[sitename]['maxwalltime'] = maxwalltime
+            else:
+                sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxwalltime']), 60*24*7)
+            if not sites[sitename].has_key('maxcputime'):
+                try:
+                    maxcputime = max([int(queue['ce_queue_maxcputime']) for queue in sites[sitename]['queues']])
+                except:
+                    maxcputime = 0
+                # if maxcputime is not set or is larger than a week, then set to 1 week
+                if maxcputime <= 0:
+                    maxcputime = 60*24*7
+                else:
+                    maxcputime = min(maxcputime, 60*24*7) 
+                sites[sitename]['maxcputime'] = maxcputime
+            else:
+                sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
             # true pilot or not
             sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv')
         self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
