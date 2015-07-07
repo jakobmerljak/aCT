@@ -68,8 +68,8 @@ class aCTATLASStatus(aCTATLASProcess):
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
-                desc['endTime'] = arcjobs[0]['EndTime']
-                desc["startTime"] = self.getStartTime(arcjobs[0]['EndTime'], arcjobs[0]['UsedTotalWallTime'])
+                desc['endTime'] = arcjobs[0]['EndTime'] if arcjobs[0]['EndTime'] else datetime.datetime.utcnow()
+                desc['startTime'] = self.getStartTime(desc['endTime'], arcjobs[0]['UsedTotalWallTime'])
             
             # Check if job was manually killed
             if job['pandastatus'] is not None:
