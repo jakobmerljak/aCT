@@ -318,7 +318,7 @@ class aCTATLASStatus(aCTATLASProcess):
             localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
             try:
                 shutil.copytree(localdir, outd)
-            except OSError, e:
+            except (OSError, shutil.Error) as e:
                 self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
                 # Sometimes fetcher fails to get output, so just make empty dir
                 try:

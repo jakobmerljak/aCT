@@ -139,9 +139,9 @@ class aCTFetcher(aCTProcess):
             # id: downloadfiles
             downloadfiles = dict((row['id'], row['downloadfiles']) for row in filestodl)
             # jobs to download all files
-            jobs_downloadall = dict((j[0], j[2]) for j in jobs if not downloadfiles[j[0]])
+            jobs_downloadall = dict((j[0], j[2]) for j in jobs if j[0] in downloadfiles and not downloadfiles[j[0]])
             # jobs to download specific files
-            jobs_downloadsome = dict((j[0], j[2]) for j in jobs if downloadfiles[j[0]])
+            jobs_downloadsome = dict((j[0], j[2]) for j in jobs if j[0] in downloadfiles and downloadfiles[j[0]])
 
             # We don't know if a failure from JobSupervisor is retryable or not
             # so always retry            

@@ -236,7 +236,8 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         c.execute("select jobdesc from arcjobs where id="+str(id))
         row = c.fetchone()
-        c.execute("delete from jobdescriptions where id="+str(row['jobdesc']))
+        if row:
+            c.execute("delete from jobdescriptions where id="+str(row['jobdesc']))
         c.execute("delete from arcjobs where id="+str(id))
         self.conn.commit()
 

@@ -115,7 +115,10 @@ class aCTValidator(aCTATLASProcess):
         gmlogerrors = os.path.join(localdir,"gmlog","errors")
         
         if not os.path.exists(os.path.join(outd,"arc-ce.log")):
-            shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.log"))
+            try:
+                shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.log"))
+            except:
+                self.log.error("Failed to copy %s" % os.path.join(outd,"arc-ce.log") ) 
 
         pilotlog = aj['stdout']
         if not pilotlog:
