@@ -5,7 +5,6 @@ import os
 import time
 import urllib2
 
-from act.common import aCTSignal
 from aCTATLASProcess import aCTATLASProcess
 
 class aCTAGISFetcher(aCTATLASProcess):
