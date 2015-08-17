@@ -89,8 +89,10 @@ class aCTPanda:
             node['prodSourceLabel']=prodSourceLabel
         pid = None
         urldesc=None
+        self.log.debug('Fetching jobs for %s %s' % ( siteName, prodSourceLabel) )
         urldata=self.__HTTPConnect__('getJob',node)
         if not urldata:
+            self.log.info('No job from panda')
             return (None,None)
         try:
             urldesc = cgi.parse_qs(urldata)
