@@ -133,7 +133,8 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
         
         for t in tlist:
-            if t.result == None:
+            if t.result == None or not t.result.has_key('StatusCode'):
+                # Strange response from panda, try later
                 continue
             if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
