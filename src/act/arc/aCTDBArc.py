@@ -405,7 +405,7 @@ class aCTDBArc(aCTDB):
             # Some object types need special treatment
             if self.jobattrs[attr] == arc.StringList:
                 l = arc.StringList()
-                for item in str(dbinfo[attr]).split('|'):
+                for item in dbinfo[attr].encode('utf-8').split('|'):
                     l.append(item)
                 setattr(j, attr, l)
                 continue
