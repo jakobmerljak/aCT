@@ -68,7 +68,10 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
-        cluster = aj['cluster'].split('/')[0]
+        if aj['cluster'].find('://') == -1:
+            cluster = aj['cluster'].split('/')[0]
+        else:
+            cluster = arc.URL(str(aj['cluster'])).Host()
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
@@ -87,8 +90,11 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.xml = str(metadata.read())
             jobinfo.computingElement = cluster
             jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
-            jobinfo.startTime = aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])
-            jobinfo.endTime = aj['EndTime']
+            if aj['EndTime']:
+                jobinfo.startTime = aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])
+                jobinfo.endTime = aj['EndTime']
+            else:
+                self.log.warning('%s: no endtime found' % aj['appjobid'])
             jobinfo.node = aj['ExecutionNode']
 
             # Add url of logs

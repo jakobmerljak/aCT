@@ -6,6 +6,7 @@ import datetime
 import re
 import os
 import shutil
+import arc
 
 from act.common import aCTSignal
 from act.common import aCTUtils
@@ -120,7 +121,11 @@ class aCTATLASStatus(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
-            desc["computingElement"] = aj["cluster"].split('/')[0]
+            if aj['cluster'].find('://') == -1:
+                cluster = aj['cluster'].split('/')[0]
+            else:
+                cluster = arc.URL(str(aj['cluster'])).Host()
+            desc["computingElement"] = cluster
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -154,7 +159,11 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["pandastatus"] = "running"
             desc["actpandastatus"] = "running"
             desc["node"] = aj["ExecutionNode"]
-            desc["computingElement"] = aj["cluster"].split('/')[0]
+            if aj['cluster'].find('://') == -1:
+                cluster = aj['cluster'].split('/')[0]
+            else:
+                cluster = arc.URL(str(aj['cluster'])).Host()
+            desc["computingElement"] = cluster
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             # When true pilot job has started running, turn of aCT heartbeats
             if self.sites[aj['siteName']]['truepilot']:
@@ -293,7 +302,10 @@ class aCTATLASStatus(aCTATLASProcess):
         for aj in arcjobs:
             cluster=aj['cluster']
             try:
-                cluster=cluster.split('/')[0]
+                if cluster.find('://') == -1:
+                    cluster = cluster.split('/')[0]
+                else:
+                    cluster = arc.URL(str(cluster)).Host()
             except:
                 pass
             jobid=aj['JobID']
