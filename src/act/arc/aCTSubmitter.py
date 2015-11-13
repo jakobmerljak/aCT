@@ -189,6 +189,10 @@ class aCTSubmitter(aCTProcess):
                 if not target.ComputingService.ID:
                     self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
                     continue
+                # If EMI-ES infoendpoint, force EMI-ES submission
+                if infoendpoints[0].InterfaceName == 'org.ogf.glue.emies.resourceinfo' and target.ComputingEndpoint.InterfaceName != 'org.ogf.glue.emies.activitycreation':
+                    self.log.debug("Rejecting target interface %s because not EMI-ES" % target.ComputingEndpoint.InterfaceName)
+                    continue                
                 # Check for matching host and queue
                 targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
                 targetqueue = target.ComputingShare.Name
