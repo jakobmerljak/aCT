@@ -82,7 +82,7 @@ class aCTValidator(aCTATLASProcess):
             if pandapickle:
                 jobinfo = aCTPandaJob(filehandle=pandapickle)
             else:
-                jobinfo = aCTPandaJob()
+                jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
                 jobinfo.xml = str(metadata.read())
             jobinfo.computingElement = cluster
@@ -505,7 +505,7 @@ class aCTValidator(aCTATLASProcess):
         #   broken. There is always the possibility of a race condition where
         #   jobSmallFiles is produced and uploaded between checking for it and
         #   cancelling the job.
-        select = "actpandastatus='toresubmit' and arcjobs.id=pandajobs.arcjobid limit 100000"
+        select = "actpandastatus='toresubmit' and arcjobs.id=pandajobs.arcjobid limit 100"
         columns = ["pandajobs.arcjobid", "pandajobs.pandaid", "arcjobs.JobID", "arcjobs.arcstate", "arcjobs.restartstate"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs, pandajobs')
 
