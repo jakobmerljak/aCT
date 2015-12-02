@@ -41,8 +41,18 @@ class PandaGetThr(Thread):
     def run(self):
         self.result=self.func(self.siteName,self.prodSourceLabel)
 
+class PandaEventsThr(Thread):
+    """
+    Generic function for event service-related calls
+    """
+    def __init__ (self, func, node):
+        Thread.__init__(self)
+        self.func = func
+        self.node = node
+        self.result = None
+    def run(self):
+        self.result = self.func(self.node)
 
-        
 class aCTAutopilot(aCTATLASProcess):
 
     """
@@ -180,8 +190,32 @@ class aCTAutopilot(aCTATLASProcess):
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
         tlist=[]
+        
+        # If event service update event ranges
         for j in jobs:
-
+            if j['actpandastatus'] != 'cancelled' and not j['sendhb'] and j['pandajob']['eventService']:
+                eventranges = j['pandajob']['eventranges']
+                for eventrange in eventranges:
+                    node = {}
+                    node['eventRangeID'] = eventrange['eventRangeID']
+                    node['eventStatus'] = j['actpandastatus']
+                    t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRange, node)
+                    tlist.append(t)
+            aCTUtils.RunThreadsSplit(tlist, nthreads)
+            for t in tlist:
+                # TODO: What to do if update fails
+                if t.result == None or not t.result.has_key('StatusCode'):
+                    # Strange response from panda, try later
+                    continue
+                if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
+                    self.log.error('Failed to contact Panda, proxy may have expired')
+                    continue
+                self.log.debug('%s: %s' % (t.id, t.result))
+                if t.result.has_key('command')  and t.result['command'][0] != "NULL":
+                    self.log.info("%s: response: %s" % (t.id,t.result) )
+                    
+        tlist = []
+        for j in jobs:
             # If true pilot skip heartbeat and just update DB
             if not j['sendhb']:
                 jd={}
@@ -288,6 +322,7 @@ class aCTAutopilot(aCTATLASProcess):
 
             # if no jobs available
             stopflag=False
+            esjobs = []
        
             for nc in range(0,max(int(num/nthreads),1)):
                 if stopflag:
@@ -322,14 +357,43 @@ class aCTAutopilot(aCTATLASProcess):
                     if pandaid == None:
                         stopflag=True
                         continue
-                    n={}
+                    
+                    # Call geteventrange for ES jobs before adding to DB
+                    if pandajob['eventService']:
+                        esjobs.append(pandajob)
+                    else:
+                        n={}
+    
+                        n['pandastatus']='sent'
+                        n['actpandastatus'] = 'sent'
+                        n['siteName']=site
+                        n['proxyid']=self.proxymap[attrs['type']]
+                        self.dbpanda.insertJob(pandaid,pandajob,n)
+                        count+=1
+                        
+            tlist=[]            
+            for esjob in esjobs:
+                node = {}
+                node['pandaID'] = esjob['PandaID']
+                node['jobsetID'] = esjob['jobsetID']
+                node['taskID'] = esjobs['taskID'] 
+                t = PandaEventsThr(self.getPanda(site).getEventRange, node)
+                tlist.append(t)
+            aCTUtils.RunThreadsSplit(tlist, nthreads)
+            for t in tlist:
+                eventrange = t.result
+                if not eventrange:
+                    continue
+                n={}
 
-                    n['pandastatus']='sent'
-                    n['actpandastatus'] = 'sent'
-                    n['siteName']=site
-                    n['proxyid']=self.proxymap[attrs['type']]
-                    self.dbpanda.insertJob(pandaid,pandajob,n)
-                    count+=1
+                n['pandastatus']='sent'
+                n['actpandastatus'] = 'sent'
+                n['siteName']=site
+                n['proxyid']=self.proxymap[attrs['type']]
+                n['eventrange']=eventrange
+                self.dbpanda.insertJob(pandaid,pandajob,n)
+                count+=1
+
         return count
 
 

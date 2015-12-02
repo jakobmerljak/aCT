@@ -39,6 +39,7 @@ class aCTDBPanda(aCTDB):
            - computingElement: CE where the job is running
            - proxyid: ID of proxy in proxies table to use for this job
            - sendhb: Flag to say whether or not to send heartbeat
+           - eventranges: event ranges for event service jobs
            
         pandaarchive:
           - Selected fields from above list:
@@ -64,7 +65,8 @@ class aCTDBPanda(aCTDB):
         endTime TIMESTAMP,
         computingElement VARCHAR(255),
         proxyid integer,
-        sendhb TINYINT(1) DEFAULT 1
+        sendhb TINYINT(1) DEFAULT 1,
+        mediumtext eventranges
     )
 """
         c=self.getCursor()

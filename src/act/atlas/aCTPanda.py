@@ -113,6 +113,33 @@ class aCTPanda:
         self.log.debug("%s %s" % (pid,urldesc))
         return (pid,urldata)
 
+    def getEventRanges(self, node):
+        self.log.debug('%s: Fetching event ranges' % node['pandaID'])
+        urldata=self.__HTTPConnect__('getEventRanges', node)
+        if not urldata:
+            self.log.info('%s: Could not get event ranges from panda' % node['pandaID'])
+            return None
+        try:
+            urldesc = cgi.parse_qs(urldata)
+            eventranges = urldesc['eventRanges']
+        except Exception,x:
+            self.log.error(x)
+            return None
+        return eventranges
+
+    def UpdateEventRange(self, node):
+        self.log.debug('%s: Updating event range' % node['pandaID'])
+        urldata=self.__HTTPConnect__('updateEventRange', node)
+        if not urldata:
+            self.log.info('%s: Could not update event ranges in panda' % node['pandaID'])
+            return None
+        try:
+            urldesc = cgi.parse_qs(urldata)
+        except Exception,x:
+            self.log.error(x)
+            return None
+        return urldesc
+
     def getStatus(self,pandaId):
         self.log.info("entry %d" % pandaId)
         node={}

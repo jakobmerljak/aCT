@@ -1,10 +1,12 @@
 import cgi
+import json
 import re
 import os
+from act.common import aCTUtils
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,inputdir=""):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,inputdir="",eventranges=None):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -21,6 +23,7 @@ class aCTPanda2Xrsl:
         self.truepilot = truepilot
         self.maxwalltime = maxwalltime
         self.inputdir = inputdir
+        self.eventranges = eventranges
         self.longjob = False
         if len(self.pandajob) > 50000:
             self.longjob = True
@@ -239,7 +242,15 @@ class aCTPanda2Xrsl:
             # some files are double:
             for k,v in inf.items():
                 x += "(" + k + " " + '"' + v + '"' + ")"
-
+        
+        if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
+            # Create tmp json file to upload with job
+            pandaid = self.pandajob['pandaID']
+            tmpjsonfile = os.path.join(self.conf.get(["tmp","dir"]), 'eventranges', '%s.json' % pandaid)
+            with open(tmpjsonfile) as f:
+                json.dump(f)
+            x += '(%s "")' %  tmpjsonfile
+        
         self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
 
 

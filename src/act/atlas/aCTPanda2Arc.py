@@ -28,7 +28,8 @@ class aCTPanda2Arc(aCTATLASProcess):
             
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'],
-                                   self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'], inputdir)
+                                   self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'],
+                                   inputdir, job['eventranges'])
             parser.parse()
             try:
                 xrsl = parser.getXrsl()
