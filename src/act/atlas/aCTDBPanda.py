@@ -66,7 +66,7 @@ class aCTDBPanda(aCTDB):
         computingElement VARCHAR(255),
         proxyid integer,
         sendhb TINYINT(1) DEFAULT 1,
-        mediumtext eventranges
+        eventranges mediumtext
     )
 """
         c=self.getCursor()
