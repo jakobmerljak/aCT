@@ -1,10 +1,12 @@
 from threading import Thread
 import datetime
 import os
+import json
 import pickle
 import re
 import time
 import random
+import urlparse
 import arc
 import aCTPanda
 from act.common import aCTProxy
@@ -45,10 +47,11 @@ class PandaEventsThr(Thread):
     """
     Generic function for event service-related calls
     """
-    def __init__ (self, func, node):
+    def __init__ (self, func, node, data=None):
         Thread.__init__(self)
         self.func = func
         self.node = node
+        self.data = data
         self.result = None
     def run(self):
         self.result = self.func(self.node)
@@ -193,9 +196,10 @@ class aCTAutopilot(aCTATLASProcess):
         
         # If event service update event ranges
         for j in jobs:
-            if j['actpandastatus'] != 'cancelled' and not j['sendhb'] and j['pandajob']['eventService']:
-                eventranges = j['pandajob']['eventranges']
-                for eventrange in eventranges:
+            if j['actpandastatus'] != 'cancelled' and not j['sendhb'] and re.search('eventService=True', j['pandajob']):
+                eventranges = j['eventranges']
+                eventrangeslist = json.loads(eventranges)
+                for eventrange in eventrangeslist:
                     node = {}
                     node['eventRangeID'] = eventrange['eventRangeID']
                     node['eventStatus'] = j['actpandastatus']
@@ -342,7 +346,7 @@ class aCTAutopilot(aCTATLASProcess):
                         if r.randint(0,100) <= 10:
                           t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site)
+                          t=PandaGetThr(self.getPanda(site).getJob,site,'ptest')
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -359,40 +363,42 @@ class aCTAutopilot(aCTATLASProcess):
                         continue
                     
                     # Call geteventrange for ES jobs before adding to DB
-                    if pandajob['eventService']:
+                    if re.search('eventService=True', pandajob):
                         esjobs.append(pandajob)
                     else:
-                        n={}
+                        n = {}
     
-                        n['pandastatus']='sent'
+                        n['pandastatus'] = 'sent'
                         n['actpandastatus'] = 'sent'
-                        n['siteName']=site
-                        n['proxyid']=self.proxymap[attrs['type']]
-                        self.dbpanda.insertJob(pandaid,pandajob,n)
-                        count+=1
+                        n['siteName'] = site
+                        n['proxyid'] = self.proxymap[attrs['type']]
+                        self.dbpanda.insertJob(pandaid, pandajob, n)
+                        count += 1
                         
             tlist=[]            
             for esjob in esjobs:
+                esjobdict = urlparse.parse_qs(esjob)
                 node = {}
-                node['pandaID'] = esjob['PandaID']
-                node['jobsetID'] = esjob['jobsetID']
-                node['taskID'] = esjobs['taskID'] 
-                t = PandaEventsThr(self.getPanda(site).getEventRange, node)
+                node['pandaID'] = esjobdict['PandaID'][0]
+                node['jobsetID'] = esjobdict['jobsetID'][0]
+                node['taskID'] = esjobdict['taskID'][0] 
+                print node
+                t = PandaEventsThr(self.getPanda(site).getEventRanges, node, esjob)
                 tlist.append(t)
             aCTUtils.RunThreadsSplit(tlist, nthreads)
             for t in tlist:
                 eventrange = t.result
                 if not eventrange:
                     continue
-                n={}
+                n = {}
 
-                n['pandastatus']='sent'
+                n['pandastatus'] = 'sent'
                 n['actpandastatus'] = 'sent'
-                n['siteName']=site
-                n['proxyid']=self.proxymap[attrs['type']]
-                n['eventrange']=eventrange
-                self.dbpanda.insertJob(pandaid,pandajob,n)
-                count+=1
+                n['siteName'] = site
+                n['proxyid'] = self.proxymap[attrs['type']]
+                n['eventranges'] = eventrange
+                self.dbpanda.insertJob(pandaid, t.data, n)
+                count += 1
 
         return count
 

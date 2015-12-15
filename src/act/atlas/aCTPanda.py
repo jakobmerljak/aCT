@@ -121,11 +121,18 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-            eventranges = urldesc['eventRanges']
         except Exception,x:
             self.log.error(x)
             return None
-        return eventranges
+        self.log.debug('%s: Panda returned %s' % (node['pandaID'], urldesc))
+        status = urldesc['StatusCode'][0]
+        if status == '0':
+            return urldesc['eventRanges'][0]
+        if status == '60':
+            self.log.error('Failed to contact Panda, proxy may have expired')             
+        else:
+            self.log.error('Check out what this Panda rc means %s' % status)
+        return None
 
     def UpdateEventRange(self, node):
         self.log.debug('%s: Updating event range' % node['pandaID'])

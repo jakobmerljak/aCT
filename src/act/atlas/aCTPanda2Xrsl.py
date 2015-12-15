@@ -6,7 +6,7 @@ from act.common import aCTUtils
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,inputdir="",eventranges=None):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,tmpdir="",eventranges=None):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -22,7 +22,8 @@ class aCTPanda2Xrsl:
         self.catalog = catalog
         self.truepilot = truepilot
         self.maxwalltime = maxwalltime
-        self.inputdir = inputdir
+        self.tmpdir = tmpdir
+        self.inputdir = os.path.join(self.tmpdir, "inputfiles", str(self.jobdesc['PandaID'][0]))
         self.eventranges = eventranges
         self.longjob = False
         if len(self.pandajob) > 50000:
@@ -200,12 +201,13 @@ class aCTPanda2Xrsl:
         if self.truepilot:
             x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
         else:
-            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot")'      
+            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es")'      
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
-        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+            x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/wguan-pilot.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es.tar.gz")'
 
         if self.longjob:
             # TODO create input file
@@ -243,14 +245,14 @@ class aCTPanda2Xrsl:
             for k,v in inf.items():
                 x += "(" + k + " " + '"' + v + '"' + ")"
         
-        if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
-            # Create tmp json file to upload with job
-            pandaid = self.pandajob['pandaID']
-            tmpjsonfile = os.path.join(self.conf.get(["tmp","dir"]), 'eventranges', '%s.json' % pandaid)
-            with open(tmpjsonfile) as f:
-                json.dump(f)
-            x += '(%s "")' %  tmpjsonfile
-        
+            if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
+                # Create tmp json file to upload with job
+                pandaid = self.jobdesc['PandaID'][0]
+                tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
+                with open(tmpjsonfile, 'w') as f:
+                    json.dump(self.eventranges, f)
+                x += '("eventranges.json" "%s")' %  tmpjsonfile
+            
         self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
 
 
@@ -304,6 +306,7 @@ class aCTPanda2Xrsl:
                     prio = 100
             except:
                 pass
+            prio = 100
             #self.xrsl['priority'] = '("priority" = 60 )'
             self.xrsl['priority'] = '("priority" = %d )' % prio
             pass
