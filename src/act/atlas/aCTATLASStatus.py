@@ -345,6 +345,8 @@ class aCTATLASStatus(aCTATLASProcess):
             # some values might not be properly set
             # TODO synchronize error codes with the rest of production
             pupdate = aCTPandaJob()
+            pupdate.jobId = aj['appjobid']
+            pupdate.state = 'failed'
             pupdate.siteName = aj['siteName']
             pupdate.computingElement = cluster
             pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
