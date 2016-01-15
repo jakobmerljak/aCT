@@ -80,7 +80,10 @@ class aCTValidator(aCTATLASProcess):
 
             # update pickle and dump to tmp/pickle
             if pandapickle:
-                jobinfo = aCTPandaJob(filehandle=pandapickle)
+                try:
+                    jobinfo = aCTPandaJob(filehandle=pandapickle)
+                except:
+                    jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             else:
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
@@ -92,7 +95,7 @@ class aCTValidator(aCTATLASProcess):
             jobinfo.node = aj['ExecutionNode']
 
             # Add url of logs
-            if jobinfo.pilotID:
+            if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
                 t = jobinfo.pilotID.split("|")
             else:
                 t = []
