@@ -105,9 +105,14 @@ class aCTSubmitter(aCTProcess):
             return 0
 
         # Get cluster host and queue: cluster/queue
-        clusterurl = arc.URL(self.cluster)
-        clusterhost = clusterurl.Host()
-        clusterqueue = clusterurl.Path()[1:] # strip off leading slash
+        clusterhost = clusterqueue = None
+        if self.cluster:
+            cluster = self.cluster
+            if cluster.find('://') == -1:
+                cluster = 'gsiftp://' + cluster
+            clusterurl = arc.URL(cluster)
+            clusterhost = clusterurl.Host()
+            clusterqueue = clusterurl.Path()[1:] # strip off leading slash
 
         # Apply proxyid fair-share
         if self.cluster:
@@ -160,7 +165,10 @@ class aCTSubmitter(aCTProcess):
     
             # Query infosys - either local or index
             if self.cluster:
-                aris = arc.URL(self.cluster)
+                if self.cluster.find('://') != -1:
+                    aris = arc.URL(self.cluster)
+                else:
+                    aris = arc.URL('gsiftp://%s' % self.cluster)
                 if aris.Protocol() == 'https':
                     aris.ChangePath('/arex')
                     infoendpoints = [arc.Endpoint(aris.str(), arc.Endpoint.COMPUTINGINFO, 'org.ogf.glue.emies.resourceinfo')]
