@@ -134,7 +134,7 @@ class aCTProcessManager:
         def __del__(self):
             self.kill()
         def start(self):
-            self.child = subprocess.Popen(['/usr/bin/python2.6', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
+            self.child = subprocess.Popen(['/usr/bin/python2', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
         def check(self):
             return self.child.poll()
         def restart(self):
