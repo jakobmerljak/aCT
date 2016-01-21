@@ -105,10 +105,9 @@ class aCTSubmitter(aCTProcess):
             return 0
 
         # Get cluster host and queue: cluster/queue
-        clusterhost = self.cluster
-        clusterqueue = ''
-        if self.cluster.find('/') != -1:
-            (clusterhost, clusterqueue) = self.cluster.split('/', 1)
+        clusterurl = arc.URL(self.cluster)
+        clusterhost = clusterurl.Host()
+        clusterqueue = clusterurl.Path()[1:] # strip off leading slash
 
         # Apply proxyid fair-share
         if self.cluster:
@@ -160,9 +159,13 @@ class aCTSubmitter(aCTProcess):
     
             # Query infosys - either local or index
             if self.cluster:
-                # Endpoint and type will come from cluster table eventually
-                aris = 'ldap://'+clusterhost+'/mds-vo-name=local,o=grid'
-                infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
+                aris = arc.URL(self.cluster)
+                if aris.Protocol() == 'https':
+                    aris.ChangePath('/arex')
+                    infoendpoints = [arc.Endpoint(aris.str(), arc.Endpoint.COMPUTINGINFO, 'org.ogf.glue.emies.resourceinfo')]
+                else:
+                    aris = 'ldap://'+aris.Host()+'/mds-vo-name=local,o=grid'
+                    infoendpoints = [arc.Endpoint(aris, arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.ldapng')]
             else:
                 giises = self.conf.getList(['atlasgiis','item'])
                 infoendpoints = []
@@ -186,6 +189,10 @@ class aCTSubmitter(aCTProcess):
                 if not target.ComputingService.ID:
                     self.log.info("Target %s does not have ComputingService ID defined, skipping" % target.ComputingService.Name)
                     continue
+                # If EMI-ES infoendpoint, force EMI-ES submission
+                if infoendpoints[0].InterfaceName == 'org.ogf.glue.emies.resourceinfo' and target.ComputingEndpoint.InterfaceName != 'org.ogf.glue.emies.activitycreation':
+                    self.log.debug("Rejecting target interface %s because not EMI-ES" % target.ComputingEndpoint.InterfaceName)
+                    continue                
                 # Check for matching host and queue
                 targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
                 targetqueue = target.ComputingShare.Name
