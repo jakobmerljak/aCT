@@ -127,7 +127,8 @@ class aCTSubmitter(aCTProcess):
 
             if self.cluster:
                 # Lock row for update in case multiple clusters are specified
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
+                #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
                                             columns=["id", "jobdesc", "appjobid"], lock=True)
                 if jobs:
                     self.log.debug("started lock for writing %d jobs"%len(jobs))
@@ -138,11 +139,11 @@ class aCTSubmitter(aCTProcess):
             jobs_taken=[]
             for j in jobs:
                 jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-                try:
-                    self.db.updateArcJobLazy(j['id'],jd)
-                except Exception,x:
-                    self.log.error('%s: %s' % (j['id'], x))
-                    continue
+                #try:
+                self.db.updateArcJobLazy(j['id'],jd)
+                #except Exception,x:
+                #    self.log.error('%s: %s' % (j['id'], x))
+                #    continue
                 jobs_taken.append(j)
             jobs=jobs_taken
      
@@ -220,9 +221,11 @@ class aCTSubmitter(aCTProcess):
     
                     # Set number of submitted jobs to running * 0.15 + 400/num of proxies
                     # Note: assumes only a few proxies are used
-                    jlimit = len(rjobs)*0.15 + 200/len(proxyids)
+                    jlimit = len(rjobs)*0.15 + 100/len(proxyids)
                     if str(self.cluster).find('arc-boinc-0') != -1:
-                        jlimit = len(rjobs)*0.25 + 400
+                        jlimit = len(rjobs)*0.15 + 200
+                    if str(self.cluster).find('XXXpikolit') != -1:
+                        jlimit = len(rjobs)*0.15 + 100
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
                     if len(qjobs) < jlimit:
                         queuelist.append(target)

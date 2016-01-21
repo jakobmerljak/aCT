@@ -19,7 +19,10 @@ class aCTPanda2Xrsl:
         self.schedconfig=schedconfig
         self.catalog = catalog
         self.truepilot = truepilot
+        #self.maxwalltime = int(maxwalltime / 60 )
         self.maxwalltime = maxwalltime
+        if self.maxwalltime == 0:
+            self.maxwalltime = 7*24*60
         self.inputdir = inputdir
         self.longjob = False
         if len(self.pandajob) > 50000:
@@ -41,6 +44,8 @@ class aCTPanda2Xrsl:
         if self.ncores > 1:
             #self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
             self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
+        if self.sitename == 'RAL-LCG2_MCORE' and self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
 
         return self.ncores
 
@@ -71,10 +76,10 @@ class aCTPanda2Xrsl:
             cpucount = 2*24*3600
 
         if cpucount == 0:
-            cpucount = 2*24*3600*self.getNCores()
+            cpucount = 2*24*3600
 
-        if cpucount < 50000:
-            cpucount = 50000
+        #if cpucount < 50000:
+        #    cpucount = 50000
 
         # shorten installation jobs
         try:
@@ -88,8 +93,9 @@ class aCTPanda2Xrsl:
 
         walltime = int( cpucount  / 60)
 
-        if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() )
+        # panda changed to walltime
+        #if self.getNCores() > 1:
+        #    walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
         walltime = max(60,walltime)
@@ -111,17 +117,28 @@ class aCTPanda2Xrsl:
         if memory <= 0:
             memory = self.defaults['memory']
 
+        # fix until maxrrs in pandajob is better known
+        if memory <= 500:
+            memory = 500
+
         if self.sitename == 'BOINC':
-            memory=1536
+            memory=2000
 
         if self.sitename == 'CERN-PROD-preprod':
             memory=1900
 
-        # hack mcore pile
-        if self.getNCores() > 1 and memory > 2500:
-            memory=2500
+        # hack mcore pile, use new convention for memory
+        if self.getNCores() > 1 and memory > 3000:
+            if memory > 5000:
+                memory = memory / self.getNCores()
+            else:
+                memory=3000
+
+        # fix memory to 500MB units
+        memory = int(memory-1)/500*500 + 500
 
         self.xrsl['memory']='(memory = %d)' % (memory)
+
 
 
     def setRTE(self):
@@ -295,6 +312,14 @@ class aCTPanda2Xrsl:
                 pass
             #self.xrsl['priority'] = '("priority" = 60 )'
             self.xrsl['priority'] = '("priority" = %d )' % prio
+            if self.sitename == 'wuppertalprod_MCORE':
+                self.xrsl['priority'] = ""
+            if self.sitename == 'wuppertalprod':
+                self.xrsl['priority'] = ""
+            if self.sitename == 'wuppertalprod_HI':
+                self.xrsl['priority'] = ""
+            if self.sitename == 'ANALY_wuppertalprod':
+                self.xrsl['priority'] = ""
             pass
             
 
