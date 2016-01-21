@@ -81,7 +81,7 @@ class aCTAGISParser:
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
                 sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
-            if not sites[sitename].has_key('maxwalltime'):
+            if not sites[sitename].has_key('maxtime') or sites[sitename]['maxtime'] == 0:
                 try:
                     maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
                 except:
@@ -93,7 +93,8 @@ class aCTAGISParser:
                     maxwalltime = min(maxwalltime, 60*24*7) 
                 sites[sitename]['maxwalltime'] = maxwalltime
             else:
-                sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxwalltime']), 60*24*7)
+                #sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxwalltime']), 60*24*7)
+                sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxtime'])/60, 60*24*7)
             if not sites[sitename].has_key('maxcputime'):
                 try:
                     maxcputime = max([int(queue['ce_queue_maxcputime']) for queue in sites[sitename]['queues']])
