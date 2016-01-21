@@ -41,10 +41,10 @@ class aCTPanda2Arc(aCTATLASProcess):
                 endpoints = self.sites[job['siteName']]['endpoints']
                 cl = []
                 for e in endpoints:
-                    if not e.startswith('gsiftp://'):
-                        # gsiftp is not used here, it's just to make a url
+                    if e.find('://') == -1:
+                        # gsiftp is default if not specified
                         e = 'gsiftp://' + e
-                    cl.append(urlparse(e).hostname + urlparse(e).path)
+                    cl.append(e)
                 cls = ",".join(cl)
                 self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))
                 maxattempts = 5
