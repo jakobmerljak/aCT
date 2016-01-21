@@ -88,8 +88,9 @@ class aCTPanda2Xrsl:
 
         walltime = int( cpucount  / 60)
 
-        if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() )
+        # panda changed to walltime
+        #if self.getNCores() > 1:
+        #    walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
         walltime = max(60,walltime)
