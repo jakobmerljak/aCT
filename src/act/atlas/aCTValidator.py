@@ -159,7 +159,12 @@ class aCTValidator(aCTATLASProcess):
             self.log.error("%s: failed to extract metadata file for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
             return {}
 
-        outputxml = minidom.parse(metadata)
+        try:
+            outputxml = minidom.parse(metadata)
+        except Exception,x:
+            self.log.error("%s: failed to parse metadata file for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+            return {}
+
         files = outputxml.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
 
         surls = {}
