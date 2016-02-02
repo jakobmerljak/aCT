@@ -246,6 +246,10 @@ class aCTPanda2Xrsl:
                     # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https,gsiftp;cache=invariant/replicas", scope, filename])
                     inf[filename] = lfn
                     dn = self.jobdesc.get('prodUserID', [])
+                    prodSourceLabel = self.jobdesc.get('prodSourceLabel', '')
+                    eventType = 'get_sm'
+                    if re.match('user', prodSourceLabel)
+                        eventType = 'get_sm_a'
                     self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0]})
 
             else:

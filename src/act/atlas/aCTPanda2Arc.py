@@ -38,7 +38,15 @@ class aCTPanda2Arc(aCTATLASProcess):
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
             parser.parse()
-            traces = parser.traces
+            traces = []
+            # Getting DDM endpoint. 'ddm' should be filled by _parseAgisJson
+            if 'ddm' in self.sites[job['siteName']]:
+                for trace in parser.traces:
+                    trace['localSite'] = self.sites[job['siteName']]['ddm']
+                    trace['remoteSite'] = self.sites[job['siteName']]['ddm']
+                    traces.append(trace)
+            else:
+                traces = parser.traces
             self.sendTraces(traces, proxies_map[job['proxyid']])
             try:
                 xrsl = parser.getXrsl()
