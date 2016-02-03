@@ -250,7 +250,7 @@ class aCTPanda2Xrsl:
                     eventType = 'get_sm'
                     if re.match('user', prodSourceLabel):
                         eventType = 'get_sm_a'
-                    self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0]})
+                    self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
 
             else:
                 raise Exception("Unknown catalog implementation: " + self.catalog)
