@@ -70,7 +70,7 @@ class aCTAGISParser:
                 sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
-            if sites[sitename]['pilot_manager'] == pilotmgr:
+            if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
                 sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
             else:
