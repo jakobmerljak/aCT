@@ -120,7 +120,11 @@ class aCTAutopilot(aCTATLASProcess):
         if pstatus == 'running' or pstatus == 'transferring':
             hb = ' and sendhb=1'
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
+        if pstatus == 'transferring':
+            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) and eventranges is NULL limit 1000", columns)
+        else:
+            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -199,24 +203,35 @@ class aCTAutopilot(aCTATLASProcess):
             if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
                 eventranges = j['eventranges']
                 eventrangeslist = json.loads(eventranges)
+                self.log.info('%s: updating %i event ranges' % (j['pandaid'], len(eventrangeslist)))
+                
+                # Work out object store used
+                oses = [o for o in self.sites[j['siteName']]['objectstores'] if o['os_bucket_name'] == 'eventservice']
+                if len(oses) == 1:
+                    objstoreID = oses[0]['os_bucket_id']
+                else:
+                    self.log.warning('Could not figure out OS id for %s' % j['siteName'])
+                    objstoreID = None
+                
                 for eventrange in eventrangeslist:
                     node = {}
                     node['eventRangeID'] = eventrange['eventRangeID']
                     node['eventStatus'] = j['actpandastatus']
+                    node['objstoreID'] = objstoreID
                     t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRange, node)
                     tlist.append(t)
+
             aCTUtils.RunThreadsSplit(tlist, nthreads)
             for t in tlist:
-                # TODO: What to do if update fails
+                self.log.debug(t.result)
+                # If update fails events will be rescheduled to another job
                 if t.result == None or not t.result.has_key('StatusCode'):
-                    # Strange response from panda, try later
+                    # Strange response from panda
                     continue
-                if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
+                if t.result['StatusCode'][0] == '60':
                     self.log.error('Failed to contact Panda, proxy may have expired')
-                    continue
-                self.log.debug('%s: %s' % (t.id, t.result))
-                if t.result.has_key('command')  and t.result['command'][0] != "NULL":
-                    self.log.info("%s: response: %s" % (t.id,t.result) )
+                elif t.result['StatusCode'][0] == '30':
+                    self.log.error('Job was already killed')
                     
         tlist = []
         for j in jobs:

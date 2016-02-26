@@ -134,11 +134,12 @@ class aCTPanda:
             self.log.error('Check out what this Panda rc means %s' % status)
         return None
 
-    def UpdateEventRange(self, node):
-        self.log.debug('%s: Updating event range' % node['pandaID'])
+    def updateEventRange(self, node):
+        self.log.debug('Updating event range %s: %s' % (node['eventRangeID'], str(node)))
         urldata=self.__HTTPConnect__('updateEventRange', node)
+        self.log.debug('panda returned %s' % str(urldata))
         if not urldata:
-            self.log.info('%s: Could not update event ranges in panda' % node['pandaID'])
+            self.log.info('Could not update event ranges in panda')
             return None
         try:
             urldesc = cgi.parse_qs(urldata)

@@ -46,6 +46,7 @@ class aCTPanda2Xrsl:
             #self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
             self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
+        self.xrsl['countpernode'] = '(countpernode=4)'
         return self.ncores
 
 
@@ -205,7 +206,7 @@ class aCTPanda2Xrsl:
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         else:
-            x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/wguan-pilot.tar.gz")'
+            x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
             #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es.tar.gz")'
 
@@ -249,8 +250,9 @@ class aCTPanda2Xrsl:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
                 tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
+                jsondata = json.loads(self.eventranges)
                 with open(tmpjsonfile, 'w') as f:
-                    json.dump(self.eventranges, f)
+                    json.dump(jsondata, f)
                 x += '("eventranges.json" "%s")' %  tmpjsonfile
             
         self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
