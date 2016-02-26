@@ -369,7 +369,8 @@ class aCTValidator(aCTATLASProcess):
         
         # Get events processed from metadata-es.xml
         try:
-            processedevents = self._extractFromSmallFiles(arcjobid, 'metadata-es.xml')
+            arcjob = self.dbarc.getArcJobInfo(arcjobid, ['JobID'])
+            processedevents = self._extractFromSmallFiles(arcjob, 'metadata-es.xml')
         except Exception, e:
             self.log.error("%s: Failed to extract events processed from metadata-es.xml: %s" % (pandaid, str(e)))
             # Safer to mark all events as failed
