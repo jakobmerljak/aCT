@@ -194,9 +194,9 @@ class aCTAutopilot(aCTATLASProcess):
         
         tlist=[]
         
-        # If event service update event ranges
+        # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
-            if j['actpandastatus'] != 'cancelled' and not j['sendhb'] and re.search('eventService=True', j['pandajob']):
+            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
                 eventranges = j['eventranges']
                 eventrangeslist = json.loads(eventranges)
                 for eventrange in eventrangeslist:
