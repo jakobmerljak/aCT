@@ -17,6 +17,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
     def setSites(self):
         self.sites = self.agisparser.getSites()                        
+        self.osmap = self.agisparser.getOSMap()                        
 
     def createArcJobs(self):
 
@@ -27,7 +28,7 @@ class aCTPanda2Arc(aCTATLASProcess):
             tmpdir = self.conf.get(["tmp", "dir"])
             
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
-                                   self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'],
+                                   self.sites[job['siteName']]['catalog'], self.osmap, self.sites[job['siteName']]['corecount'],
                                    self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'],
                                    tmpdir, job['eventranges'])
             parser.parse()

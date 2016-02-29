@@ -6,7 +6,7 @@ from act.common import aCTUtils
 
 class aCTPanda2Xrsl:
 
-    def __init__(self,pandajob,sitename,schedconfig,catalog,corecount=1,truepilot=0,maxwalltime=10080,tmpdir="",eventranges=None):
+    def __init__(self,pandajob,sitename,schedconfig,catalog,osmap,corecount=1,truepilot=0,maxwalltime=10080,tmpdir="",eventranges=None):
         self.pandajob=pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl={}
@@ -20,6 +20,7 @@ class aCTPanda2Xrsl:
         self.sitename=sitename
         self.schedconfig=schedconfig
         self.catalog = catalog
+        self.osmap = osmap
         self.truepilot = truepilot
         self.maxwalltime = maxwalltime
         self.tmpdir = tmpdir
@@ -195,6 +196,18 @@ class aCTPanda2Xrsl:
         self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + pandajobarg  + '" '+pargs+ ')'
         #AF self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
+    def setInputsES(self, inf):
+        
+        for f, s, i in zip (self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['prodDBlockToken'][0].split(",")):
+            if i == 'None':
+                # Rucio file
+                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", s, f])
+            elif int(i) in self.osmap:
+                lfn = '/'.join([self.osmap[int(i)], f])
+            else:
+                # TODO this exception is ignored by panda2arc
+                raise Exception("No OS defined in AGIS for bucket id %s" % i)
+            inf[f] = lfn
 
     def setInputs(self):
 
@@ -228,7 +241,9 @@ class aCTPanda2Xrsl:
 
         if(self.jobdesc.has_key('inFiles') and not self.truepilot):
             inf={}
-            if self.catalog.find('lfc://') == 0:
+            if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+                self.setInputsES(inf)
+            elif self.catalog.find('lfc://') == 0:
                 for f,g in zip (self.jobdesc['inFiles'][0].split(","),self.jobdesc['GUID'][0].split(",")):
                     lfn="lfc://prod-lfc-atlas.cern.ch/:guid="+g
                     inf[f]=lfn
