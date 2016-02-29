@@ -361,11 +361,12 @@ class aCTValidator(aCTATLASProcess):
             return
         
         eventranges = esjobs[0]['eventranges']
-        pandaid = esjobs[0]['pandaid']
-        eventranges = json.loads(eventranges)
         if not eventranges:
             # Not ES job
             return
+
+        pandaid = esjobs[0]['pandaid']
+        eventranges = json.loads(eventranges)
         
         # Get events processed from metadata-es.xml
         try:
