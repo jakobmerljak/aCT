@@ -160,10 +160,14 @@ class aCTAGISParser:
                     self.log.info("%s: %s, maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['maxjobs']))
 
         # Fill OS map
+        self.osmap = {}
         for site, info in self.sites.items():
             osinfo = info['objectstores']
             for obj in osinfo:
-                self.osmap[obj['os_bucket_id']] = '%s%s' % (obj['os_endpoint'], obj['os_bucket_endpoint']) 
+                endpoint = obj['os_endpoint']
+                if endpoint.endswith('/'): # double slash causes errors in arc
+                    endpoint = endpoint[:-1]
+                self.osmap[obj['os_bucket_id']] = '%s%s' % (endpoint, obj['os_bucket_endpoint']) 
 
         return self.sites
     
