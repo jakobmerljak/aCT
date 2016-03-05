@@ -131,13 +131,13 @@ class aCTSubmitter(aCTProcess):
 
             if self.cluster:
                 # Lock row for update in case multiple clusters are specified
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
-                #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
-                                            columns=["id", "jobdesc", "appjobid"], lock=True)
+                #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
+                                            columns=["id", "jobdesc", "appjobid","priority"], lock=True)
                 if jobs:
                     self.log.debug("started lock for writing %d jobs"%len(jobs))
             else:
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + " limit 10", ["id", "jobdesc", "appjobid"])
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
     
             # mark submitting in db
             jobs_taken=[]
@@ -162,6 +162,13 @@ class aCTSubmitter(aCTProcess):
                 #self.log.debug("No jobs to submit")
                 continue
             self.log.info("Submitting %d jobs for proxyid %d" % (len(jobs), proxyid))
+
+            # max waiting priority
+            try:
+                maxpriowaiting = max(jobs,key = lambda x : x['priority'])['priority']
+            except:
+                maxpriowaiting = 0
+            self.log.info("Maximum priority of waiting jobs: %d" % maxpriowaiting)
     
             # Query infosys - either local or index
             if self.cluster:
@@ -231,8 +238,15 @@ class aCTSubmitter(aCTProcess):
                     if str(self.cluster).find('ce501.cern.ch') != -1:
                         target.ComputingShare.MaxMainMemory = 16000
                         target.ComputingShare.MaxVirtualMemory = 16000
-                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id'])
+                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id','priority'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
+                    
+                    # max queued priority
+                    try:
+                        maxprioqueued = max(qjobs,key = lambda x : x['priority'])['priority']
+                    except:
+                        maxprioqueued = 0
+                    self.log.info("Max priority queued: %d" % maxprioqueued)
     
                     # Set number of submitted jobs to running * 0.15 + 400/num of proxies
                     # Note: assumes only a few proxies are used
@@ -242,7 +256,7 @@ class aCTSubmitter(aCTProcess):
                     if str(self.cluster).find('XXXpikolit') != -1:
                         jlimit = len(rjobs)*0.15 + 100
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
-                    if len(qjobs) < jlimit:
+                    if len(qjobs) < jlimit or maxpriowaiting > maxprioqueued :
                         queuelist.append(target)
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:
