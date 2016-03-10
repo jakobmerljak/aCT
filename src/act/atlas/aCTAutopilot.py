@@ -412,7 +412,7 @@ class aCTAutopilot(aCTATLASProcess):
                 n['siteName'] = site
                 n['proxyid'] = self.proxymap[attrs['type']]
                 n['eventranges'] = eventrange
-                self.dbpanda.insertJob(pandaid, t.data, n)
+                self.dbpanda.insertJob(t.node['pandaID'], t.data, n)
                 count += 1
 
         return count
