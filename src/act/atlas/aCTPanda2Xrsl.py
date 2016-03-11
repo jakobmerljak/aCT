@@ -25,7 +25,9 @@ class aCTPanda2Xrsl:
         self.maxwalltime = maxwalltime
         self.tmpdir = tmpdir
         self.inputdir = os.path.join(self.tmpdir, "inputfiles", str(self.jobdesc['PandaID'][0]))
-        self.eventranges = eventranges self.longjob = False if len(self.pandajob) > 50000:
+        self.eventranges = eventranges
+        self.longjob = False
+        if len(self.pandajob) > 50000:
             self.longjob = True
 
         # ES merge jobs need unique guids because pilot uses them as dict keys
@@ -84,7 +86,8 @@ class aCTPanda2Xrsl:
             cpucount = 2*24*3600
 
         if cpucount == 0:
-            cpucount = 2*24*3600*self.getNCores()
+            #cpucount = 2*24*3600*self.getNCores()
+            cpucount = self.maxwalltime*self.getNCores()
 
         if cpucount < 50000:
             cpucount = 50000
