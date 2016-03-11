@@ -76,10 +76,13 @@ class aCTValidator(aCTATLASProcess):
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
+            except Exception,x:
+                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                pandapickle = None
+            try:
                 metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
             except Exception,x:
-                self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
-                pandapickle = None
+                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
                 metadata = None
 
             # update pickle and dump to tmp/pickle
@@ -99,7 +102,7 @@ class aCTValidator(aCTATLASProcess):
             jobinfo.node = aj['ExecutionNode']
 
             # Add url of logs
-            if jobinfo.pilotID:
+            if jobinfo.dictionary().has_key('pilotID') and jobinfo.pilotID:
                 t = jobinfo.pilotID.split("|")
             else:
                 t = []
