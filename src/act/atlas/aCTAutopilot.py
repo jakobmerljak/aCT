@@ -358,8 +358,8 @@ class aCTAutopilot(aCTATLASProcess):
                           t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
-                        if r.randint(0,100) <= 10:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        if r.randint(0,100) <= 50:
+                          t=PandaGetThr(self.getPanda(site).getJob,site)
                         else:
                           t=PandaGetThr(self.getPanda(site).getJob,site,'ptest')
                     tlist.append(t)
@@ -397,6 +397,7 @@ class aCTAutopilot(aCTATLASProcess):
                 node['pandaID'] = esjobdict['PandaID'][0]
                 node['jobsetID'] = esjobdict['jobsetID'][0]
                 node['taskID'] = esjobdict['taskID'][0] 
+                node['nRanges'] = 500 # TODO: configurable?
                 print node
                 t = PandaEventsThr(self.getPanda(site).getEventRanges, node, esjob)
                 tlist.append(t)
@@ -406,9 +407,13 @@ class aCTAutopilot(aCTATLASProcess):
                 if not eventrange:
                     continue
                 n = {}
-
-                n['pandastatus'] = 'sent'
-                n['actpandastatus'] = 'sent'
+                if eventrange == '[]':
+                    self.log.warning('%d: No event ranges given by panda' % t.node['pandaID'])
+                    n['pandastatus'] = 'finished'
+                    n['actpandastatus'] = 'finished'
+                else:
+                    n['pandastatus'] = 'sent'
+                    n['actpandastatus'] = 'sent'
                 n['siteName'] = site
                 n['proxyid'] = self.proxymap[attrs['type']]
                 n['eventranges'] = eventrange
