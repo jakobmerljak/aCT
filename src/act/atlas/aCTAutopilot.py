@@ -200,7 +200,7 @@ class aCTAutopilot(aCTATLASProcess):
         
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
-            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
+            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']) and j['eventranges']:
                 eventranges = j['eventranges']
                 eventrangeslist = json.loads(eventranges)
                 self.log.info('%s: updating %i event ranges' % (j['pandaid'], len(eventrangeslist)))
@@ -353,15 +353,15 @@ class aCTAutopilot(aCTATLASProcess):
                     if attrs['type'] == "analysis":
                         r=random.Random()
                         if r.randint(0,100) <= 10:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'user')
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
                         if r.randint(0,100) <= 50:
-                          t=PandaGetThr(self.getPanda(site).getJob,site)
+                            t=PandaGetThr(self.getPanda(site).getJob,site)
                         else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'ptest')
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'ptest')
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -372,53 +372,25 @@ class aCTAutopilot(aCTATLASProcess):
                     
                 for t in tlist:
                     t.join()
-                    (pandaid,pandajob)=t.result
+                    (pandaid,pandajob,eventranges)=t.result
                     if pandaid == None:
                         stopflag=True
                         continue
                     
-                    # Call geteventrange for ES jobs before adding to DB
-                    if re.search('eventService=True', pandajob):
-                        esjobs.append(pandajob)
+                    n = {}
+                    # Check eventranges is defined for ES jobs
+                    if re.search('eventService=True', pandajob) and (eventranges is None or eventranges == '[]'):
+                        self.log.warning('%d: No event ranges given by panda' % pandaid)
+                        n['pandastatus'] = 'finished'
+                        n['actpandastatus'] = 'finished'
                     else:
-                        n = {}
-    
                         n['pandastatus'] = 'sent'
                         n['actpandastatus'] = 'sent'
-                        n['siteName'] = site
-                        n['proxyid'] = self.proxymap[attrs['type']]
-                        self.dbpanda.insertJob(pandaid, pandajob, n)
-                        count += 1
-                        
-            tlist=[]            
-            for esjob in esjobs:
-                esjobdict = urlparse.parse_qs(esjob)
-                node = {}
-                node['pandaID'] = esjobdict['PandaID'][0]
-                node['jobsetID'] = esjobdict['jobsetID'][0]
-                node['taskID'] = esjobdict['taskID'][0] 
-                node['nRanges'] = 500 # TODO: configurable?
-                print node
-                t = PandaEventsThr(self.getPanda(site).getEventRanges, node, esjob)
-                tlist.append(t)
-            aCTUtils.RunThreadsSplit(tlist, nthreads)
-            for t in tlist:
-                eventrange = t.result
-                if not eventrange:
-                    continue
-                n = {}
-                if eventrange == '[]':
-                    self.log.warning('%d: No event ranges given by panda' % t.node['pandaID'])
-                    n['pandastatus'] = 'finished'
-                    n['actpandastatus'] = 'finished'
-                else:
-                    n['pandastatus'] = 'sent'
-                    n['actpandastatus'] = 'sent'
-                n['siteName'] = site
-                n['proxyid'] = self.proxymap[attrs['type']]
-                n['eventranges'] = eventrange
-                self.dbpanda.insertJob(t.node['pandaID'], t.data, n)
-                count += 1
+                    n['siteName'] = site
+                    n['proxyid'] = self.proxymap[attrs['type']]
+                    n['eventranges'] = eventranges
+                    self.dbpanda.insertJob(pandaid, pandajob, n)
+                    count += 1
 
         return count
 
