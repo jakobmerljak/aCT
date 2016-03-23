@@ -256,7 +256,9 @@ class aCTSubmitter(aCTProcess):
                     if str(self.cluster).find('XXXpikolit') != -1:
                         jlimit = len(rjobs)*0.15 + 100
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
-                    if len(qjobs) < jlimit or maxpriowaiting > maxprioqueued :
+                    if len(qjobs) < jlimit or ( ( maxpriowaiting > maxprioqueued ) and ( maxpriowaiting > 10 ) ) :
+                        if maxpriowaiting > maxprioqueued :
+                            self.log.info("Overriding limit, maxpriowaiting: %d > maxprioqueued: %d" % (maxpriowaiting, maxprioqueued))
                         queuelist.append(target)
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:
