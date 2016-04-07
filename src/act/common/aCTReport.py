@@ -49,9 +49,10 @@ class aCTStatus:
                     cluster_procs[cluster] = [process]
         
         print 'Active processes per cluster:'
-        for cluster, procs in cluster_procs.items():
+        for cluster in sorted(cluster_procs):
+            procs = cluster_procs[cluster]
             procs.sort()
-            print '%28s: %s' % (cluster, ' '.join(procs))
+            print '%38s: %s' % (cluster, ' '.join(procs))
         print
         for proc in longprocesses:
             print 'WARNING: %s for %s running for more than one hour (%s)' % proc
