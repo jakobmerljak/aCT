@@ -13,10 +13,11 @@ class aCTProcessManager:
         
         # logger
         self.log = log
+        self.conf = conf
         self.actlocation = conf.get(["actlocation","dir"])
-        self.logdir = conf.get(["logger", "logdir"])
+        self.logdir = self.conf.get(["logger", "logdir"])
         # DB connection
-        self.db = aCTDBArc.aCTDBArc(self.log, conf.get(["db","file"]))
+        self.db = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db","file"]))
         # list of processes to run per cluster
         self.processes = ['act/arc/aCTSubmitter', 'act/arc/aCTStatus', 'act/arc/aCTFetcher', 'act/arc/aCTCleaner']
         # dictionary of processes:aCTProcessHandler of which to run a single instance
@@ -40,6 +41,16 @@ class aCTProcessManager:
             proc.start()
             self.processes_single[process] = proc
         
+    def reconnectDB(self):
+        ''' 
+        Reconnect DB
+        '''
+        try:
+            del self.db
+        except AttributeError: # Already deleted
+            pass
+        self.db = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db", "file"]))
+ 
     def checkRunning(self):
         '''
         Check for crashed processes and respawn

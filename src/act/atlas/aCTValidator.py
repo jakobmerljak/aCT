@@ -87,7 +87,10 @@ class aCTValidator(aCTATLASProcess):
 
             # update pickle and dump to tmp/pickle
             if pandapickle:
-                jobinfo = aCTPandaJob(filehandle=pandapickle)
+                try:
+                    jobinfo = aCTPandaJob(filehandle=pandapickle)
+                except:
+                    jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             else:
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
@@ -102,7 +105,7 @@ class aCTValidator(aCTATLASProcess):
             jobinfo.node = aj['ExecutionNode']
 
             # Add url of logs
-            if jobinfo.dictionary().has_key('pilotID') and jobinfo.pilotID:
+            if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
                 t = jobinfo.pilotID.split("|")
             else:
                 t = []
@@ -160,7 +163,12 @@ class aCTValidator(aCTATLASProcess):
             self.log.error("%s: failed to extract metadata file for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
             return {}
 
-        outputxml = minidom.parse(metadata)
+        try:
+            outputxml = minidom.parse(metadata)
+        except Exception, e:
+            self.log.error("%s: failed to parse metadata file for arcjob %s: %s" % (aj['appjobid'], sessionid, str(e)))
+            return {}
+
         files = outputxml.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
 
         surls = {}
@@ -493,7 +501,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
         select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
-        columns = ["arcjobid", "pandaid"]
+        columns = ["arcjobid", "pandaid", "sendhb"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -504,6 +512,19 @@ class aCTValidator(aCTATLASProcess):
 
         surls = {}
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+        
+        # For truepilot jobs, don't try to clean outputs (too dangerous), just clean arc job
+        for job in jobstoupdate[:]:
+            if not job['sendhb']:
+                self.log.info("%s: Skip cleanup of output files" % job['pandaid'])
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
+                self.dbpanda.updateJobs(select, desc)
+                # set arcjobs state toclean
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                self.cleanDownloadedJob(job["arcjobid"])
+                jobstoupdate.remove(job)
+        
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
