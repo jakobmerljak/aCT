@@ -133,6 +133,7 @@ class aCTMain:
         logrotateconf = '''
             %s/*.log {
                 daily
+                dateext
                 missingok
                 rotate %s
                 create
