@@ -11,7 +11,7 @@ class aCTStatus:
     
     def __init__(self):
         self.conf=aCTConfig.aCTConfigARC()
-        self.logger=aCTLogger.aCTLogger("panda2arc")
+        self.logger=aCTLogger.aCTLogger("aCTReport")
         self.log=self.logger()
 
 
