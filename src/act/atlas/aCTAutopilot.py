@@ -380,7 +380,7 @@ class aCTAutopilot(aCTATLASProcess):
                     n = {}
                     # Check eventranges is defined for ES jobs
                     if re.search('eventService=True', pandajob) and (eventranges is None or eventranges == '[]'):
-                        self.log.warning('%d: No event ranges given by panda' % pandaid)
+                        self.log.warning('%s: No event ranges given by panda' % pandaid)
                         n['pandastatus'] = 'finished'
                         n['actpandastatus'] = 'finished'
                     else:
