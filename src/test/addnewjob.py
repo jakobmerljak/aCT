@@ -17,6 +17,6 @@ voms="atlas"
 attribute="" # e.g. attribute="/atlas/Role=production"
 proxypath=p.conf.get(["voms", "proxypath"])
 validHours=5
-proxyid = p.createVOMSAttribute(voms, attribute, proxypath, validHours)
+proxyid = p.createVOMSAttribute(voms, attribute, proxypath)
 
-db.insertArcJobDescription(xrsl, clusterlist='', proxyid=proxyid, maxattempts=5)
+db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo4.cern.ch/fork', proxyid=proxyid, maxattempts=5)

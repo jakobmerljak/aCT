@@ -105,9 +105,14 @@ class aCTSubmitter(aCTProcess):
             return 0
 
         # Get cluster host and queue: cluster/queue
-        clusterurl = arc.URL(self.cluster)
-        clusterhost = clusterurl.Host()
-        clusterqueue = clusterurl.Path()[1:] # strip off leading slash
+        clusterhost = clusterqueue = None
+        if self.cluster:
+            cluster = self.cluster
+            if cluster.find('://') == -1:
+                cluster = 'gsiftp://' + cluster
+            clusterurl = arc.URL(cluster)
+            clusterhost = clusterurl.Host()
+            clusterqueue = clusterurl.Path()[1:] # strip off leading slash
 
         # Apply proxyid fair-share
         if self.cluster:
@@ -126,22 +131,23 @@ class aCTSubmitter(aCTProcess):
 
             if self.cluster:
                 # Lock row for update in case multiple clusters are specified
+                #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
                 jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
-                                            columns=["id", "jobdesc", "appjobid"], lock=True)
+                                            columns=["id", "jobdesc", "appjobid","priority"], lock=True)
                 if jobs:
                     self.log.debug("started lock for writing %d jobs"%len(jobs))
             else:
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + " limit 10", ["id", "jobdesc", "appjobid"])
+                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
     
             # mark submitting in db
             jobs_taken=[]
             for j in jobs:
                 jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-                try:
-                    self.db.updateArcJobLazy(j['id'],jd)
-                except Exception,x:
-                    self.log.error('%s: %s' % (j['id'], x))
-                    continue
+                #try:
+                self.db.updateArcJobLazy(j['id'],jd)
+                #except Exception,x:
+                #    self.log.error('%s: %s' % (j['id'], x))
+                #    continue
                 jobs_taken.append(j)
             jobs=jobs_taken
      
@@ -156,10 +162,20 @@ class aCTSubmitter(aCTProcess):
                 #self.log.debug("No jobs to submit")
                 continue
             self.log.info("Submitting %d jobs for proxyid %d" % (len(jobs), proxyid))
+
+            # max waiting priority
+            try:
+                maxpriowaiting = max(jobs,key = lambda x : x['priority'])['priority']
+            except:
+                maxpriowaiting = 0
+            self.log.info("Maximum priority of waiting jobs: %d" % maxpriowaiting)
     
             # Query infosys - either local or index
             if self.cluster:
-                aris = arc.URL(self.cluster)
+                if self.cluster.find('://') != -1:
+                    aris = arc.URL(self.cluster)
+                else:
+                    aris = arc.URL('gsiftp://%s' % self.cluster)
                 if aris.Protocol() == 'https':
                     aris.ChangePath('/arex')
                     infoendpoints = [arc.Endpoint(aris.str(), arc.Endpoint.COMPUTINGINFO, 'org.ogf.glue.emies.resourceinfo')]
@@ -222,16 +238,27 @@ class aCTSubmitter(aCTProcess):
                     if str(self.cluster).find('ce501.cern.ch') != -1:
                         target.ComputingShare.MaxMainMemory = 16000
                         target.ComputingShare.MaxVirtualMemory = 16000
-                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id'])
+                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id','priority'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
+                    
+                    # max queued priority
+                    try:
+                        maxprioqueued = max(qjobs,key = lambda x : x['priority'])['priority']
+                    except:
+                        maxprioqueued = 0
+                    self.log.info("Max priority queued: %d" % maxprioqueued)
     
                     # Set number of submitted jobs to running * 0.15 + 400/num of proxies
                     # Note: assumes only a few proxies are used
-                    jlimit = len(rjobs)*0.15 + 200/len(proxyids)
+                    jlimit = len(rjobs)*0.15 + 100/len(proxyids)
                     if str(self.cluster).find('arc-boinc-0') != -1:
-                        jlimit = len(rjobs)*0.25 + 400
+                        jlimit = len(rjobs)*0.15 + 200
+                    if str(self.cluster).find('XXXpikolit') != -1:
+                        jlimit = len(rjobs)*0.15 + 100
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
-                    if len(qjobs) < jlimit:
+                    if len(qjobs) < jlimit or ( ( maxpriowaiting > maxprioqueued ) and ( maxpriowaiting > 10 ) ) :
+                        if maxpriowaiting > maxprioqueued :
+                            self.log.info("Overriding limit, maxpriowaiting: %d > maxprioqueued: %d" % (maxpriowaiting, maxprioqueued))
                         queuelist.append(target)
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:

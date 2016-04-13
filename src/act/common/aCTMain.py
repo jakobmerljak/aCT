@@ -133,6 +133,7 @@ class aCTMain:
         logrotateconf = '''
             %s/*.log {
                 daily
+                dateext
                 missingok
                 rotate %s
                 create
@@ -156,9 +157,9 @@ class aCTMain:
         """
         Main loop
         """
-        try:
-            self.log.info("Running")
-            while 1:
+        self.log.info("Running")
+        while 1:
+            try:
                 # Rotate logs
                 self.logrotate()
                 # check running processes are ok
@@ -168,12 +169,17 @@ class aCTMain:
                 # sleep
                 aCTUtils.sleep(10)
 
-        except aCTSignal.ExceptInterrupt,x:
-            pass
-        except:
-            self.log.critical("*** Unexpected exception! ***")
-            self.log.critical(traceback.format_exc())
-            self.log.critical("*** Process exiting ***")
+            except aCTSignal.ExceptInterrupt:
+                break
+            except:
+                self.log.critical("*** Unexpected exception! ***")
+                self.log.critical(traceback.format_exc())
+                # Reconnect database, in case there was a DB interruption
+                try:
+                    self.procmanager.reconnectDB()
+                except:
+                    self.log.critical(traceback.format_exc())
+                aCTUtils.sleep(10)
 
 
     def finish(self):

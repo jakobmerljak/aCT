@@ -446,12 +446,20 @@ class aCTATLASStatus(aCTATLASProcess):
 
         for aj in lostjobs:
             # There is no cleaning to do for lost jobs so just resubmit them
-            self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
             select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc={}
-            desc['pandastatus'] = 'starting'
-            desc['actpandastatus'] = 'starting'
-            desc['arcjobid'] = None
+
+            # For truepilot, just set to failed
+            if self.sites[aj['siteName']]['truepilot']:
+                self.log.info("%s: Job is lost, setting failed", aj['appjobid'])
+                desc['sendhb'] = 0
+                desc['pandastatus'] = None
+                desc['actpandastatus'] = 'donefailed'
+            else:
+                self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
+                desc['pandastatus'] = 'starting'
+                desc['actpandastatus'] = 'starting'
+                desc['arcjobid'] = None
             self.dbpanda.updateJobsLazy(select,desc)
 
         for aj in cancelledjobs:
@@ -460,9 +468,17 @@ class aCTATLASStatus(aCTATLASProcess):
             # killed in arc, resubmit and clean
             select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus not in ('cancelled', 'donecancelled', 'failed', 'donefailed')"
             desc = {}
-            desc["pandastatus"] = "starting"
-            desc["actpandastatus"] = "starting"
-            desc["arcjobid"] = None
+            # For truepilot, just set to cancelled
+            if self.sites[aj['siteName']]['truepilot']:
+                self.log.info("%s: Job was cancelled, setting to donecancelled", aj['appjobid'])
+                desc['sendhb'] = 0
+                desc['pandastatus'] = None
+                desc['actpandastatus'] = 'donecancelled'
+            else:
+                self.log.info("%s: Resubmitting cancelled job %d %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID']))
+                desc["pandastatus"] = "starting"
+                desc["actpandastatus"] = "starting"
+                desc["arcjobid"] = None
             self.dbpanda.updateJobsLazy(select, desc)
 
         if failedjobs or lostjobs or cancelledjobs:
