@@ -383,6 +383,7 @@ class aCTAutopilot(aCTATLASProcess):
                         self.log.warning('%s: No event ranges given by panda' % pandaid)
                         n['pandastatus'] = 'finished'
                         n['actpandastatus'] = 'finished'
+                        n['arcjobid'] = -1 # dummy id so job is not submitted
                     else:
                         n['pandastatus'] = 'sent'
                         n['actpandastatus'] = 'sent'
