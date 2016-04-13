@@ -87,7 +87,7 @@ class aCTPanda2Xrsl:
 
         if cpucount == 0:
             #cpucount = 2*24*3600*self.getNCores()
-            cpucount = self.maxwalltime*self.getNCores()
+            cpucount = 60*self.maxwalltime*self.getNCores()
 
         if cpucount < 50000:
             cpucount = 50000
