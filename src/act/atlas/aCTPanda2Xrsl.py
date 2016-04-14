@@ -110,7 +110,7 @@ class aCTPanda2Xrsl:
 
         if 'minRamCount' in self.jobdesc:
             memory = int(self.jobdesc['minRamCount'][0])
-        elif not self.sitename.beginswith('ANALY'):
+        elif not self.sitename.startswith('ANALY'):
             memory = 4000
         else:
             memory = 2000
