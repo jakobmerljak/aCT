@@ -341,7 +341,6 @@ class aCTAutopilot(aCTATLASProcess):
 
             # if no jobs available
             stopflag=False
-            esjobs = []
        
             for nc in range(0,max(int(num/nthreads),1)):
                 if stopflag:
@@ -358,10 +357,10 @@ class aCTAutopilot(aCTATLASProcess):
                             t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
-                        if r.randint(0,100) <= 50:
-                            t=PandaGetThr(self.getPanda(site).getJob,site)
+                        if r.randint(0,100) <= 10:
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
-                            t=PandaGetThr(self.getPanda(site).getJob,site,'ptest')
+                            t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                     nall += 1
