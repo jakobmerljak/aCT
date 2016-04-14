@@ -254,9 +254,10 @@ class aCTPanda2Xrsl:
             #elif self.sitename == 'HPC2N_MCORE':
             #x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/pilotcode-PICARD-noglexec.tar.gz")'
             #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-63.4.1.tar.gz")'
-        else:
+        elif self.eventranges: # ES job
             x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        else:
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
         x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es.tar.gz")'
 
         if self.longjob:
