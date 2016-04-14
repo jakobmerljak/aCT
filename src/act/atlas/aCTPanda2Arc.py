@@ -28,14 +28,13 @@ class aCTPanda2Arc(aCTATLASProcess):
 
         for job in jobs:
 
-            inputdir = self.conf.get(["tmp", "dir"]) + "/inputfiles/" + str(job['pandaid'])
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
                                    self.sites[job['siteName']]['catalog'], self.osmap, self.sites[job['siteName']]['corecount'],
                                    self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'],
-                                   inputdir, job['eventranges'])
+                                   self.conf.get(["tmp", "dir"]), job['eventranges'])
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 

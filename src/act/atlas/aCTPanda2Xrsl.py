@@ -8,7 +8,7 @@ import uuid
 
 class aCTPanda2Xrsl:
 
-    def __init__(self, pandajob, sitename, schedconfig, catalog, osmap, corecount=1, truepilot=0, maxwalltime=10080, inputdir="", eventranges=None):
+    def __init__(self, pandajob, sitename, schedconfig, catalog, osmap, corecount=1, truepilot=0, maxwalltime=10080, tmpdir="", eventranges=None):
         self.pandajob = pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.xrsl = {}
@@ -29,7 +29,8 @@ class aCTPanda2Xrsl:
         self.eventranges = eventranges
         if self.maxwalltime == 0:
             self.maxwalltime = 7*24*60
-        self.inputdir = inputdir
+        self.tmpdir = tmpdir
+        self.inputdir = tmpdir + "/inputfiles/" + self.jobdesc['PandaID'][0]
         self.longjob = False
         self.traces = []
         if len(self.pandajob) > 50000:
