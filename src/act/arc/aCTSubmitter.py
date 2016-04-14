@@ -218,26 +218,17 @@ class aCTSubmitter(aCTProcess):
                 if clusterqueue and targetqueue != clusterqueue:
                     self.log.debug('Rejecting target queue %s as it does not match %s' % (targetqueue, clusterqueue))
                     continue
-                s = self.db.getSchedconfig(targethost)
-                status = 'online'
-                if s is not None:
-                    status=s['status']
                 if targetqueue in self.conf.getList(['queuesreject','item']):
                     self.log.debug('Rejecting target queue %s in queuesreject list' % targetqueue)
                     continue
                 elif targethost in self.conf.getList(['clustersreject','item']):
                     self.log.debug('Rejecting target host %s in clustersreject list' % targethost)
                     continue
-                elif status == "XXXoffline":
-                    continue
                 else:
                     # tmp hack
                     target.ComputingShare.LocalWaitingJobs = 0
                     target.ComputingShare.PreLRMSWaitingJobs = 0
                     target.ExecutionEnvironment.CPUClockSpeed = 2000
-                    if str(self.cluster).find('ce501.cern.ch') != -1:
-                        target.ComputingShare.MaxMainMemory = 16000
-                        target.ComputingShare.MaxVirtualMemory = 16000
                     qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id','priority'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
                     

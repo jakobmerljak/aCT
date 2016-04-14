@@ -7,7 +7,6 @@
 ## maxjobs defaults to 1M
 ## endpoints should be pulled out of "queues" (ce_endpoints)
 ## corecount defaults to 1
-## catalog defaults to panda config value
 import logging
 import time
 import os, sys
@@ -43,10 +42,6 @@ class aCTAGISParser:
             except:
                 pass
             try:
-                sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
-            except:
-                sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
-            try:
                 sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
                 pass
@@ -66,8 +61,6 @@ class aCTAGISParser:
             agisjson=json.load(f)
         sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
-            if not sites[sitename].has_key('catalog'):
-                sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
             if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':

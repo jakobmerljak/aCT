@@ -442,27 +442,6 @@ class aCTAutopilot(aCTATLASProcess):
         self.log.info("missing jobs: %d removed" % count)
             
             
-    def checkQueues(self):
-        """
-        get the queue status from panda and store in db
-        """
-
-        if time.time()-self.queuestamp < int(self.conf.get(["panda","schedinterval"])) :
-            return
-        else:
-            self.queuestamp=time.time()
-
-        for q in self.conf.getList(["panda","queues","item"]):
-            res = re.match("ARC-(.+)",q)
-            cluster = res.group(1)
-            status = self.panda.getQueueStatus(cluster)
-            r=self.dbpanda.getSchedconfig(cluster)
-            if r is None:
-                self.dbpanda.insertSchedconfig(cluster,status)
-            else:
-                self.dbpanda.updateSchedconfig(cluster,status)
-
-
     def updateArchive(self):
         """
         Move old jobs older than 1 day to archive table
