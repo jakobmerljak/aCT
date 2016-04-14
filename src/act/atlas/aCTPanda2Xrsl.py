@@ -312,6 +312,10 @@ class aCTPanda2Xrsl:
             if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
+                try:
+                    os.mkdir(os.path.join(self.tmpdir, 'eventranges'))
+                except:
+                    pass
                 tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
                 jsondata = json.loads(self.eventranges)
                 with open(tmpjsonfile, 'w') as f:
