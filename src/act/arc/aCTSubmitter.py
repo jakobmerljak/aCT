@@ -314,7 +314,14 @@ class aCTSubmitter(aCTProcess):
             notcancelled = job_supervisor.GetIDsNotProcessed()
     
             for (id, appjobid, job) in jobs:
-                if job.JobID in notcancelled:
+
+                if not job.JobID:
+                    # Job not submitted
+                    self.log.info("%s: Marking unsubmitted job cancelled" % appjobid)
+                    self.db.updateArcJob(id, {"arcstate": "cancelled",
+                                              "tarcstate": self.db.getTimeStamp()})                    
+
+                elif job.JobID in notcancelled:
                     if job.State == arc.JobState.UNDEFINED:
                         # If longer than one hour since submission assume job never made it
                         if job.StartTime + arc.Period(3600) < arc.Time():

@@ -157,11 +157,15 @@ class aCTStatus(aCTProcess):
         # 2 days limit. TODO: configurable?
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='finished') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
-                                    ['id', 'appjobid', 'JobID'])
+                                    ['id', 'appjobid', 'JobID', 'arcstate'])
         
         for job in jobs:
-            self.log.warning("%s: Job %s lost from information system, marking as lost" % (job['appjobid'], job['JobID']))
-            self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
+            if job['arcstate'] == 'cancelling':
+                self.log.warning("%s: Job %s lost from information system, marking as cancelled" % (job['appjobid'], job['JobID']))
+                self.db.updateArcJob(job['id'], {'arcstate': 'cancelled', 'tarcstate': self.db.getTimeStamp()})
+            else:
+                self.log.warning("%s: Job %s lost from information system, marking as lost" % (job['appjobid'], job['JobID']))
+                self.db.updateArcJob(job['id'], {'arcstate': 'lost', 'tarcstate': self.db.getTimeStamp()})
 
 
     def checkStuckJobs(self):
