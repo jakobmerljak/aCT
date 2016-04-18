@@ -8,9 +8,11 @@ import uuid
 
 class aCTPanda2Xrsl:
 
-    def __init__(self, pandajob, sitename, siteinfo, osmap, tmpdir, eventranges):
+    def __init__(self, pandajob, sitename, siteinfo, osmap, tmpdir, eventranges, log):
+        self.log = log
         self.pandajob = pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
+        self.pandaid = self.jobdesc['PandaID'][0]
         self.xrsl = {}
         self.ncores = siteinfo['corecount']
 
@@ -84,8 +86,10 @@ class aCTPanda2Xrsl:
         if 'maxCpuCount' in self.jobdesc:
             cpucount = int(self.jobdesc['maxCpuCount'][0])
             cpucount = int(2 * cpucount)
+            self.log.info('%s: job maxCpuCount %s' % (self.pandaid, cpucount))
         else:
             cpucount = 2*24*3600
+            self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
 
         if cpucount == 0:
             #cpucount = 2*24*3600*self.getNCores()
@@ -114,6 +118,7 @@ class aCTPanda2Xrsl:
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
         cputime = self.getNCores() * walltime
+        self.log.info('%s: walltime: %d, cputime: %d' % (self.pandaid, walltime, cputime))
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
 
