@@ -1,3 +1,4 @@
+import errno
 import os
 import signal
 import subprocess
@@ -71,6 +72,7 @@ class aCTMain:
                 print "aCT already running (pid %s)" % pid
                 sys.exit(1)
                 
+            print 'Starting aCT... '
             # do double fork
             try:
                 pid = os.fork()
@@ -118,7 +120,16 @@ class aCTMain:
                 except OSError: # already stopped
                     pass
                 os.remove(pidfile)
-                print 'aCT stopped'
+                print 'Stopping aCT... ',
+                sys.stdout.flush()
+                while True:
+                    try:
+                        aCTUtils.sleep(1)
+                        os.kill(int(pid), 0)
+                    except OSError as err:
+                        if err.errno == errno.ESRCH:
+                            break
+                print 'stopped'
             sys.exit(0)
         else:
             print 'Usage: python aCTMain.py [start|stop]'

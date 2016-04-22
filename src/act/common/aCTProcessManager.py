@@ -155,7 +155,8 @@ class aCTProcessManager:
             if self.child:
                 # first kill nicely (SIGTERM)
                 self.child.terminate()
-                aCTUtils.sleep(1)
-                # make sure it is gone
-                self.child.kill()
+                if os.kill(self.child.pid, 0):
+                    aCTUtils.sleep(1)
+                    # make sure it is gone
+                    self.child.kill()
 
