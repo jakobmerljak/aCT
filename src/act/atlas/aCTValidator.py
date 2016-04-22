@@ -115,7 +115,7 @@ class aCTValidator(aCTATLASProcess):
             else:
                 jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
 
-            jobinfo.writeToFile(self.conf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
+            jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)

@@ -261,7 +261,7 @@ class aCTAutopilot(aCTATLASProcess):
             else:
                 try:
                     # Load pickled information from pilot
-                    fname = self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     jobinfo = aCTPandaJob(filename=fname)
                 except Exception,x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
