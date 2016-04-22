@@ -6,19 +6,6 @@
   <ptarurlrc>"http://project-atlas-gmsb.web.cern.ch;cache=no/project-atlas-gmsb/pilotcode-rc.tar.gz"</ptarurlrc>
 </executable>
 
-<db>
-  <type>mysql</type>
-  <socket>/data/user/atlact1/act-mysql/act.mysql.socket</socket>
-  <file>/data/user/atlact1/act-mysql/act.mysql.socket</file>
-  <name>act</name>
-  <user>user</user>
-  <password>password</password>
-</db>
-
-<tmp>
-    <dir>/data/user/atlact1/act-test1/tmp</dir>
-</tmp>
-
 <joblog>
   <urlprefix>http://voatlas403.cern.ch/jobs</urlprefix>
   <dir>/data/user/act/www/jobs</dir>
@@ -33,16 +20,12 @@
 
 <panda>
   <server>https://pandaserver.cern.ch:25443/server/panda/</server>
-  <schedconfigurl>http://pandaserver.cern.ch:25085/cache/schedconfig/</schedconfigurl>
   <heartbeattime>1800</heartbeattime>
   <threads>1</threads>
   <getjobs>1</getjobs>
   <schedulerid>aCT-atlact1-1</schedulerid>
   <timeout>60</timeout>
-  <schedinterval>60</schedinterval>
   <minjobs>10</minjobs>
-  <!-- catalog for input files. Can be overridden per site -->
-  <catalog>rucio://rucio.cern.ch:/grid/atlas</catalog>
 
   <sites>
 
@@ -61,8 +44,6 @@
       <maxjobs>10</maxjobs>
       <!-- Number of cores for each job in this queue (eg 8 for mcore) -->
       <corecount>1</corecount>
-      <!-- Overriding catalog -->
-      <catalog>lfc://prod-lfc-atlas.cern.ch:/grid/atlas</catalog>
     </site>
 
   </sites>
