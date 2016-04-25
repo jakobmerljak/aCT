@@ -140,7 +140,6 @@ class aCTSubmitter(aCTProcess):
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
                     jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
-                time.sleep(30)
                 # mark submitting in db
                 jobs_taken=[]
                 for j in jobs:
