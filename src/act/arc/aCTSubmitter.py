@@ -129,35 +129,38 @@ class aCTSubmitter(aCTProcess):
 
         for proxyid in proxyids:
 
-            if self.cluster:
-                # Lock row for update in case multiple clusters are specified
-                #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
-                                            columns=["id", "jobdesc", "appjobid","priority"], lock=True)
-                if jobs:
-                    self.log.debug("started lock for writing %d jobs"%len(jobs))
-            else:
-                jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
-    
-            # mark submitting in db
-            jobs_taken=[]
-            for j in jobs:
-                jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-                #try:
-                self.db.updateArcJobLazy(j['id'],jd)
-                #except Exception,x:
-                #    self.log.error('%s: %s' % (j['id'], x))
-                #    continue
-                jobs_taken.append(j)
-            jobs=jobs_taken
-     
-            if self.cluster:
-                self.db.Commit(lock=True)
-                if jobs:
-                    self.log.debug("ended lock")
-            else:
-                self.db.Commit()
-    
+            try:
+                # catch any exceptions here to avoid leaving lock
+                if self.cluster:
+                    # Lock row for update in case multiple clusters are specified
+                    #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
+                                                columns=["id", "jobdesc", "appjobid","priority"], lock=True)
+                    if jobs:
+                        self.log.debug("started lock for writing %d jobs"%len(jobs))
+                else:
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
+                time.sleep(30)
+                # mark submitting in db
+                jobs_taken=[]
+                for j in jobs:
+                    jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
+                    #try:
+                    self.db.updateArcJobLazy(j['id'],jd)
+                    #except Exception,x:
+                    #    self.log.error('%s: %s' % (j['id'], x))
+                    #    continue
+                    jobs_taken.append(j)
+                jobs=jobs_taken
+
+            finally:
+                if self.cluster:
+                    self.db.Commit(lock=True)
+                    if jobs:
+                        self.log.debug("ended lock")
+                else:
+                    self.db.Commit()
+        
             if len(jobs) == 0:
                 #self.log.debug("No jobs to submit")
                 continue
