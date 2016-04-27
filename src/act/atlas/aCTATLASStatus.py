@@ -449,12 +449,12 @@ class aCTATLASStatus(aCTATLASProcess):
             select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc={}
 
-            # For truepilot, just set to failed
+            # For truepilot, just set to clean and transferring to clean up arc job
             if self.sites[aj['siteName']]['truepilot']:
-                self.log.info("%s: Job is lost, setting failed", aj['appjobid'])
+                self.log.info("%s: Job is lost, cleaning up arc job", aj['appjobid'])
                 desc['sendhb'] = 0
-                desc['pandastatus'] = None
-                desc['actpandastatus'] = 'donefailed'
+                desc['pandastatus'] = 'transferring'
+                desc['actpandastatus'] = 'toclean'
             else:
                 self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
                 desc['pandastatus'] = 'starting'
@@ -468,12 +468,12 @@ class aCTATLASStatus(aCTATLASProcess):
             # killed in arc, resubmit and clean
             select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus not in ('cancelled', 'donecancelled', 'failed', 'donefailed')"
             desc = {}
-            # For truepilot, just set to cancelled
+            # For truepilot, just set to clean and transferring to clean up arc job
             if self.sites[aj['siteName']]['truepilot']:
-                self.log.info("%s: Job was cancelled, setting to donecancelled", aj['appjobid'])
+                self.log.info("%s: Job was cancelled, cleaning up arc job", aj['appjobid'])
                 desc['sendhb'] = 0
-                desc['pandastatus'] = None
-                desc['actpandastatus'] = 'donecancelled'
+                desc['pandastatus'] = 'transferring'
+                desc['actpandastatus'] = 'toclean'
             else:
                 self.log.info("%s: Resubmitting cancelled job %d %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID']))
                 desc["pandastatus"] = "starting"
