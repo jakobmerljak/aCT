@@ -144,19 +144,17 @@ class aCTSubmitter(aCTProcess):
                 jobs_taken=[]
                 for j in jobs:
                     jd={'cluster': self.cluster, 'arcstate': 'submitting', 'tarcstate': self.db.getTimeStamp()}
-                    #try:
                     self.db.updateArcJobLazy(j['id'],jd)
-                    #except Exception,x:
-                    #    self.log.error('%s: %s' % (j['id'], x))
-                    #    continue
                     jobs_taken.append(j)
                 jobs=jobs_taken
 
             finally:
                 if self.cluster:
-                    self.db.Commit(lock=True)
-                    if jobs:
+                    try:
+                        self.db.Commit(lock=True)
                         self.log.debug("ended lock")
+                    except:
+                        self.log.warning("Failed to release DB lock")
                 else:
                     self.db.Commit()
         
