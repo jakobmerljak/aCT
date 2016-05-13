@@ -11,16 +11,18 @@ class aCTAGISFetcher(aCTATLASProcess):
                  
     def __init__(self):
         aCTATLASProcess.__init__(self)
-        self.srv = self.conf.get(['agis','server'])
-        self.pilotmanager = self.conf.get(['agis','pilotmanager'])
+        self.queues = self.conf.get(['agis','server'])
+        self.oses = self.conf.get(['agis','objectstores'])
+        self.queuesfile =self.conf.get(['agis', 'jsonfilename'])
+        self.osesfile =self.conf.get(['agis', 'osfilename'])
 
-    def fetchFromAgis(self):
+
+    def fetchFromAgis(self, url, filename):
         try:
-            response = urllib2.urlopen(self.srv)
+            response = urllib2.urlopen(url)
         except urllib2.URLError as e:
             self.log.warning("Failed to contact AGIS: %s" % str(e))
             # Check if the cached data is getting old, if so raise a critical error
-            filename = self.conf.get(['agis','jsonfilename'])
             try:
                 mtime = os.stat(filename).st_mtime
                 if datetime.fromtimestamp(mtime) < datetime.now() - timedelta(hours=1):
@@ -31,13 +33,12 @@ class aCTAGISFetcher(aCTATLASProcess):
             return ''
 
         urldata = response.read()
-        self.log.debug("Fetched %s" % self.srv)
+        self.log.debug("Fetched %s" % url)
         return urldata
     
-    def storeToFile(self, agisjson):
+    def storeToFile(self, agisjson, filename):
         if not agisjson:
             return
-        filename = self.conf.get(['agis','jsonfilename'])
         tmpfile=filename+'_'
         try:
             with open(tmpfile, 'w') as f:
@@ -57,9 +58,11 @@ class aCTAGISFetcher(aCTATLASProcess):
         self.log.info("Running")
         # todo: check if agis.json exists and return if too new
         # fetch data from AGIS
-        agisjson = self.fetchFromAgis()
+        queuesjson = self.fetchFromAgis(self.queues, self.queuesfile)
+        osesjson = self.fetchFromAgis(self.oses, self.osesfile)
         # store data to file
-        self.storeToFile(agisjson)
+        self.storeToFile(queuesjson, self.queuesfile)
+        self.storeToFile(osesjson, self.osesfile)
         # temporary hack to avoid too much agis fetching
         time.sleep(600)
         

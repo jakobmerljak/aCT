@@ -12,8 +12,10 @@
 </joblog>
 
 <agis>
-  <server>http://atlas-agis-api.cern.ch/request/pandaqueue</server>
+  <server>http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/&#63;json&#38;preset&#61;schedconf.all</server>
+  <objectstores>http://atlas-agis-api.cern.ch/request/ddmendpoint/query/list/&#63;json&#38;type&#91;&#93;&#61;OS_LOGS&#38;type&#91;&#93;&#61;OS_ES</objectstores>
   <jsonfilename>/data/user/atlact1/act-test1/tmp/agis.json</jsonfilename>
+  <osfilename>/home/dcameron/dev/aCT/tmp/oses.json</osfilename>
   <pilotmanager>aCT</pilotmanager>
   <maxjobs>0</maxjobs>
 </agis>

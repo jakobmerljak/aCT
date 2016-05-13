@@ -9,7 +9,7 @@
 ## corecount defaults to 1
 import logging
 import time
-import os, sys
+import os, re, sys
 import json
 from act.common import aCTConfig
 
@@ -103,8 +103,42 @@ class aCTAGISParser:
                 sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
             # true pilot or not
             sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv')
+            # set OS bucket IDs
+            try:
+                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
+                sites[sitename]['ddmoses'] = objstore
+            except:
+                self.log.debug('No ES object store for %s', sitename)
+            try:
+                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_LOGS'][0]
+                sites[sitename]['ddmoslogs'] = objstore
+            except:
+                self.log.debug('No LOGS object store for %s', sitename)
         self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
         return sites
+
+    def _parseDDMEndpoints(self, filename):
+        self.osmap = {}
+        self.bucketmap = {}
+        with open(filename) as f:
+            self.ddmjson = json.load(f)
+        # make map of bucket_id: endpoint
+        for ep in self.ddmjson:
+            print ep['name']
+            try:
+                bucket_id = ep['resource']['bucket_id']
+            except:
+                self.log.info('No bucket_id info for %s', ep['name'])
+                continue
+            try:
+                protocol = [p for p in ep['protocols'].keys() if p.startswith('s3://')][0]
+            except:
+                self.log.info('No s3 endpoint for %s' % ep['name'])
+                continue
+            endpoint = '%s%s' % (protocol, ep['protocols'][protocol][0][2])
+            endpoint = re.sub('s3:/', 's3://', re.sub('//', '/', endpoint))
+            self.osmap[bucket_id] = endpoint
+            self.bucketmap[ep['name']] = {'bucket_id': bucket_id, 'type': ep['type']}
 
     def _mergeSiteDicts(self, dict1, dict2):
         for d in dict2.keys():
@@ -122,7 +156,7 @@ class aCTAGISParser:
         
         # wait for AGIS json to be produced
         i = 0
-        while (True):
+        while True:
             try:
                 agismtime = os.stat(agisfile).st_mtime
                 break
@@ -138,6 +172,7 @@ class aCTAGISParser:
             self.log.info("AGIS file and/or config modified, reparsing site info")
             pilotmgr = self.conf.get(['agis','pilotmanager'])
             start_parsing = time.time()
+            self._parseDDMEndpoints(self.conf.get(['agis', 'osfilename']))
             self.sites = self._parseAgisJson(agisfile, pilotmgr)
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
             self.tparse = time.time()
@@ -152,16 +187,6 @@ class aCTAGISParser:
                     del self.sites[site]
                 else:
                     self.log.info("%s: %s, maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['maxjobs']))
-
-        # Fill OS map
-        self.osmap = {}
-        for site, info in self.sites.items():
-            osinfo = info['objectstores']
-            for obj in osinfo:
-                endpoint = obj['os_endpoint']
-                if endpoint.endswith('/'): # double slash causes errors in arc
-                    endpoint = endpoint[:-1]
-                self.osmap[obj['os_bucket_id']] = '%s%s' % (endpoint, obj['os_bucket_endpoint']) 
 
         return self.sites
     
@@ -181,7 +206,15 @@ if __name__ == '__main__':
     while 1:
         sites = agisparser.getSites()
         sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
-        pprint.pprint(sites)
+        #pprint.pprint(sites)
+        for s,i in sites.items():
+            try:
+                print s, i['ddmoses'], i['ddmoslogs']
+            except:
+                pass
         print len(sites)
+        oses = agisparser.getOSMap()
+        sites = dict([(s,i) for s,i in oses.items()])
+        pprint.pprint(sites)
         exit(1)
         time.sleep(10)
