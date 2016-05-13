@@ -205,12 +205,11 @@ class aCTAutopilot(aCTATLASProcess):
                 eventrangeslist = json.loads(eventranges)
                 self.log.info('%s: updating %i event ranges' % (j['pandaid'], len(eventrangeslist)))
                 
-                # Work out object store used
-                oses = [o for o in self.sites[j['siteName']]['objectstores'] if o['os_bucket_name'] == 'eventservice']
-                if len(oses) == 1:
-                    objstoreID = oses[0]['os_bucket_id']
-                else:
-                    self.log.warning('Could not figure out OS id for %s' % j['siteName'])
+                # Get object store ID used
+                try:
+                    objstoreID = self.sites[j['siteName']]['ddmoses']
+                except:
+                    self.log.warning('No ES object store defined for %s' % j['siteName'])
                     objstoreID = None
                 
                 for eventrange in eventrangeslist:
