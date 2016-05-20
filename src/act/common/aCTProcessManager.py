@@ -41,6 +41,24 @@ class aCTProcessManager:
             proc.start()
             self.processes_single[process] = proc
         
+    def __del__(self):
+        
+        self.log.info('Shutdown')
+        for cluster, procs in self.running.items():
+            for proc in procs:
+                self.log.info('Terminating %s for %s' % (proc.name, cluster))
+                proc.terminate()
+        for cluster, proc in self.submitters.items():
+            self.log.info('Terminating aCTSubmitter for %s' % cluster)
+            proc.terminate()
+        for appproc, proc in self.processes_single.items():
+            self.log.info('Terminating %s' % appproc)
+            proc.terminate()
+        
+        # Sleep to allow processes to exit before checking them in aCTProcess
+        # destructor
+        aCTUtils.sleep(1)
+        
     def reconnectDB(self):
         ''' 
         Reconnect DB
@@ -151,12 +169,21 @@ class aCTProcessManager:
         def restart(self):
             if self.check() != None:
                 self.start()
-        def kill(self):
+        def terminate(self):
             if self.child:
-                # first kill nicely (SIGTERM)
                 self.child.terminate()
-                if os.kill(self.child.pid, 0):
-                    aCTUtils.sleep(1)
-                    # make sure it is gone
-                    self.child.kill()
+        def kill(self):
+            # first kill nicely (SIGTERM)
+            self.terminate()
+            if self.child and self.check() == None:
+                try:
+                    print 'checking pid', self.child.pid
+                    os.kill(self.child.pid, 0)
+                except OSError: # process already exited
+                    print 'process gone'
+                    return
+                print 'process still running, sleeping'
+                aCTUtils.sleep(1)
+                # make sure it is gone
+                self.child.kill()
 
