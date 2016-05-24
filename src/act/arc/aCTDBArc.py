@@ -377,9 +377,8 @@ class aCTDBArc(aCTDB):
         Return a list and count of clusters
         '''
         c=self.getCursor()
-        c.execute("SELECT cluster, COUNT(*) FROM arcjobs GROUP BY cluster")
+        c.execute("SELECT cluster, COUNT(*) FROM arcjobs WHERE cluster!='' GROUP BY cluster")
         rows=c.fetchall()
-        print "getActiveClusters", rows
         return rows
     
     def getClusterLists(self):
@@ -391,7 +390,6 @@ class aCTDBArc(aCTDB):
         # killed while submitting jobs
         c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' OR arcstate='submitting' GROUP BY clusterlist")
         rows=c.fetchall()
-        print "getClusterLists", rows
         return rows
     
     def _db2job(self, dbinfo):

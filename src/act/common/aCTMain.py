@@ -201,9 +201,7 @@ class aCTMain:
             try:
                 # Rotate logs
                 self.logrotate()
-                # check running processes are ok
-                self.procmanager.checkRunning()
-                # start and stop new processes as necessary
+                # (re)start new processes as necessary
                 self.procmanager.checkClusters()
                 # sleep
                 aCTUtils.sleep(10)
