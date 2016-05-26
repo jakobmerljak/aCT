@@ -39,7 +39,7 @@ class PandaGetThr(Thread):
         self.func=func
         self.siteName=siteName
         self.prodSourceLabel=prodSourceLabel
-        self.result = (None,None)
+        self.result = (None,None,None)
     def run(self):
         self.result=self.func(self.siteName,self.prodSourceLabel)
 
