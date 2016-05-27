@@ -114,32 +114,33 @@ class aCTSubmitter(aCTProcess):
             clusterhost = clusterurl.Host()
             clusterqueue = clusterurl.Path()[1:] # strip off leading slash
 
-        # Apply proxyid fair-share
+        # Apply fair-share
         if self.cluster:
-            proxyids = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['proxyid'])
+            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['fairshare'])
         else:
-            proxyids = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['proxyid'])
+            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['fairshare'])
             
-        if not proxyids:
+        if not fairshares:
             self.log.info('Nothing to submit')
             return 0
         
-        proxyids = set([p['proxyid'] for p in proxyids])
+        fairshares = set([p['fairshare'] for p in fairshares])
         count = 0
 
-        for proxyid in proxyids:
+        for fairshare in fairshares:
 
             try:
                 # catch any exceptions here to avoid leaving lock
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  limit 10",
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%' and proxyid=" + str(proxyid) + "  order by priority desc limit 10",
-                                                columns=["id", "jobdesc", "appjobid","priority"], lock=True)
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%{0}%' and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and proxyid=" + str(proxyid) + "order by priority desc limit 10", ["id", "jobdesc", "appjobid","priority"])
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
+                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid"])
                 # mark submitting in db
                 jobs_taken=[]
                 for j in jobs:
@@ -161,7 +162,7 @@ class aCTSubmitter(aCTProcess):
             if len(jobs) == 0:
                 #self.log.debug("No jobs to submit")
                 continue
-            self.log.info("Submitting %d jobs for proxyid %d" % (len(jobs), proxyid))
+            self.log.info("Submitting %d jobs for fairshare %s" % (len(jobs), fairshare))
 
             # max waiting priority
             try:
@@ -189,8 +190,9 @@ class aCTSubmitter(aCTProcess):
                     # Specify explicitly EGIIS
                     infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
     
-            # Set UserConfig credential for each proxy
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            # Set UserConfig credential for each proxy. Assumes that any proxy
+            # in the fairshare can query the CE infosys
+            self.uc.CredentialString(self.db.getProxy(jobs[0]['proxyid']))
             # retriever contains a list of CE endpoints
             retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
             retriever.wait()
@@ -229,8 +231,8 @@ class aCTSubmitter(aCTProcess):
                     target.ComputingShare.LocalWaitingJobs = 0
                     target.ComputingShare.PreLRMSWaitingJobs = 0
                     target.ExecutionEnvironment.CPUClockSpeed = 2000
-                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and proxyid=%d" % proxyid, ['id','priority'])
-                    rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and proxyid=%d" % proxyid, ['id'])
+                    qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and fairshare='%s'" % fairshare, ['id','priority'])
+                    rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and fairshare='%s'" % fairshare, ['id'])
                     
                     # max queued priority
                     try:
@@ -239,9 +241,9 @@ class aCTSubmitter(aCTProcess):
                         maxprioqueued = 0
                     self.log.info("Max priority queued: %d" % maxprioqueued)
     
-                    # Set number of submitted jobs to running * 0.15 + 400/num of proxies
-                    # Note: assumes only a few proxies are used
-                    jlimit = len(rjobs)*0.15 + 100/len(proxyids)
+                    # Set number of submitted jobs to running * 0.15 + 400/num of shares
+                    # Note: assumes only a few shares are used
+                    jlimit = len(rjobs)*0.15 + 100/len(fairshares)
                     if str(self.cluster).find('arc-boinc-0') != -1:
                         jlimit = len(rjobs)*0.15 + 200
                     if str(self.cluster).find('XXXpikolit') != -1:
@@ -253,7 +255,7 @@ class aCTSubmitter(aCTProcess):
                         queuelist.append(target)
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:
-                        self.log.info("%s/%s already at limit of submitted jobs for proxy %d" % (targethost, targetqueue, proxyid))
+                        self.log.info("%s/%s already at limit of submitted jobs for fairshare %s" % (targethost, targetqueue, fairshare))
     
             # check if any queues are available, if not leave and try again next time
             if not queuelist:
@@ -272,7 +274,9 @@ class aCTSubmitter(aCTProcess):
                 if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                     self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                     continue
-
+                # TODO: might not work if proxies are different within a share
+                # since same uc object is shared among threads
+                self.uc.CredentialString(self.db.getProxy(j['proxyid']))
                 t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
                 self.RunThreadsSplit([t],1)
                 count=count+1
