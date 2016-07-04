@@ -23,6 +23,7 @@ class aCTProcessManager:
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         # TODO: app-specific processes in conf file instead of hard-coded
         self.processes_single = {'act/atlas/aCTAutopilot':None, 
+                                 'act/atlas/aCTPandaGetJobs':None,
                                  'act/atlas/aCTPanda2Arc':None,
                                  'act/common/aCTProxyHandler':None,
                                  'act/atlas/aCTATLASStatus':None,

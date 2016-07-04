@@ -440,10 +440,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
         self.setSites()
 
-        # request new jobs
-        num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
-        if num:
-            self.log.info("Got %i jobs" % num)
+        # Getting new jobs is now done in aCTPandaGetJobs
         
         # Update all jobs currently in the system
         self.updatePandaHeartbeat('sent')
