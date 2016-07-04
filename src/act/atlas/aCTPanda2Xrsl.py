@@ -73,6 +73,11 @@ class aCTPanda2Xrsl:
 
         if 'maxCpuCount' in self.jobdesc:
             cpucount = int(self.jobdesc['maxCpuCount'][0])
+
+            # hack for group production!!!
+            if cpucount == 600:
+                cpucount = 24*3600
+
             cpucount = int(2 * cpucount)
         else:
             cpucount = 2*24*3600
@@ -102,6 +107,8 @@ class aCTPanda2Xrsl:
         # JEDI analysis hack
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
+        if self.sitename == 'BOINC':
+            walltime = min(240, walltime)
         cputime = self.getNCores() * walltime
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
@@ -196,7 +203,7 @@ class aCTPanda2Xrsl:
 
         # Set options for NG/true pilot
         if self.truepilot:
-            pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig, self.sitename)
+            pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-d" "{HOME}" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig, self.sitename)
         else:
             pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
 
