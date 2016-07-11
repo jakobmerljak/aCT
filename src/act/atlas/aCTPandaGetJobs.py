@@ -1,48 +1,28 @@
 from threading import Thread
-import datetime
-import os
-import pickle
 import re
 import time
 import random
 import arc
 import aCTPanda
 from act.common import aCTProxy
-from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
 from aCTAGISParser import aCTAGISParser
-from aCTPandaJob import aCTPandaJob
 
-class PandaThr(Thread):
-    """
-    Helper function for threaded panda status update calls.
-    func is generic, but it is only used for aCTPanda.updateStatus call.
-    """
-    def __init__ (self,func,id,status,args={}):
-        Thread.__init__(self)
-        self.func=func
-        self.id = id
-        self.status = status
-        self.args = args
-        self.result = None
-    def run(self):
-        self.result=self.func(self.id,self.status,self.args)
 
 class PandaGetThr(Thread):
     """
     Similar to previous but for aCTPanda.getJob
     """
-    def __init__ (self,func,siteName,prodSourceLabel=None):
+    def __init__ (self, func, siteName, prodSourceLabel=None):
         Thread.__init__(self)
-        self.func=func
-        self.siteName=siteName
-        self.prodSourceLabel=prodSourceLabel
-        self.result = (None,None)
+        self.func = func
+        self.siteName = siteName
+        self.prodSourceLabel = prodSourceLabel
+        self.result = (None, None)
     def run(self):
-        self.result=self.func(self.siteName,self.prodSourceLabel)
+        self.result = self.func(self.siteName, self.prodSourceLabel)
 
 
-        
 class aCTPandaGetJobs(aCTATLASProcess):
 
     """
@@ -79,14 +59,15 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 role = 'analysis'
             self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
             self.proxymap[role] = proxyid
-            
+
         # queue interval
         self.queuestamp=0
 
         self.sites={}
 
+
     def getEndTime(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime())
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
     def setSites(self):
@@ -97,8 +78,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         return self.pandas[self.sites[sitename]['type']]
 
 
-    def getJobs(self,num):
-
+    def getJobs(self, num):
         """
         Get at most num panda jobs from panda server. Store fetched jobs in database.
         """
@@ -117,7 +97,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 continue
 
             # Get number of jobs injected into ARC but not yet submitted
-            nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
+            nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
 
             # Get total number of active jobs
             nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' \
@@ -143,25 +123,25 @@ class aCTPandaGetJobs(aCTATLASProcess):
             # if no jobs available
             stopflag=False
        
-            for nc in range(0,max(int(num/nthreads),1)):
+            for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:
                     continue
 
-                tlist=[]
+                tlist = []
 
-                for i in range(0,nthreads):
+                for i in range(0, nthreads):
                     if attrs['type'] == "analysis":
-                        r=random.Random()
+                        r = random.Random()
                         if r.randint(0,100) <= 10:
-                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                         else:
-                            t=PandaGetThr(self.getPanda(site).getJob,site,'user')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
                     else:
-                        r=random.Random()
+                        r = random.Random()
                         if r.randint(0,100) <= 10:
-                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                         else:
-                            t=PandaGetThr(self.getPanda(site).getJob,site)
+                            t = PandaGetThr(self.getPanda(site).getJob, site)
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -172,9 +152,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     
                 for t in tlist:
                     t.join()
-                    (pandaid,pandajob,eventranges)=t.result
+                    (pandaid, pandajob, eventranges) = t.result
                     if pandaid == None:
-                        stopflag=True
+                        stopflag = True
                         continue
                     
                     n = {}
@@ -196,7 +176,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
         return count
 
 
-
     def process(self):
         """
         Method called from loop
@@ -204,7 +183,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         self.setSites()
 
         # request new jobs
-        num=self.getJobs(int(self.conf.get(['panda','getjobs'])))
+        num = self.getJobs(int(self.conf.get(['panda','getjobs'])))
         if num:
             self.log.info("Got %i jobs" % num)
         
