@@ -119,12 +119,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
 
-            # Limit number of jobs waiting submission to avoid getting too many
-            # jobs from Panda 
-            if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
-                self.log.info("Site %s: at limit of sent jobs" % site)
-                continue
-
             # Get total number of active jobs
             nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' \
                                           and actpandastatus!='donefailed' and actpandastatus!='donecancelled'" % site)
@@ -132,9 +126,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
             # Limit number of jobs waiting submission to avoid getting too many
             # jobs from Panda 
-            #if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
-            #    self.log.info("Site %s: at limit of sent jobs" % site)
-            #    continue
+            if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
+                self.log.info("Site %s: at limit of sent jobs" % site)
+                continue
             
             if self.sites[site]['maxjobs'] == 0:
                 self.log.info("Site %s: accepting new jobs disabled" % site)
@@ -145,7 +139,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 continue
 
             nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
-            #nthreads = min(4, self.sites[site]['maxjobs'] - nall) 
 
             # if no jobs available
             stopflag=False
@@ -159,16 +152,16 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 for i in range(0,nthreads):
                     if attrs['type'] == "analysis":
                         r=random.Random()
-                        if r.randint(0,100) <= 2:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        if r.randint(0,100) <= 10:
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'user')
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'user')
                     else:
                         r=random.Random()
-                        if r.randint(0,100) <= 2:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
+                        if r.randint(0,100) <= 10:
+                            t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
                         else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site)
+                            t=PandaGetThr(self.getPanda(site).getJob,site)
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -179,18 +172,27 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     
                 for t in tlist:
                     t.join()
-                    (pandaid,pandajob)=t.result
+                    (pandaid,pandajob,eventranges)=t.result
                     if pandaid == None:
                         stopflag=True
                         continue
-                    n={}
+                    
+                    n = {}
+                    # Check eventranges is defined for ES jobs
+                    if re.search('eventService=True', pandajob) and (eventranges is None or eventranges == '[]'):
+                        self.log.warning('%s: No event ranges given by panda' % pandaid)
+                        n['pandastatus'] = 'finished'
+                        n['actpandastatus'] = 'finished'
+                        n['arcjobid'] = -1 # dummy id so job is not submitted
+                    else:
+                        n['pandastatus'] = 'sent'
+                        n['actpandastatus'] = 'sent'
+                    n['siteName'] = site
+                    n['proxyid'] = self.proxymap[attrs['type']]
+                    n['eventranges'] = eventranges
+                    self.dbpanda.insertJob(pandaid, pandajob, n)
+                    count += 1
 
-                    n['pandastatus']='sent'
-                    n['actpandastatus'] = 'sent'
-                    n['siteName']=site
-                    n['proxyid']=self.proxymap[attrs['type']]
-                    self.dbpanda.insertJob(pandaid,pandajob,n)
-                    count+=1
         return count
 
 
