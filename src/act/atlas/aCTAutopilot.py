@@ -106,7 +106,7 @@ class aCTAutopilot(aCTATLASProcess):
         hb = ''
         if pstatus == 'running' or pstatus == 'transferring':
             hb = ' and sendhb=1'
-        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node']
+        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount']
         # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
         if pstatus == 'transferring':
             jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) and eventranges is NULL limit 1000", columns)
@@ -130,8 +130,9 @@ class aCTAutopilot(aCTATLASProcess):
             jd['node'] = j['node']
             jd['siteName'] = j['siteName']
             try:
-                jd['jobMetrics']="coreCount=%s" % self.sites[j['siteName']]['corecount']
-            except Exception,x:
+                jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
+                self.log.info('%s: %s' % (j['pandaid'], jd['jobMetrics']))
+            except:
                 pass
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
