@@ -131,7 +131,7 @@ class aCTAutopilot(aCTATLASProcess):
             jd['siteName'] = j['siteName']
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
-                self.log.info('%s: %s' % (j['pandaid'], jd['jobMetrics']))
+                self.log.debug('%s: %s' % (j['pandaid'], jd['jobMetrics']))
             except:
                 pass
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
