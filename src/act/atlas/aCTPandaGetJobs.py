@@ -11,7 +11,7 @@ from aCTAGISParser import aCTAGISParser
 
 class PandaGetThr(Thread):
     """
-    Similar to previous but for aCTPanda.getJob
+    Helper function for getting panda jobs
     """
     def __init__ (self, func, siteName, prodSourceLabel=None):
         Thread.__init__(self)
@@ -132,13 +132,13 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 for i in range(0, nthreads):
                     if attrs['type'] == "analysis":
                         r = random.Random()
-                        if r.randint(0,100) <= 10:
+                        if r.randint(0,100) <= 2:
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
                     else:
                         r = random.Random()
-                        if r.randint(0,100) <= 10:
+                        if r.randint(0,100) <= 2:
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site)

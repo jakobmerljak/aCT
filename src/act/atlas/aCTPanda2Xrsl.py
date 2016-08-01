@@ -97,8 +97,7 @@ class aCTPanda2Xrsl:
             self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
 
         if cpucount == 0:
-            #cpucount = 2*24*3600*self.getNCores()
-            cpucount = 60*self.maxwalltime*self.getNCores()
+            cpucount = 2*24*3600
 
         #if cpucount < 50000:
         #    cpucount = 50000

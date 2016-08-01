@@ -124,7 +124,6 @@ class aCTAGISParser:
             self.ddmjson = json.load(f)
         # make map of bucket_id: endpoint
         for ep in self.ddmjson:
-            print ep['name']
             try:
                 bucket_id = ep['resource']['bucket_id']
             except:
