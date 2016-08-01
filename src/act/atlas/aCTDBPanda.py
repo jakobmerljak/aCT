@@ -46,7 +46,7 @@ class aCTDBPanda(aCTDB):
           - Selected fields from above list:
             - pandaid, siteName, actpandastatus, startTime, endTime
         '''
-        aCTDB.createTables(self)
+
         str="""
         create table pandajobs (
         id INTEGER PRIMARY KEY AUTO_INCREMENT,
