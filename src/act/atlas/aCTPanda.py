@@ -178,6 +178,11 @@ class aCTPanda:
         if desc:
             for key in desc.keys():
                 node[key]=desc[key]
+        # protection against bad pickles
+        if 'jobId' not in node or not node['jobId']:
+            node['jobId'] = pandaId
+        if 'stste' not in node or not node['state']:
+            node['state'] = state
         urldesc=None
         urldata=self.__HTTPConnect__('updateJob',node)
         try:

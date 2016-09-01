@@ -180,10 +180,10 @@ class aCTAutopilot(aCTATLASProcess):
         
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
-        tlist=[]
         
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
+            tlist=[]
             if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']) and j['eventranges']:
                 
                 # If zip is used we need to first send transferring heartbeat
@@ -225,7 +225,10 @@ class aCTAutopilot(aCTATLASProcess):
                 for eventrange in eventrangeslist:
                     node = {}
                     node['eventRangeID'] = eventrange['eventRangeID']
-                    node['eventStatus'] = j['actpandastatus']
+                    try:
+                        node['eventStatus'] = eventrange['status']
+                    except:
+                        node['eventStatus'] = j['actpandastatus']
                     node['objstoreID'] = objstoreID
                     t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRange, node)
                     tlist.append(t)
@@ -240,7 +243,8 @@ class aCTAutopilot(aCTATLASProcess):
                 if t.result['StatusCode'][0] == '60':
                     self.log.error('Failed to contact Panda, proxy may have expired')
                 elif t.result['StatusCode'][0] == '30':
-                    self.log.error('Job was already killed')
+                    self.log.error('%s: Job was already killed' % j['pandaid'])
+                    break
                     
         tlist = []
         for j in jobs:

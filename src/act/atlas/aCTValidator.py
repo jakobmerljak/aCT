@@ -390,22 +390,30 @@ class aCTValidator(aCTATLASProcess):
             self.dbpanda.updateJobLazy(pandaid, desc)
             return
         
-        eventsdone = []
+        eventsdone = {}
         eventmeta = minidom.parseString(processedevents.read())
         events = eventmeta.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
         for event in events:
-            eventsdone.append(event.getAttribute('EventRangeID'))
+            try:
+                eventsdone[event.getAttribute('EventRangeID')] = event.getAttribute('Status')
+            except:
+                eventsdone[event.getAttribute('EventRangeID')] = 'finished'
     
         # Check that events done corresponds to events asked
-        for event in eventsdone[:]:
+        for event in eventsdone.keys():
             if event not in [e['eventRangeID'] for e in eventranges]:
                 self.log.warning("%s: Event ID %s was processed but was not in eventranges!" % (pandaid, event))
-                eventsdone.remove(event)
+                del eventsdone[event]
 
         # Update DB with done events
-        self.log.info("%s: %i events done out of %i" % (pandaid, len(eventsdone), len(eventranges)))                
-        eventranges = [e for e in eventranges if e['eventRangeID'] in eventsdone]
-        desc = {"eventranges": json.dumps(eventranges)}
+        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in eventsdone.items() if v == 'finished']), len([k for k,v in eventsdone.items() if v == 'failed']), len(eventranges)))                
+        finaleventranges = []
+        for e in eventranges:
+            if e['eventRangeID'] in eventsdone:
+                e['status'] = eventsdone[e['eventRangeID']]
+                finaleventranges.append(e)
+
+        desc = {"eventranges": json.dumps(finaleventranges)}
         self.dbpanda.updateJobLazy(pandaid, desc)
         
 
