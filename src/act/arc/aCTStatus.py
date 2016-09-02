@@ -187,9 +187,9 @@ class aCTStatus(aCTProcess):
             jobs = self.db.getArcJobsInfo(select, columns=['id', 'JobID', 'appjobid', 'arcstate'])
             
             for job in jobs:
-                if job['arcstate'] == 'toclean':
-                   # delete jobs stuck in toclean
-                   self.log.info("%s: Job stuck in toclean for too long, deleting" % (job['appjobid']))
+                if job['arcstate'] == 'toclean' or job['arcstate'] == 'cancelling':
+                   # delete jobs stuck in toclean/cancelling
+                   self.log.info("%s: Job stuck in toclean/cancelling for too long, deleting" % (job['appjobid']))
                    self.db.deleteArcJob(job['id'])
                    continue
 
