@@ -31,9 +31,10 @@ class PandaEventsThr(Thread):
     """
     Generic function for event service-related calls
     """
-    def __init__ (self, func, node, data=None):
+    def __init__ (self, func, id, node, data=None):
         Thread.__init__(self)
         self.func = func
+        self.id = id
         self.node = node
         self.data = data
         self.result = None
@@ -181,9 +182,10 @@ class aCTAutopilot(aCTATLASProcess):
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
         
+        tlist=[]
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
-            tlist=[]
+            eventrangestoupdate = []
             if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']) and j['eventranges']:
                 
                 # If zip is used we need to first send transferring heartbeat
@@ -213,7 +215,6 @@ class aCTAutopilot(aCTATLASProcess):
                                 
                 eventranges = j['eventranges']
                 eventrangeslist = json.loads(eventranges)
-                self.log.info('%s: updating %i event ranges' % (j['pandaid'], len(eventrangeslist)))
                 
                 # Get object store ID used
                 try:
@@ -230,22 +231,25 @@ class aCTAutopilot(aCTATLASProcess):
                     except:
                         node['eventStatus'] = j['actpandastatus']
                     node['objstoreID'] = objstoreID
-                    t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRange, node)
-                    tlist.append(t)
-
-            aCTUtils.RunThreadsSplit(tlist, nthreads)
-            for t in tlist:
-                self.log.debug(t.result)
-                # If update fails events will be rescheduled to another job
-                if t.result == None or not t.result.has_key('StatusCode'):
-                    # Strange response from panda
-                    continue
-                if t.result['StatusCode'][0] == '60':
-                    self.log.error('Failed to contact Panda, proxy may have expired')
-                elif t.result['StatusCode'][0] == '30':
-                    self.log.error('%s: Job was already killed' % j['pandaid'])
-                    break
+                    eventrangestoupdate.append(node)
                     
+                self.log.info('%s: updating %i event ranges: %s' % (j['pandaid'], len(eventrangestoupdate), eventrangestoupdate))
+                node = {'eventRanges': json.dumps(eventrangestoupdate)}
+                t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRanges, j['pandaid'], node)
+                tlist.append(t)
+
+        aCTUtils.RunThreadsSplit(tlist, nthreads)
+        for t in tlist:
+            self.log.debug('%s: %s' % (t.id, t.result))
+            # If update fails events will be rescheduled to another job
+            if t.result == None or not t.result.has_key('StatusCode'):
+                # Strange response from panda
+                continue
+            if t.result['StatusCode'][0] == '60':
+                self.log.error('Failed to contact Panda, proxy may have expired')
+            elif t.result['StatusCode'][0] == '30':
+                self.log.warning('%s: Job was already killed' % j['pandaid'])
+                
         tlist = []
         for j in jobs:
             # If true pilot skip heartbeat and just update DB
@@ -292,6 +296,7 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
         for t in tlist:
+            self.log.debug('%s: %s' % (t.id, t.result))
             if t.result == None:
                 continue
             if t.result['StatusCode'] and t.result['StatusCode'][0] != '0':

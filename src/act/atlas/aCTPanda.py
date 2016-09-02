@@ -156,6 +156,19 @@ class aCTPanda:
             return None
         return urldesc
 
+    def updateEventRanges(self, node):
+        urldata=self.__HTTPConnect__('updateEventRanges', node)
+        self.log.debug('panda returned %s' % str(urldata))
+        if not urldata:
+            self.log.info('Could not update event ranges in panda')
+            return None
+        try:
+            urldesc = cgi.parse_qs(urldata)
+        except Exception,x:
+            self.log.error(x)
+            return None
+        return urldesc
+
     def getStatus(self,pandaId):
         self.log.info("entry %d" % pandaId)
         node={}
@@ -185,6 +198,7 @@ class aCTPanda:
             node['state'] = state
         urldesc=None
         urldata=self.__HTTPConnect__('updateJob',node)
+        self.log.debug('panda returned %s' % str(urldata))
         try:
             urldesc = cgi.parse_qs(urldata)
         except Exception,x:
