@@ -186,7 +186,14 @@ class aCTAutopilot(aCTATLASProcess):
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
             eventrangestoupdate = []
-            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']) and j['eventranges']:
+            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
+                
+                if not j['eventranges'] or j['eventranges'] == '[]':
+                    # Create the empty pickle so that heartbeat code below doesn't fail
+                    jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    jobinfo.writeToFile(fname)
+                    continue
                 
                 # If zip is used we need to first send transferring heartbeat
                 # with jobMetrics containing the zip file
@@ -299,7 +306,7 @@ class aCTAutopilot(aCTATLASProcess):
             self.log.debug('%s: %s' % (t.id, t.result))
             if t.result == None:
                 continue
-            if t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
+            if 'StatusCode' in t.result and t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
                 self.log.error('Error updating panda')
                 continue
             jd={}
