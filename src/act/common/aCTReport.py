@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-import aCTConfig
 import re
 import subprocess
-import aCTLogger
+from act.common import aCTConfig
+from act.common import aCTLogger
 from act.arc import aCTDBArc
 from act.atlas import aCTDBPanda
 
@@ -167,10 +167,37 @@ class aCTStatus:
                 log += '%10s' % '-'
         print log+'\n\n'
 
-        
+    def StuckReport(self):
+
+        # Query for lost jobs older than lostlimit
+        lostlimit = 86400
+        select = "(arcstate='submitted' or arcstate='running') and " \
+                 + self.db.timeStampLessThan("tarcstate", lostlimit) + \
+                 " and sendhb=1 and arcjobs.id=pandajobs.arcjobid order by tarcstate"
+        columns = ['cluster']
+        jobs = self.db.getArcJobsInfo(select, columns, tables='arcjobs,pandajobs')
+
+        if jobs:
+            print 'Found %d jobs not updated in over %d seconds:\n' % (len(jobs), lostlimit)
+
+            clustercount = {}
+            for job in jobs:
+                try:
+                    host = re.search('.+//([^:]+)', job['cluster']).group(1)
+                except:
+                    pass
+                if host in clustercount:
+                    clustercount[host] += 1
+                else:
+                    clustercount[host] = 1
+
+            for cluster, count in clustercount.items():
+                print count, cluster
+            print
 
 acts=aCTStatus()
 acts.PandaReport()
 acts.JobReport()
+acts.StuckReport()
 acts.ProcessReport()
 
