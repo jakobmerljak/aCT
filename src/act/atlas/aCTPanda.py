@@ -1,6 +1,7 @@
 import cgi
 import urllib2, urllib, socket, httplib
 from threading import Thread
+import os
 import pickle
 import re
 from act.common import aCTConfig
@@ -48,9 +49,7 @@ class aCTPanda:
             conn.close()
         except Exception,x:
             self.log.error("error in connection: %s" %x)
-            return None
         return urldata
-
 
     def __HTTPConnectMon__(self,mode,node):
         urldata = None
@@ -65,22 +64,18 @@ class aCTPanda:
             return None
         return urldata
         
-    def getQueueStatus(self,cluster):
+    def getQueueStatus(self, queue=None):
         node = {}
-        query = "query?tpmes=pilotpars&queue=ARC-%s" % cluster
-        urldata=self.__HTTPConnectMon__(query,node)
-        status=None
-        try:
-            keys=urldata.split("|")
-            for i in keys:
-                if (i.find("status")) >= 0 :
-                    res=re.match("status=(.+)",i)
-                    status=res.group(1)
-        except Exception,x:
-            self.log.error(x)
+        if queue:
+            node = {'site': queue}
+        self.log.debug('Getting queue info')
+        urldata = self.__HTTPConnect__('getJobStatisticsWithLabel', node)
+        if not urldata:
+            self.log.warning('No queue info returned by panda')
             return None
-        return status
-        
+
+        data = pickle.loads(urldata)
+        return data
     
     def getJob(self,siteName,prodSourceLabel=None):
         node={}
@@ -103,7 +98,7 @@ class aCTPanda:
         status = urldesc['StatusCode'][0]
         if status == '20':
             self.log.debug('No Panda activated jobs available')
-            return (None,None,None)
+            return (-1,None,None)
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
@@ -234,30 +229,9 @@ class aCTPanda:
             thr.join()
         
 if __name__ == '__main__':
-    # just for testing
-    import logging
-    import sys
-    logging.basicConfig(level=logging.DEBUG)
-    a=aCTPanda(logging.getLogger('test'))
-    print a.getQueueStatus("pikolit.ijs.si")
-
-    #a.getStatus(17058051)
-    #a.updateStatus(17058796,'activated')
-    #a.updateStatus(17058051,'activated')
-    #a.updateStatus(17058797,'activated')
-    #a.updateStatus(17397310,'activated')
-
-    #a.getJob()
-
-    #t = Thread(target=a.getStatus(17058051),name='st1')
-    #t.setDaemon(True)
-    #t.start()
-    #t = Thread(target=a.getStatus(17058796),name='st2')
-    #t.setDaemon(True)
-    #t.start()
-    #a.getst([17058051,17058796,17058797,17397310])
-    l=a.queryJobInfo()
-    for j in l:
-        if j['jobStatus'] != 'activated':
-            print j
     
+    from act.common.aCTLogger import aCTLogger
+    logger = aCTLogger('test')
+    log = logger()
+    p = aCTPanda(log, os.environ['X509_USER_PROXY'])
+    print p.getQueueStatus('UIO')
