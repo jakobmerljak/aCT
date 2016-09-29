@@ -86,6 +86,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             for site in [k for k,v in self.sites.items() if v['enabled']]:
                 if site not in queueinfo:
                     self.log.debug("%s: no jobs" % site)
+                    self.activated[site] = {'rc_test': 0, 'rest': 0}
                     continue
                 n_rc_test = 0
                 n_rest = 0
@@ -161,7 +162,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                             self.log.debug('%s: No rc_test activated jobs' % site)
                             continue
                         else:
-			    t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                     else:
                         if site in self.activated and self.activated[site]['rest'] == 0:
                             self.log.debug('%s: No activated jobs' % site)
