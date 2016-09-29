@@ -144,15 +144,17 @@ class aCTPanda2Xrsl:
         if memory <= 500:
             memory = 500
 
-        if self.sitename == 'BOINC':
+        if self.sitename == 'BOINC' or self.sitename == 'BOINC_MCORE':
             memory = 2000
 
         # hack mcore pile, use new convention for memory
-        if self.getNCores() > 1 and memory > 3000:
-            if memory > 5000:
-                memory = memory / self.getNCores()
-            else:
-                memory = 3000
+        #if self.getNCores() > 1 and memory > 3000:
+        #    if memory > 1000:
+        #        memory = memory / self.getNCores()
+        #    else:
+        #        memory = 3000
+        if self.getNCores() > 1:
+            memory = memory / self.getNCores()
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
@@ -334,6 +336,9 @@ class aCTPanda2Xrsl:
 
         output = '("jobSmallFiles.tgz" "")'
         output += '("@output.list" "")'
+        # needed for SCEAPI
+        # generated output file list"
+        output += '("output.list" "")'
         self.xrsl['outputs'] = "(outputfiles = %s )" % output
 
         if self.truepilot:

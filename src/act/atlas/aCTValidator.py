@@ -368,7 +368,7 @@ class aCTValidator(aCTATLASProcess):
         esjobs = self.dbpanda.getJobs(select, ['eventranges', 'pandaid'])
         if len(esjobs) != 1:
             # unexpected
-            self.log.error("%s: Could not find eventranges for arcjobid %s" % str(arcjobid))
+            self.log.error("Could not find eventranges for arcjobid %s" % str(arcjobid))
             return
         
         eventranges = esjobs[0]['eventranges']
