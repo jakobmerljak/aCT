@@ -67,6 +67,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
         self.sites={}
         # Panda info on activated jobs: {queue: {'rc_test': 2, 'rest': 40}}
         self.activated = {}
+        # Flag for calling getJob no matter what to have a constant stream
+        self.getjob = False
 
 
     def getEndTime(self):
@@ -80,6 +82,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
         """
         Get the number of activated jobs for each served queue
         """
+        # If panda query fails safer to assume all queues have jobs
+        self.activated.clear() 
         # Assume any proxy is ok to query panda
         queueinfo = self.pandas.values()[0].getQueueStatus()
         if queueinfo:
@@ -158,19 +162,20 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 for i in range(0, nthreads):
                     r = random.Random()
                     if r.randint(0,100) <= 2:
-                        if site in self.activated and self.activated[site]['rc_test'] == 0:
+                        if (not self.getjob) and site in self.activated and self.activated[site]['rc_test'] == 0:
                             self.log.debug('%s: No rc_test activated jobs' % site)
                             continue
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
                     else:
-                        if site in self.activated and self.activated[site]['rest'] == 0:
+                        if (not self.getjob) and site in self.activated and self.activated[site]['rest'] == 0:
                             self.log.debug('%s: No activated jobs' % site)
                             continue
                         elif attrs['type'] == "analysis":
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site)
+                    self.getjob = False
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -183,7 +188,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     t.join()
                     (pandaid, pandajob, eventranges) = t.result
                     if pandaid == -1: # No jobs available
-                        self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
+                        if site in self.activated:
+                            self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
+                        stopflag = True
                         continue
                     if pandaid == None:
                         stopflag = True
@@ -216,6 +223,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         if not self.activated or time.time() - self.starttime > 300:
             self.getActivated()
             self.starttime = time.time()
+            self.getjob = True
 
         # request new jobs
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))
