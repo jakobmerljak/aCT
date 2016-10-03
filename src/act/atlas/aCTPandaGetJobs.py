@@ -183,7 +183,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     t.join()
                     (pandaid, pandajob, eventranges) = t.result
                     if pandaid == -1: # No jobs available
-                        self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
+                        if site in self.activated:
+                            self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
                         continue
                     if pandaid == None:
                         stopflag = True
