@@ -183,16 +183,15 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         self.log.info("Site %s: reached max job limit of %d" % (site, self.sites[site]['maxjobs']))
                         stopflag = True
                         break
-                    
+
+                activatedjobs = False
                 for t in tlist:
                     t.join()
                     (pandaid, pandajob, eventranges) = t.result
                     if pandaid == -1: # No jobs available
-                        if site in self.activated:
-                            self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
-                        stopflag = True
                         continue
-                    if pandaid == None:
+                    activatedjobs = True
+                    if pandaid == None: # connection error
                         stopflag = True
                         continue
                     
@@ -211,6 +210,11 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     n['eventranges'] = eventranges
                     self.dbpanda.insertJob(pandaid, pandajob, n)
                     count += 1
+
+                if not activatedjobs:
+                    if site in self.activated:
+                        self.activated[site]['rest'] = 0
+                    stopflag = True
 
         return count
 
