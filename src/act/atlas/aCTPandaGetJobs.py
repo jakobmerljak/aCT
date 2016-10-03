@@ -126,6 +126,14 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.info("Site %s is offline, will not fetch new jobs" % site)
                 continue
 
+            if attrs['maxjobs'] == 0:
+                self.log.info("Site %s: accepting new jobs disabled" % site)
+                continue
+
+            if site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
+                self.log.info("Site %s: No activated jobs" % site)
+                continue
+            
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
 
@@ -138,10 +146,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
             # jobs from Panda 
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
                 self.log.info("Site %s: at limit of sent jobs" % site)
-                continue
-            
-            if self.sites[site]['maxjobs'] == 0:
-                self.log.info("Site %s: accepting new jobs disabled" % site)
                 continue
             
             if nall >= self.sites[site]['maxjobs']:
