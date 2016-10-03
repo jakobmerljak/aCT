@@ -39,13 +39,14 @@ class aCTDBPanda(aCTDB):
            - computingElement: CE where the job is running
            - proxyid: ID of proxy in proxies table to use for this job
            - sendhb: Flag to say whether or not to send heartbeat
+           - eventranges: event ranges for event service jobs
            - corecount: Number of cores used by job
            
         pandaarchive:
           - Selected fields from above list:
             - pandaid, siteName, actpandastatus, startTime, endTime
         '''
-        aCTDB.createTables(self)
+
         str="""
         create table pandajobs (
         id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -66,6 +67,7 @@ class aCTDBPanda(aCTDB):
         computingElement VARCHAR(255),
         proxyid integer,
         sendhb TINYINT(1) DEFAULT 1,
+        eventranges mediumtext,
         corecount integer
     )
 """

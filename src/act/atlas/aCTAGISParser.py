@@ -7,10 +7,9 @@
 ## maxjobs defaults to 1M
 ## endpoints should be pulled out of "queues" (ce_endpoints)
 ## corecount defaults to 1
-## catalog defaults to panda config value
 import logging
 import time
-import os, sys
+import os, re, sys
 import json
 from act.common import aCTConfig
 
@@ -43,10 +42,6 @@ class aCTAGISParser:
             except:
                 pass
             try:
-                sites[sitename]['catalog'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["catalog"])[0]
-            except:
-                sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
-            try:
                 sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
             except:
                 pass
@@ -66,8 +61,6 @@ class aCTAGISParser:
             agisjson=json.load(f)
         sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
-            if not sites[sitename].has_key('catalog'):
-                sites[sitename]['catalog'] = self.conf.get(["panda", "catalog"])
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
             if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
@@ -110,8 +103,41 @@ class aCTAGISParser:
                 sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
             # true pilot or not
             sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv')
+            # set OS bucket IDs
+            try:
+                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
+                sites[sitename]['ddmoses'] = objstore
+            except:
+                self.log.debug('No ES object store for %s', sitename)
+            try:
+                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_LOGS'][0]
+                sites[sitename]['ddmoslogs'] = objstore
+            except:
+                self.log.debug('No LOGS object store for %s', sitename)
         self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
         return sites
+
+    def _parseDDMEndpoints(self, filename):
+        self.osmap = {}
+        self.bucketmap = {}
+        with open(filename) as f:
+            self.ddmjson = json.load(f)
+        # make map of bucket_id: endpoint
+        for ep in self.ddmjson:
+            try:
+                bucket_id = ep['resource']['bucket_id']
+            except:
+                self.log.info('No bucket_id info for %s', ep['name'])
+                continue
+            try:
+                protocol = [p for p in ep['protocols'].keys() if p.startswith('s3://')][0]
+            except:
+                self.log.info('No s3 endpoint for %s' % ep['name'])
+                continue
+            endpoint = '%s%s' % (protocol, ep['protocols'][protocol][0][2])
+            endpoint = re.sub('s3:/', 's3://', re.sub('//', '/', endpoint))
+            self.osmap[bucket_id] = endpoint
+            self.bucketmap[ep['name']] = {'bucket_id': bucket_id, 'type': ep['type']}
 
     def _mergeSiteDicts(self, dict1, dict2):
         for d in dict2.keys():
@@ -129,7 +155,7 @@ class aCTAGISParser:
         
         # wait for AGIS json to be produced
         i = 0
-        while (True):
+        while True:
             try:
                 agismtime = os.stat(agisfile).st_mtime
                 break
@@ -145,6 +171,7 @@ class aCTAGISParser:
             self.log.info("AGIS file and/or config modified, reparsing site info")
             pilotmgr = self.conf.get(['agis','pilotmanager'])
             start_parsing = time.time()
+            self._parseDDMEndpoints(self.conf.get(['agis', 'osfilename']))
             self.sites = self._parseAgisJson(agisfile, pilotmgr)
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
             self.tparse = time.time()
@@ -162,6 +189,11 @@ class aCTAGISParser:
 
         return self.sites
     
+    def getOSMap(self):
+        ''' Return dictionary of OS ID to OS endpoint'''
+        
+        return self.osmap
+    
 if __name__ == '__main__':
 
     import pprint
@@ -173,7 +205,15 @@ if __name__ == '__main__':
     while 1:
         sites = agisparser.getSites()
         sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
-        pprint.pprint(sites)
+        #pprint.pprint(sites)
+        for s,i in sites.items():
+            try:
+                print s, i['ddmoses'], i['ddmoslogs']
+            except:
+                pass
         print len(sites)
+        oses = agisparser.getOSMap()
+        sites = dict([(s,i) for s,i in oses.items()])
+        pprint.pprint(sites)
         exit(1)
         time.sleep(10)

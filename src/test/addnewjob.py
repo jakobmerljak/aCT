@@ -3,20 +3,25 @@
 import logging
 from act.arc.aCTDBArc import aCTDBArc
 from act.common.aCTProxy import aCTProxy
+from act.common.aCTLogger import aCTLogger
 
-db = aCTDBArc(logging.getLogger(), "act")
+logger = aCTLogger('acttest', cluster='test')
+log = logger()
+
+db = aCTDBArc(log, "act")
 
 xrsl = '''&(executable=/bin/sleep)
            (arguments=1)
            (stdout=stdout)
            (rerun=2)
            (gmlog=gmlog)
+           (inputfiles = (file1 "srm://srm.ndgf.org:8443;cache=no/atlas/disk/atlasdatadisk/rucio/mc15_13TeV/fe/a0/AOD.07849074._019904.pool.root.1"))
            '''
 p=aCTProxy(logging.getLogger(), 1)
 voms="atlas"
 attribute="" # e.g. attribute="/atlas/Role=production"
 proxypath=p.conf.get(["voms", "proxypath"])
 validHours=5
-proxyid = p.createVOMSAttribute(voms, attribute, proxypath)
+proxyid =1 # p.createVOMSAttribute(voms, attribute, proxypath, validHours)
 
-db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo4.cern.ch/fork', proxyid=proxyid, maxattempts=5)
+db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo5.cern.ch/fork', proxyid=proxyid, maxattempts=5)

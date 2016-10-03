@@ -18,7 +18,8 @@ class aCTPanda2Arc(aCTATLASProcess):
         self.setSites()
 
     def setSites(self):
-        self.sites = self.agisparser.getSites()
+        self.sites = self.agisparser.getSites()                        
+        self.osmap = self.agisparser.getOSMap()                        
 
     def createArcJobs(self):
 
@@ -27,13 +28,11 @@ class aCTPanda2Arc(aCTATLASProcess):
 
         for job in jobs:
 
-            inputdir = self.conf.get(["tmp", "dir"]) + "/inputfiles/" + str(job['pandaid'])
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
-            parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']]['schedconfig'],
-                                   self.sites[job['siteName']]['catalog'], self.sites[job['siteName']]['corecount'],
-                                   self.sites[job['siteName']]['truepilot'], self.sites[job['siteName']]['maxwalltime'], inputdir)
+            parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']], self.osmap,
+                                   self.arcconf.get(["tmp", "dir"]), job['eventranges'], self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
@@ -80,7 +79,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']),
-                                                         downloadfiles=downloadfiles)
+                                                         downloadfiles=downloadfiles, fairshare=job['siteName'])
                 if not aid:
                     self.log.error("%s: Failed to insert arc job description: %s" % (job['pandaid'], xrsl))
                     continue

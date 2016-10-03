@@ -33,7 +33,6 @@
   <level>debug</level>
   <arclevel>info</arclevel>
   <logdir>/data/user/atlact1/act-test1/log</logdir>
-  <size>10000000</size>
   <rotate>25</rotate>
 </logger>
 
@@ -66,8 +65,6 @@
 <downtime>
   <stopsubmission>false</stopsubmission>
   <srmdown>false</srmdown>
-  <poolsdown>false</poolsdown>
-  <lfcdown>false</lfcdown>
   <cluster>
     <item>nosuchcluster</item>
     <item>Xjeannedarc.hpc2n.umu.se</item>

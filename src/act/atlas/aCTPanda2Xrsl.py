@@ -1,4 +1,5 @@
 import cgi
+import json
 import os
 import re
 import time
@@ -7,30 +8,41 @@ import uuid
 
 class aCTPanda2Xrsl:
 
-    def __init__(self, pandajob, sitename, schedconfig, catalog, corecount=1, truepilot=0, maxwalltime=10080, inputdir=""):
+    def __init__(self, pandajob, sitename, siteinfo, osmap, tmpdir, eventranges, log):
+        self.log = log
         self.pandajob = pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
+        self.pandaid = self.jobdesc['PandaID'][0]
         self.xrsl = {}
-        # self.ncores = 0
-        # use schedconfig/xml value for now
-        self.ncores = corecount
+        self.ncores = siteinfo['corecount']
 
         self.defaults = {}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
         self.sitename = sitename
-        self.schedconfig = schedconfig
-        self.catalog = catalog
-        self.truepilot = truepilot
-        # self.maxwalltime = int(maxwalltime / 60)
-        self.maxwalltime = maxwalltime
+        self.schedconfig = siteinfo['schedconfig']
+        self.truepilot = siteinfo['truepilot']
+        self.osmap = osmap
+        self.maxwalltime = siteinfo['maxwalltime']
         if self.maxwalltime == 0:
             self.maxwalltime = 7*24*60
-        self.inputdir = inputdir
+
+        self.tmpdir = tmpdir
+        self.inputdir = tmpdir + "/inputfiles/" + self.jobdesc['PandaID'][0]
+        self.eventranges = eventranges
         self.longjob = False
         self.traces = []
         if len(self.pandajob) > 50000:
             self.longjob = True
+
+        # ES merge jobs need unique guids because pilot uses them as dict keys
+        if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+            if self.pandajob.startswith('GUID'):
+                esjobdesc = self.pandajob[self.pandajobs.find('&'):]
+            else:
+                esjobdesc = self.pandajob[:self.pandajob.find('&GUID')] + self.pandajob[self.pandajob.find('&', self.pandajob.find('&GUID')+5):]
+            esjobdesc += '&GUID=%s' % '%2C'.join(['DUMMYGUID%i' % i for i in range(len(self.jobdesc['GUID'][0].split(',')))])
+            self.pandajob = esjobdesc
 
         #print self.jobdesc.keys()
 
@@ -79,8 +91,10 @@ class aCTPanda2Xrsl:
                 cpucount = 24*3600
 
             cpucount = int(2 * cpucount)
+            self.log.info('%s: job maxCpuCount %s' % (self.pandaid, cpucount))
         else:
             cpucount = 2*24*3600
+            self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
 
         if cpucount == 0:
             cpucount = 2*24*3600
@@ -110,6 +124,7 @@ class aCTPanda2Xrsl:
         if self.sitename == 'BOINC':
             walltime = min(240, walltime)
         cputime = self.getNCores() * walltime
+        self.log.info('%s: walltime: %d, cputime: %d' % (self.pandaid, walltime, cputime))
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
 
@@ -129,18 +144,17 @@ class aCTPanda2Xrsl:
         if memory <= 500:
             memory = 500
 
-        if self.sitename == 'BOINC':
-            memory = 2000
-
-        if self.sitename == 'CERN-PROD-preprod':
-            memory = 1900
+        if self.sitename == 'BOINC' or self.sitename == 'BOINC_MCORE':
+            memory = 2400
 
         # hack mcore pile, use new convention for memory
-        if self.getNCores() > 1 and memory > 3000:
-            if memory > 5000:
-                memory = memory / self.getNCores()
-            else:
-                memory = 3000
+        #if self.getNCores() > 1 and memory > 3000:
+        #    if memory > 1000:
+        #        memory = memory / self.getNCores()
+        #    else:
+        #        memory = 3000
+        if self.getNCores() > 1:
+            memory = memory / self.getNCores()
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
@@ -173,6 +187,8 @@ class aCTPanda2Xrsl:
                 rte = rte.replace('PROD1-', 'ATLASPROD1-')
                 rte = rte.replace('DERIVATION-', 'ATLASDERIVATION-')
                 rte = rte.replace('P1HLT-', 'ATLASP1HLT-')
+                rte = rte.replace('TESTHLT-', 'ATLASTESTHLT-')
+                rte = rte.replace('CAFHLT-', 'ATLASCAFHLT-')
 
             if rte.find('NULL') != -1:
                 rte = 'PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
@@ -213,35 +229,40 @@ class aCTPanda2Xrsl:
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
         #AF self.xrsl['arguments']  = '(arguments = "'+self.artes+'" "' + self.pandajob  + '" '+pargs+ ')'
 
+    def setInputsES(self, inf):
+        
+        for f, s, i in zip (self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['prodDBlockToken'][0].split(",")):
+            if i == 'None':
+                # Rucio file
+                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", s, f])
+            elif int(i) in self.osmap:
+                lfn = '/'.join([self.osmap[int(i)], f])
+            else:
+                # TODO this exception is ignored by panda2arc
+                raise Exception("No OS defined in AGIS for bucket id %s" % i)
+            inf[f] = lfn
 
     def setInputs(self):
 
         x = ""
         if self.truepilot:
             x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
+        elif self.eventranges:
+            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es")'      
         else:
             x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot")'
+
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-            #elif self.sitename == 'BEIJING-ERA_MCORE':
-            #x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/pilotcode-PICARD-noglexec.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-63.4.1.tar.gz")'
-            #elif self.sitename == 'BEIJING-TIANJIN-TH-1A_MCORE':
-            #x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/pilotcode-PICARD-noglexec.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-63.4.1.tar.gz")'
-            #elif self.sitename == 'HPC2N':
-            #x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/pilotcode-PICARD-noglexec.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-63.4.1.tar.gz")'
-            #elif self.sitename == 'HPC2N_MCORE':
-            #x += '(pilotcode.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/pilotcode-PICARD-noglexec.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-63.4.1.tar.gz")'
+        elif self.eventranges: # ES job
+            x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
         else:
-            if self.sitename == 'LRZ-LMU_C2PAP_ES_MCORE':
-                x += '(pilotcode.tar.gz "http://walkerr.web.cern.ch;cache=check/walkerr/pilotcode-PICARD-pap1.tar.gz")'
-            else:
-                x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch/project-atlas-gmsb/pilotcode-PICARD-64.1-PRE.tar.gz")'
-        x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-test.tar.gz")'
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+
+        if self.eventranges:
+            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es.tar.gz")'
+        else:
+            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot.tar.gz")'
 
         if self.longjob:
             # TODO create input file
@@ -261,27 +282,40 @@ class aCTPanda2Xrsl:
 
         if 'inFiles' in self.jobdesc and not self.truepilot:
             inf = {}
-            if self.catalog.find('rucio://') == 0:
-                for filename, scope, dsn, guid in zip(self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['realDatasetsIn'][0].split(","), self.jobdesc['GUID'][0].split(",")):
-                    # Hard-coded pilot rucio account - should change based on proxy
-                    # Rucio does not expose mtime, set cache=invariant so not to download too much
-                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
-                    # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", scope, filename])
-                    # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https,gsiftp;cache=invariant/replicas", scope, filename])
-                    inf[filename] = lfn
-                    dn = self.jobdesc.get('prodUserID', [])
-                    prodSourceLabel = self.jobdesc.get('prodSourceLabel', [''])[0]
-                    eventType = 'get_sm'
-                    if re.match('user', prodSourceLabel):
-                        eventType = 'get_sm_a'
-                    self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
+            if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+                self.setInputsES(inf)
 
-            else:
-                raise Exception("Unknown catalog implementation: " + self.catalog)
+            for filename, scope, dsn, guid in zip(self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['realDatasetsIn'][0].split(","), self.jobdesc['GUID'][0].split(",")):
+                # Hard-coded pilot rucio account - should change based on proxy
+                # Rucio does not expose mtime, set cache=invariant so not to download too much
+                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
+                # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", scope, filename])
+                # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https,gsiftp;cache=invariant/replicas", scope, filename])
+                inf[filename] = lfn
+                dn = self.jobdesc.get('prodUserID', [])
+                prodSourceLabel = self.jobdesc.get('prodSourceLabel', [''])[0]
+                eventType = 'get_sm'
+                if re.match('user', prodSourceLabel):
+                    eventType = 'get_sm_a'
+                self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
+
             # some files are double:
             for k, v in inf.items():
                 x += "(" + k + " " + '"' + v + '"' + ")"
-
+        
+            if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
+                # Create tmp json file to upload with job
+                pandaid = self.jobdesc['PandaID'][0]
+                try:
+                    os.mkdir(os.path.join(self.tmpdir, 'eventranges'))
+                except:
+                    pass
+                tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
+                jsondata = json.loads(self.eventranges)
+                with open(tmpjsonfile, 'w') as f:
+                    json.dump(jsondata, f)
+                x += '("eventranges.json" "%s")' %  tmpjsonfile
+            
         self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
 
     def setLog(self):
@@ -304,7 +338,7 @@ class aCTPanda2Xrsl:
 
         output = '("jobSmallFiles.tgz" "")'
         output += '("@output.list" "")'
-        # tmp hack until arc 4.1 is everywhere, to avoid "Error reading user
+        # needed for SCEAPI
         # generated output file list"
         output += '("output.list" "")'
         self.xrsl['outputs'] = "(outputfiles = %s )" % output
@@ -374,6 +408,7 @@ if __name__ == '__main__':
     pandajob = "jobsetID=21000&logGUID=1c412f70-851f-429f-ba75-6d6cc0861222&cmtConfig=x86_64-slc6-gcc49-opt&prodDBlocks=mc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cpanda.0225095920.817593.lib._7770508%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00%2Cmc15_13TeV%3Amc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471_tid07091912_00&dispatchDBlockTokenForOut=NULL%2CNULL%2CNULL&destinationDBlockToken=TOMERGE%2CTOMERGE%2CTOMERGE&destinationSE=NULL&realDatasets=panda.um.user.lcerdaal.CVBV35_MxAOD.root.67419484%2Cpanda.um.user.lcerdaal.CVBV35_hist.67419485%2Cpanda.um.user.lcerdaal.CVBV35.log.67419483&prodUserID=%2FDC%3Dch%2FDC%3Dcern%2FOU%3DOrganic+Units%2FOU%3DUsers%2FCN%3Dlcerdaal%2FCN%3D743490%2FCN%3DLeonor+Cerda+Alberich%2FCN%3Dproxy&GUID=B0B372A6-EBD5-2346-8B4B-DD44B5A83603%2C1D33B61C-C4E9-354B-B5C1-99D2B21DD2AE%2CB8E1E5E9-79E0-A343-B236-53D7726D2110%2C76469B57-AE5D-7649-9B13-6D77F3336743%2C12076092-FE84-7849-BBA3-01A2C1D9878A%2CA69E929C-A4C3-9244-B2C9-1C92D2F2F9D1%2C54DBD613-7AC3-504A-9868-85EAD2E6EEDE%2CAA40EE05-D6CE-424C-B40F-108CAE6082E3%2C7DE3CA10-FA4C-F54F-BF84-EFDD0867668F%2C35420939-2AEF-C449-BBFA-50B3E457C7DF%2CDCF848E2-E5A6-E44E-8335-7F5B2A240D5E%2C8A996316-0904-3A45-9984-DFFA524D6FF9%2C72a24b72-6b69-47a8-8182-9f6d28d16041%2CA5ADFA55-B2C5-AD4F-8CA1-A3D33F20C2D5%2CFA987BD2-32C7-3B44-BF5B-B350FF58CB7A%2C0BA2D9AB-F0E6-2240-8B5B-A03081761DC8%2C821BB226-DF9A-8E44-9094-B00583D1543F&realDatasetsIn=mc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cpanda.0225095920.817593.lib._7770508%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F%2Cmc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%2F&nSent=0&cloud=ND&StatusCode=0&homepackage=NULL&inFiles=DAOD_HIGG1D1.07091912._000016.pool.root.1%2CDAOD_HIGG1D1.07091912._000017.pool.root.1%2CDAOD_HIGG1D1.07091912._000018.pool.root.1%2CDAOD_HIGG1D1.07091912._000020.pool.root.1%2CDAOD_HIGG1D1.07091912._000021.pool.root.1%2CDAOD_HIGG1D1.07091912._000022.pool.root.1%2CDAOD_HIGG1D1.07091912._000019.pool.root.1%2CDAOD_HIGG1D1.07091912._000023.pool.root.1%2CDAOD_HIGG1D1.07091912._000024.pool.root.1%2CDAOD_HIGG1D1.07091912._000029.pool.root.1%2CDAOD_HIGG1D1.07091912._000030.pool.root.1%2CDAOD_HIGG1D1.07091912._000031.pool.root.1%2Cpanda.0225095920.817593.lib._7770508.5510350115.lib.tgz%2CDAOD_HIGG1D1.07091912._000025.pool.root.1%2CDAOD_HIGG1D1.07091912._000026.pool.root.1%2CDAOD_HIGG1D1.07091912._000027.pool.root.1%2CDAOD_HIGG1D1.07091912._000028.pool.root.1&processingType=panda-client-0.5.60-jedi-run&currentPriority=983&fsize=2704668013%2C2707060396%2C2721101358%2C2710676168%2C2705137174%2C2723773566%2C2706671129%2C2712045167%2C2673536146%2C2682993356%2C2730692285%2C2711456131%2C161138817%2C2709494869%2C2672282868%2C2652078576%2C2738865386&fileDestinationSE=ANALY_SiGNET%2CANALY_SiGNET%2CANALY_SiGNET&scopeOut=panda%2Cpanda&minRamCount=0&jobDefinitionID=21782&scopeLog=panda&transformation=http%3A%2F%2Fpandaserver.cern.ch%3A25085%2Ftrf%2Fuser%2FrunGen-00-00-02&maxDiskCount=50000&coreCount=1&prodDBlockToken=NULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL&transferType=NULL&destinationDblock=panda.um.user.lcerdaal.CVBV35_MxAOD.root.67419484_sub0282382208%2Cpanda.um.user.lcerdaal.CVBV35_hist.67419485_sub0282382207%2Cpanda.um.user.lcerdaal.CVBV35.log.67419483_sub0282382209&dispatchDBlockToken=NULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL&jobPars=-j+%22%22+--sourceURL+https%3A%2F%2Faipanda012.cern.ch%3A25443+-r+.+-p+%22runjob.sh%2520mc15_13TeV.361039.Sherpa_CT10_SinglePhotonPt35_70_CVetoBVeto.merge.DAOD_HIGG1D1.e3587_s2608_s2183_r7326_r6282_p2471%22+-l+panda.0225095920.817593.lib._7770508.5510350115.lib.tgz+-o+%22%7B%27hist-output.root%27%3A+%27panda.um.user.lcerdaal.7770508._000256.hist-output.root%27%2C+%27MxAOD.root%27%3A+%27panda.um.user.lcerdaal.7770508._000256.MxAOD.root%27%7D%22+-i+%22%5B%27DAOD_HIGG1D1.07091912._000016.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000017.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000018.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000019.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000020.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000021.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000022.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000023.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000024.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000025.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000026.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000027.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000028.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000029.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000030.pool.root.1%27%2C+%27DAOD_HIGG1D1.07091912._000031.pool.root.1%27%5D%22+--useRootCore+--rootVer+6.04.12+--writeInputToTxt+IN%3Ainput.txt+&attemptNr=5&swRelease=NULL&maxCpuCount=0&outFiles=panda.um.user.lcerdaal.7770508._000256.MxAOD.root%2Cpanda.um.user.lcerdaal.7770508._000256.hist-output.root%2Cpanda.um.user.lcerdaal.CVBV35.log.7770508.000256.log.tgz&ddmEndPointOut=NDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK&scopeIn=mc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cpanda%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV%2Cmc15_13TeV&PandaID=2773552067&sourceSite=NULL&dispatchDblock=NULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2Cpanda.0225095920.817593.lib._7770508%2CNULL%2CNULL%2CNULL%2CNULL&prodSourceLabel=user&checksum=ad%3A1a666e58%2Cad%3A2b0434ed%2Cad%3Aa2700040%2Cad%3Af3a6a55a%2Cad%3A0f9c6dab%2Cad%3A13f8e429%2Cad%3A7d8cca56%2Cad%3Adfcaf583%2Cad%3A43c44df6%2Cad%3A68de20b0%2Cad%3Ae1355f2d%2Cad%3A3faa770c%2Cad%3Aa2bb6c07%2Cad%3Ab32ddb3e%2Cad%3Ae9d53551%2Cad%3A54177370%2Cad%3A568e1bd3&jobName=user.lcerdaal.CVBV35%2F.2773037917&ddmEndPointIn=NDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK%2CNDGF-T1_SCRATCHDISK&taskID=7770508&logFile=panda.um.user.lcerdaal.CVBV35.log.7770508.000256.log.tgz"
 
     # a = aCTPanda2Xrsl(pandajob, 'LRZ-LMU_C2PAP')
-    a = aCTPanda2Xrsl(pandajob, 'LRZ-LMU_C2PAP', 'schedconfig', 'rucio://blahblah')
+    siteinfo = {'schedconfig': 'LRZ-LMU_C2PAP', 'corecount': 1, 'truepilot': False, 'maxwalltime': 10800}
+    a = aCTPanda2Xrsl(pandajob, 'LRZ-LMU_C2PAP', siteinfo, {}, '/tmp', None)
     a.parse()
     print a.getXrsl()

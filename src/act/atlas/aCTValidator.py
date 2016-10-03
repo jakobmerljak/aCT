@@ -12,6 +12,7 @@ import tarfile
 import arc
 from xml.dom import minidom
 import re
+import json
 
 class aCTValidator(aCTATLASProcess):
     '''
@@ -75,10 +76,13 @@ class aCTValidator(aCTATLASProcess):
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
+            except Exception,x:
+                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                pandapickle = None
+            try:
                 metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
             except Exception,x:
-                self.log.error("%s: failed to extract smallFiles for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
-                pandapickle = None
+                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
                 metadata = None
 
             # update pickle and dump to tmp/pickle
@@ -111,8 +115,8 @@ class aCTValidator(aCTATLASProcess):
             else:
                 jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
 
-            jobinfo.writeToFile(self.conf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
-
+            jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
+            
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
         try:
@@ -354,6 +358,65 @@ class aCTValidator(aCTATLASProcess):
             shutil.rmtree(localdir, ignore_errors=True)
 
 
+    def validateEvents(self, arcjobid):
+        '''
+        Take successful event service jobs and modify the eventranges to
+        show what was actually processed.
+        '''
+        
+        select = "arcjobid='"+str(arcjobid)+"'"
+        esjobs = self.dbpanda.getJobs(select, ['eventranges', 'pandaid'])
+        if len(esjobs) != 1:
+            # unexpected
+            self.log.error("Could not find eventranges for arcjobid %s" % str(arcjobid))
+            return
+        
+        eventranges = esjobs[0]['eventranges']
+        if not eventranges:
+            # Not ES job
+            return
+
+        pandaid = esjobs[0]['pandaid']
+        eventranges = json.loads(eventranges)
+        
+        # Get events processed from metadata-es.xml
+        try:
+            arcjob = self.dbarc.getArcJobInfo(arcjobid, ['JobID'])
+            processedevents = self._extractFromSmallFiles(arcjob, 'metadata-es.xml')
+        except Exception, e:
+            self.log.error("%s: Failed to extract events processed from metadata-es.xml: %s" % (pandaid, str(e)))
+            # Safer to mark all events as failed
+            desc = {"eventranges": "[]"}
+            self.dbpanda.updateJobLazy(pandaid, desc)
+            return
+        
+        eventsdone = {}
+        eventmeta = minidom.parseString(processedevents.read())
+        events = eventmeta.getElementsByTagName("POOLFILECATALOG")[0].getElementsByTagName("File")
+        for event in events:
+            try:
+                eventsdone[event.getAttribute('EventRangeID')] = event.getAttribute('Status')
+            except:
+                eventsdone[event.getAttribute('EventRangeID')] = 'finished'
+    
+        # Check that events done corresponds to events asked
+        for event in eventsdone.keys():
+            if event not in [e['eventRangeID'] for e in eventranges]:
+                self.log.warning("%s: Event ID %s was processed but was not in eventranges!" % (pandaid, event))
+                del eventsdone[event]
+
+        # Update DB with done events
+        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in eventsdone.items() if v == 'finished']), len([k for k,v in eventsdone.items() if v == 'failed']), len(eventranges)))                
+        finaleventranges = []
+        for e in eventranges:
+            if e['eventRangeID'] in eventsdone:
+                e['status'] = eventsdone[e['eventRangeID']]
+                finaleventranges.append(e)
+
+        desc = {"eventranges": json.dumps(finaleventranges)}
+        self.dbpanda.updateJobLazy(pandaid, desc)
+        
+
     def validateFinishedJobs(self):
         '''
         Check for jobs with actpandastatus tovalidate and pandastatus running
@@ -412,6 +475,9 @@ class aCTValidator(aCTATLASProcess):
             checkedsurls = self.checkOutputFiles(surls[se])
             for id, result in checkedsurls.items():
                 if result == self.ok:
+                    # For ES jobs, modify eventranges to what was produced
+                    self.validateEvents(id)
+
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc) 

@@ -276,7 +276,7 @@ class aCTATLASStatus(aCTATLASProcess):
                     lns.append(l)
             log+=''.join(lns[:nlines])
             # copy logfiles to failedlogs dir
-            failedlogsd = self.conf.get(["tmp","dir"])+"/failedlogs"
+            failedlogsd = self.arcconf.get(["tmp","dir"])+"/failedlogs"
             try:
                 os.mkdir(failedlogsd)
             except:
@@ -380,7 +380,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.endTime = aj['EndTime']
             # save the pickle file to be used by aCTAutopilot panda update
             try:
-                picklefile = os.path.join(self.conf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
+                picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
                 pupdate.writeToFile(picklefile)
             except Exception as e:
                 self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))

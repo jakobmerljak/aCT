@@ -1,10 +1,9 @@
 from threading import Thread
 import datetime
 import os
-import pickle
+import json
 import re
 import time
-import random
 import arc
 import aCTPanda
 from act.common import aCTProxy
@@ -28,21 +27,20 @@ class PandaThr(Thread):
     def run(self):
         self.result=self.func(self.id,self.status,self.args)
 
-class PandaGetThr(Thread):
+class PandaEventsThr(Thread):
     """
-    Similar to previous but for aCTPanda.getJob
+    Generic function for event service-related calls
     """
-    def __init__ (self,func,siteName,prodSourceLabel=None):
+    def __init__ (self, func, id, node, data=None):
         Thread.__init__(self)
-        self.func=func
-        self.siteName=siteName
-        self.prodSourceLabel=prodSourceLabel
-        self.result = (None,None)
+        self.func = func
+        self.id = id
+        self.node = node
+        self.data = data
+        self.result = None
     def run(self):
-        self.result=self.func(self.siteName,self.prodSourceLabel)
+        self.result = self.func(self.node)
 
-
-        
 class aCTAutopilot(aCTATLASProcess):
 
     """
@@ -107,7 +105,11 @@ class aCTAutopilot(aCTATLASProcess):
         if pstatus == 'running' or pstatus == 'transferring':
             hb = ' and sendhb=1'
         columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
+        if pstatus == 'transferring':
+            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) and eventranges is NULL limit 1000", columns)
+        else:
+            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -127,7 +129,6 @@ class aCTAutopilot(aCTATLASProcess):
             jd['siteName'] = j['siteName']
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
-                self.log.debug('%s: %s' % (j['pandaid'], jd['jobMetrics']))
             except:
                 pass
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
@@ -180,9 +181,84 @@ class aCTAutopilot(aCTATLASProcess):
         
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
+        
         tlist=[]
+        # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
+            eventrangestoupdate = []
+            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
+                
+                if not j['eventranges'] or j['eventranges'] == '[]':
+                    # Create the empty pickle so that heartbeat code below doesn't fail
+                    jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    jobinfo.writeToFile(fname)
+                    continue
+                
+                # If zip is used we need to first send transferring heartbeat
+                # with jobMetrics containing the zip file
+                if 'es_to_zip' in self.sites[j['siteName']]['catchall']:
+                    try:
+                        # Load pickled information from pilot
+                        fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                        jobinfo = aCTPandaJob(filename=fname)
+                        jobmetrics = {'jobMetrics': jobinfo.jobMetrics}
+                        self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
+                    except Exception,x:
+                        self.log.error('%s: No pickle info found: %s' % (j['pandaid'], x))
+                    else:
+                        t = PandaThr(self.getPanda(j['siteName']).updateStatus, j['pandaid'], 'transferring', jobmetrics)
+                        aCTUtils.RunThreadsSplit([t], nthreads)
+                        self.log.debug(t.result)
+                        # If update fails panda won't see the zip and events
+                        # will be rescheduled to another job
+                        if t.result == None or not t.result.has_key('StatusCode'):
+                            # Strange response from panda
+                            continue
+                        if t.result['StatusCode'][0] == '60':
+                            self.log.error('Failed to contact Panda, proxy may have expired')
+                        elif t.result['StatusCode'][0] == '30':
+                            self.log.error('Job was already killed')
+                                
+                eventranges = j['eventranges']
+                eventrangeslist = json.loads(eventranges)
+                
+                # Get object store ID used
+                try:
+                    objstoreID = self.sites[j['siteName']]['ddmoses']
+                except:
+                    self.log.warning('No ES object store defined for %s' % j['siteName'])
+                    objstoreID = None
+                
+                for eventrange in eventrangeslist:
+                    node = {}
+                    node['eventRangeID'] = eventrange['eventRangeID']
+                    try:
+                        node['eventStatus'] = eventrange['status']
+                    except:
+                        node['eventStatus'] = j['actpandastatus']
+                    node['objstoreID'] = objstoreID
+                    eventrangestoupdate.append(node)
+                    
+                self.log.info('%s: updating %i event ranges: %s' % (j['pandaid'], len(eventrangestoupdate), eventrangestoupdate))
+                node = {'eventRanges': json.dumps(eventrangestoupdate)}
+                t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRanges, j['pandaid'], node)
+                tlist.append(t)
 
+        aCTUtils.RunThreadsSplit(tlist, nthreads)
+        for t in tlist:
+            self.log.debug('%s: %s' % (t.id, t.result))
+            # If update fails events will be rescheduled to another job
+            if t.result == None or not t.result.has_key('StatusCode'):
+                # Strange response from panda
+                continue
+            if t.result['StatusCode'][0] == '60':
+                self.log.error('Failed to contact Panda, proxy may have expired')
+            elif t.result['StatusCode'][0] == '30':
+                self.log.warning('%s: Job was already killed' % j['pandaid'])
+                
+        tlist = []
+        for j in jobs:
             # If true pilot skip heartbeat and just update DB
             if not j['sendhb']:
                 jd={}
@@ -209,7 +285,7 @@ class aCTAutopilot(aCTATLASProcess):
             else:
                 try:
                     # Load pickled information from pilot
-                    fname = self.conf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     jobinfo = aCTPandaJob(filename=fname)
                 except Exception,x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
@@ -227,9 +303,10 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
         for t in tlist:
+            self.log.debug('%s: %s' % (t.id, t.result))
             if t.result == None:
                 continue
-            if t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
+            if 'StatusCode' in t.result and t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
                 self.log.error('Error updating panda')
                 continue
             jd={}
@@ -243,95 +320,6 @@ class aCTAutopilot(aCTATLASProcess):
             self.dbpanda.updateJob(t.id,jd)
 
         self.log.info("Threads finished")
-
-
-    def getJobs(self,num):
-
-        """
-        Get at most num panda jobs from panda server. Store fetched jobs in database.
-        """
-       
-        if num == 0:
-            return 0
-
-        count=0
-
-        for site, attrs in self.sites.iteritems():
-            if not attrs['enabled']:
-                continue        
-
-            if attrs['status'] == 'offline':
-                self.log.info("Site %s is offline, will not fetch new jobs" % site)
-                continue
-
-            # Get number of jobs injected into ARC but not yet submitted
-            nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" %  site )
-            # Get total number of active jobs
-            nall = self.dbpanda.getNJobs("siteName='%s' and actpandastatus!='done' \
-                                          and actpandastatus!='donefailed' and actpandastatus!='donecancelled'" % site)
-            self.log.info("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
-
-            # Limit number of jobs waiting submission to avoid getting too many
-            # jobs from Panda 
-            if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
-                self.log.info("Site %s: at limit of sent jobs" % site)
-                continue
-            
-            if self.sites[site]['maxjobs'] == 0:
-                self.log.info("Site %s: accepting new jobs disabled" % site)
-                continue
-            
-            if nall >= self.sites[site]['maxjobs']:
-                self.log.info("Site %s: at or above max job limit of %d" % (site, self.sites[site]['maxjobs']))
-                continue
-
-            nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
-
-            # if no jobs available
-            stopflag=False
-       
-            for nc in range(0,max(int(num/nthreads),1)):
-                if stopflag:
-                    continue
-
-                tlist=[]
-
-                for i in range(0,nthreads):
-                    if attrs['type'] == "analysis":
-                        r=random.Random()
-                        if r.randint(0,100) <= 10:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
-                        else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'user')
-                    else:
-                        r=random.Random()
-                        if r.randint(0,100) <= 10:
-                          t=PandaGetThr(self.getPanda(site).getJob,site,'rc_test')
-                        else:
-                          t=PandaGetThr(self.getPanda(site).getJob,site)
-                    tlist.append(t)
-                    t.start()
-                    nall += 1
-                    if nall >= self.sites[site]['maxjobs']:
-                        self.log.info("Site %s: reached max job limit of %d" % (site, self.sites[site]['maxjobs']))
-                        stopflag = True
-                        break
-                    
-                for t in tlist:
-                    t.join()
-                    (pandaid,pandajob)=t.result
-                    if pandaid == None:
-                        stopflag=True
-                        continue
-                    n={}
-
-                    n['pandastatus']='sent'
-                    n['actpandastatus'] = 'sent'
-                    n['siteName']=site
-                    n['proxyid']=self.proxymap[attrs['type']]
-                    self.dbpanda.insertJob(pandaid,pandajob,n)
-                    count+=1
-        return count
 
 
     def checkJobs(self):
@@ -381,27 +369,6 @@ class aCTAutopilot(aCTATLASProcess):
         self.log.info("missing jobs: %d removed" % count)
             
             
-    def checkQueues(self):
-        """
-        get the queue status from panda and store in db
-        """
-
-        if time.time()-self.queuestamp < int(self.conf.get(["panda","schedinterval"])) :
-            return
-        else:
-            self.queuestamp=time.time()
-
-        for q in self.conf.getList(["panda","queues","item"]):
-            res = re.match("ARC-(.+)",q)
-            cluster = res.group(1)
-            status = self.panda.getQueueStatus(cluster)
-            r=self.dbpanda.getSchedconfig(cluster)
-            if r is None:
-                self.dbpanda.insertSchedconfig(cluster,status)
-            else:
-                self.dbpanda.updateSchedconfig(cluster,status)
-
-
     def updateArchive(self):
         """
         Move old jobs older than 1 day to archive table

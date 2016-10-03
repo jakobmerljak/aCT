@@ -69,6 +69,8 @@ class aCTDBArc(aCTDB):
           - appjobid: job identifier of application. Used in log messages to track
             a job through the system
           - priority: ARC job priority, extracted from the job description
+          - fairshare: A string representing a share. Job submission for the same
+            cluster will be spread evenly over shares.
         jobdescriptions: job description added by the application engine
           - id: primary key
           - jobdescription: job description text
@@ -100,6 +102,7 @@ class aCTDBArc(aCTDB):
             proxyid INTEGER,
             appjobid VARCHAR(255),
             priority SMALLINT,
+            fairshare VARCHAR(255),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
             
         # First check if table already exists
@@ -185,7 +188,7 @@ class aCTDBArc(aCTDB):
         return row
 
 
-    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', downloadfiles=''):
+    def insertArcJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', downloadfiles='', fairshare=''):
         '''
         Add a new job description for the ARC engine to process. If specified
         the job will be sent to a cluster in the given list.
@@ -220,6 +223,7 @@ class aCTDBArc(aCTDB):
         desc['appjobid'] = appjobid
         desc['downloadfiles'] = downloadfiles
         desc['priority'] = priority
+        desc['fairshare'] = fairshare
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
         c.execute(s,desc.values())
@@ -377,9 +381,8 @@ class aCTDBArc(aCTDB):
         Return a list and count of clusters
         '''
         c=self.getCursor()
-        c.execute("SELECT cluster, COUNT(*) FROM arcjobs GROUP BY cluster")
+        c.execute("SELECT cluster, COUNT(*) FROM arcjobs WHERE cluster!='' GROUP BY cluster")
         rows=c.fetchall()
-        print "getActiveClusters", rows
         return rows
     
     def getClusterLists(self):
@@ -391,7 +394,6 @@ class aCTDBArc(aCTDB):
         # killed while submitting jobs
         c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' OR arcstate='submitting' GROUP BY clusterlist")
         rows=c.fetchall()
-        print "getClusterLists", rows
         return rows
     
     def _db2job(self, dbinfo):
