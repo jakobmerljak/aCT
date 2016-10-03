@@ -116,6 +116,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
         if num == 0:
             return 0
 
+        if self.getjob:
+            num = 1
+        
         count=0
 
         for site, attrs in self.sites.iteritems():
@@ -130,7 +133,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.info("Site %s: accepting new jobs disabled" % site)
                 continue
 
-            if site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
+            if (not self.getjob) and site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
                 self.log.info("Site %s: No activated jobs" % site)
                 continue
             
@@ -153,6 +156,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 continue
 
             nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
+            if self.getjob:
+                nthreads = 1
 
             # if no jobs available
             stopflag=False
@@ -179,7 +184,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site)
-                    self.getjob = False
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -217,7 +221,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
                 if not activatedjobs:
                     if site in self.activated:
-                        self.activated[site]['rest'] = 0
+                        self.activated[site] = {'rest': 0, 'rc_test': 0}
                     stopflag = True
 
         return count
@@ -237,6 +241,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))
         if num:
             self.log.info("Got %i jobs" % num)
+        self.getjob = False
         
 if __name__ == '__main__':
     am=aCTPandaGetJobs()
