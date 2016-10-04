@@ -145,7 +145,7 @@ class aCTPanda2Xrsl:
             memory = 500
 
         if self.sitename == 'BOINC' or self.sitename == 'BOINC_MCORE':
-            memory = 2000
+            memory = 2400
 
         # hack mcore pile, use new convention for memory
         #if self.getNCores() > 1 and memory > 3000:
