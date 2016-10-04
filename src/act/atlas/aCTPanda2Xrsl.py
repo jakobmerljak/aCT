@@ -187,6 +187,8 @@ class aCTPanda2Xrsl:
                 rte = rte.replace('PROD1-', 'ATLASPROD1-')
                 rte = rte.replace('DERIVATION-', 'ATLASDERIVATION-')
                 rte = rte.replace('P1HLT-', 'ATLASP1HLT-')
+                rte = rte.replace('TESTHLT-', 'ATLASTESTHLT-')
+                rte = rte.replace('CAFHLT-', 'ATLASCAFHLT-')
 
             if rte.find('NULL') != -1:
                 rte = 'PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
