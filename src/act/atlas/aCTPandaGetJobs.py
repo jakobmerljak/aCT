@@ -116,6 +116,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
         if num == 0:
             return 0
 
+        if self.getjob:
+            num = 1
+        
         count=0
 
         for site, attrs in self.sites.iteritems():
@@ -126,6 +129,14 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.info("Site %s is offline, will not fetch new jobs" % site)
                 continue
 
+            if attrs['maxjobs'] == 0:
+                self.log.info("Site %s: accepting new jobs disabled" % site)
+                continue
+
+            if (not self.getjob) and site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
+                self.log.info("Site %s: No activated jobs" % site)
+                continue
+            
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
 
@@ -140,15 +151,13 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.info("Site %s: at limit of sent jobs" % site)
                 continue
             
-            if self.sites[site]['maxjobs'] == 0:
-                self.log.info("Site %s: accepting new jobs disabled" % site)
-                continue
-            
             if nall >= self.sites[site]['maxjobs']:
                 self.log.info("Site %s: at or above max job limit of %d" % (site, self.sites[site]['maxjobs']))
                 continue
 
             nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
+            if self.getjob:
+                nthreads = 1
 
             # if no jobs available
             stopflag=False
@@ -175,7 +184,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
                             t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site)
-                    self.getjob = False
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -183,16 +191,15 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         self.log.info("Site %s: reached max job limit of %d" % (site, self.sites[site]['maxjobs']))
                         stopflag = True
                         break
-                    
+
+                activatedjobs = False
                 for t in tlist:
                     t.join()
                     (pandaid, pandajob, eventranges) = t.result
                     if pandaid == -1: # No jobs available
-                        if site in self.activated:
-                            self.activated[site]['rc_test' if t.prodSourceLabel == 'rc_test' else 'rest'] = 0
-                        stopflag = True
                         continue
-                    if pandaid == None:
+                    activatedjobs = True
+                    if pandaid == None: # connection error
                         stopflag = True
                         continue
                     
@@ -212,6 +219,11 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     self.dbpanda.insertJob(pandaid, pandajob, n)
                     count += 1
 
+                if not activatedjobs:
+                    if site in self.activated:
+                        self.activated[site] = {'rest': 0, 'rc_test': 0}
+                    stopflag = True
+
         return count
 
 
@@ -229,6 +241,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))
         if num:
             self.log.info("Got %i jobs" % num)
+        self.getjob = False
         
 if __name__ == '__main__':
     am=aCTPandaGetJobs()
