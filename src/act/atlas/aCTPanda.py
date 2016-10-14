@@ -77,7 +77,7 @@ class aCTPanda:
         data = pickle.loads(urldata)
         return data
     
-    def getJob(self,siteName,prodSourceLabel=None):
+    def getJob(self,siteName,prodSourceLabel=None,getEventRanges=True):
         node={}
         node['siteName']=siteName
         if prodSourceLabel is not None:
@@ -102,7 +102,7 @@ class aCTPanda:
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
-            if 'eventService' in urldesc and urldesc['eventService'][0] == 'True':
+            if getEventRanges and 'eventService' in urldesc and urldesc['eventService'][0] == 'True':
                 node = {}
                 node['pandaID'] = urldesc['PandaID'][0]
                 node['jobsetID'] = urldesc['jobsetID'][0]

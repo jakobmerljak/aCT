@@ -13,14 +13,15 @@ class PandaGetThr(Thread):
     """
     Helper function for getting panda jobs
     """
-    def __init__ (self, func, siteName, prodSourceLabel=None):
+    def __init__ (self, func, siteName, prodSourceLabel=None, getEventRanges=True):
         Thread.__init__(self)
         self.func = func
         self.siteName = siteName
         self.prodSourceLabel = prodSourceLabel
-        self.result = (None, None)
+        self.getEventRanges = getEventRanges
+        self.result = (None, None, None)
     def run(self):
-        self.result = self.func(self.siteName, self.prodSourceLabel)
+        self.result = self.func(self.siteName, self.prodSourceLabel, self.getEventRanges)
 
 
 class aCTPandaGetJobs(aCTATLASProcess):
@@ -161,7 +162,12 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
             # if no jobs available
             stopflag=False
-       
+
+            try:
+                getEventRanges = not attrs['truepilot']
+            except:
+                getEventRanges = True
+
             for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:
                     continue
@@ -175,15 +181,15 @@ class aCTPandaGetJobs(aCTATLASProcess):
                             self.log.debug('%s: No rc_test activated jobs' % site)
                             continue
                         else:
-                            t = PandaGetThr(self.getPanda(site).getJob, site, 'rc_test')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='rc_test', getEventRanges=getEventRanges)
                     else:
                         if (not self.getjob) and site in self.activated and self.activated[site]['rest'] == 0:
                             self.log.debug('%s: No activated jobs' % site)
                             continue
                         elif attrs['type'] == "analysis":
-                            t = PandaGetThr(self.getPanda(site).getJob, site, 'user')
+                            t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='user', getEventRanges=getEventRanges)
                         else:
-                            t = PandaGetThr(self.getPanda(site).getJob, site)
+                            t = PandaGetThr(self.getPanda(site).getJob, site, getEventRanges=getEventRanges)
                     tlist.append(t)
                     t.start()
                     nall += 1
@@ -205,7 +211,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     
                     n = {}
                     # Check eventranges is defined for ES jobs
-                    if re.search('eventService=True', pandajob) and (eventranges is None or eventranges == '[]'):
+                    if re.search('eventService=True', pandajob) and getEventRanges and (eventranges is None or eventranges == '[]'):
                         self.log.warning('%s: No event ranges given by panda' % pandaid)
                         n['pandastatus'] = 'finished'
                         n['actpandastatus'] = 'finished'

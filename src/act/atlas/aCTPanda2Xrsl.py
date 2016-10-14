@@ -36,9 +36,9 @@ class aCTPanda2Xrsl:
             self.longjob = True
 
         # ES merge jobs need unique guids because pilot uses them as dict keys
-        if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+        if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
             if self.pandajob.startswith('GUID'):
-                esjobdesc = self.pandajob[self.pandajobs.find('&'):]
+                esjobdesc = self.pandajob[self.pandajob.find('&'):]
             else:
                 esjobdesc = self.pandajob[:self.pandajob.find('&GUID')] + self.pandajob[self.pandajob.find('&', self.pandajob.find('&GUID')+5):]
             esjobdesc += '&GUID=%s' % '%2C'.join(['DUMMYGUID%i' % i for i in range(len(self.jobdesc['GUID'][0].split(',')))])
