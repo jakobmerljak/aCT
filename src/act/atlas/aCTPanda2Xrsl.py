@@ -193,6 +193,10 @@ class aCTPanda2Xrsl:
                 rte = rte.replace('P1HLT-', 'ATLASP1HLT-')
                 rte = rte.replace('TESTHLT-', 'ATLASTESTHLT-')
                 rte = rte.replace('CAFHLT-', 'ATLASCAFHLT-')
+            if cache.find('AnalysisTransforms') != -1:
+                res=re.match('(21\..+)',rte)
+                if res is not None:
+                    rte = rte.replace('21','OFFLINE-21')
 
             if rte.find('NULL') != -1:
                 rte = 'PYTHON-CVMFS-X86_64-SLC6-GCC47-OPT'
