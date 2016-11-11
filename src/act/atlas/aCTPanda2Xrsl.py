@@ -154,7 +154,11 @@ class aCTPanda2Xrsl:
         #    else:
         #        memory = 3000
         if self.getNCores() > 1:
-            memory = memory / self.getNCores()
+            # hack for 0 ramcount, defaulting to 4000, see above, fix to 2000/core
+            if memory == 4000:
+                memory = 2000
+            else:
+                memory = memory / self.getNCores()
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500

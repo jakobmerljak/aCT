@@ -133,8 +133,8 @@ class aCTSubmitter(aCTProcess):
                 # catch any exceptions here to avoid leaving lock
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
-                    #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}%' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}%' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                    #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
