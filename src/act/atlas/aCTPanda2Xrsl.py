@@ -295,9 +295,10 @@ class aCTPanda2Xrsl:
                                                          self.jobdesc['prodDBlockToken'][0].split(",")):
 
                 # Skip files which use direct I/O: site has it enabled, token is
-                # not 'local' and file is root file
+                # not 'local', file is root file and --useLocalIO is not used
                 if token != 'local' and self.siteinfo.get('direct_access_lan', False) and \
-                  not ('.tar.gz' in filename or '.lib.tgz' in filename or '.raw.' in filename):
+                  not ('.tar.gz' in filename or '.lib.tgz' in filename or '.raw.' in filename) and \
+                  '--useLocalIO' not in self.jobdesc['jobPars'][0]:
                     continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
