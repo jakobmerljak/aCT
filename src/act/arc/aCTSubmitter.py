@@ -68,7 +68,8 @@ class aCTSubmitter(aCTProcess):
                 it+=1
             errfl=False
             for t in tl:
-                t.join(60.0)
+                # Be careful to wait longer than submission timeout
+                t.join(t.uc.Timeout() + 60.0)
                 if t.isAlive() :
                     # abort due to timeout and try again
                     self.log.error("%s: submission timeout: exit and try again" % t.appjobid)
