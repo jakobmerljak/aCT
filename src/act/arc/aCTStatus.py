@@ -145,6 +145,11 @@ class aCTStatus(aCTProcess):
                     # unexpected
                     arcstate = 'failed'
                     
+                # Fix crazy wallclock times
+                if updatedjob.UsedTotalWallTime > arc.Time() - updatedjob.LocalSubmissionTime:
+                    fixedwalltime = arc.Time() - updatedjob.LocalSubmissionTime
+                    self.log.warning("%s: Fixing reported walltime %d to %d" % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), fixedwalltime.GetPeriod()))
+                    updatedjob.UsedTotalWallTime = fixedwalltime
                 self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()}, updatedjob)
                     
         self.log.info('Done')
