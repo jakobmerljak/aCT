@@ -63,6 +63,12 @@ class aCTPanda2Xrsl:
             self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
         if self.sitename == 'RAL-LCG2_MCORE' and self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+        if self.sitename == 'FZK-LCG2_MCORE' and self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+        if self.sitename == 'FZK-LCG2_MCORE_HI' and self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+        if self.sitename == 'FZK-LCG2_MCORE_LO' and self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
 
         return self.ncores
 
@@ -304,10 +310,12 @@ class aCTPanda2Xrsl:
 
                 # Skip files which use direct I/O: site has it enabled, token is
                 # not 'local', file is root file and --useLocalIO is not used
-                if token != 'local' and self.siteinfo.get('direct_access_lan', False) and \
-                  not ('.tar.gz' in filename or '.lib.tgz' in filename or '.raw.' in filename) and \
-                  '--useLocalIO' not in self.jobdesc['jobPars'][0]:
-                    continue
+
+                # don't use direct I/O - pending new mover switch
+                #if token != 'local' and self.siteinfo.get('direct_access_lan', False) and \
+                #  not ('.tar.gz' in filename or '.lib.tgz' in filename or '.raw.' in filename) and \
+                #  '--useLocalIO' not in self.jobdesc['jobPars'][0]:
+                #    continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
                 lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
