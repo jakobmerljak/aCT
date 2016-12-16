@@ -70,12 +70,12 @@ class aCTPanda2Arc(aCTATLASProcess):
 
                 # Set the list of files to download at the end of the job
                 downloadfiles = 'gmlog/errors'
-                if not self.sites[job['siteName']]['truepilot']:
-                    downloadfiles += ';jobSmallFiles.tgz'
                 try:
                     downloadfiles += ';%s' % parser.jobdesc['logFile'][0].replace('.tgz', '')
                 except:
                     pass
+                if not self.sites[job['siteName']]['truepilot']:
+                    downloadfiles += ';jobSmallFiles.tgz'
 
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']),
