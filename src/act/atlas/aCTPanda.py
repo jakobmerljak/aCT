@@ -189,7 +189,7 @@ class aCTPanda:
         # protection against bad pickles
         if 'jobId' not in node or not node['jobId']:
             node['jobId'] = pandaId
-        if 'stste' not in node or not node['state']:
+        if 'state' not in node or not node['state']:
             node['state'] = state
         urldesc=None
         urldata=self.__HTTPConnect__('updateJob',node)
