@@ -18,6 +18,7 @@ class aCTAGISParser:
     def __init__(self, logger):
         self.log=logger
         self.conf=aCTConfig.aCTConfigATLAS()
+        self.arcconf=aCTConfig.aCTConfigARC()
         self.tparse = 0
         self.getSites()
                 
@@ -66,6 +67,9 @@ class aCTAGISParser:
             if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
                 sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
+                # Dump to file
+                with open(os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', '%s.all.json' % sitename), 'w') as f:
+                    json.dump(sites[sitename], f)
             else:
                 sites[sitename]['enabled'] = False
                 sites[sitename]['maxjobs'] = 0
