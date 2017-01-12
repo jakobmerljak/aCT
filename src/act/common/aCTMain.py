@@ -24,6 +24,15 @@ class aCTMain:
         # xml config file
         self.conf = aCTConfig.aCTConfigARC()
    
+        # Create required directories
+        tmpdir = self.conf.get(["tmp", "dir"])
+        self.makeDirs(tmpdir)
+        self.makeDirs(os.path.join(tmpdir, 'inputfiles'))
+        self.makeDirs(os.path.join(tmpdir, 'eventranges'))
+        self.makeDirs(os.path.join(tmpdir, 'failedlogs'))
+        self.makeDirs(self.conf.get(["voms","proxystoredir"]), 0700)
+        self.makeDirs(self.conf.get(["logger", "logdir"]))
+
         # logger
         self.logger = aCTLogger.aCTLogger("aCTMain")
         self.log = self.logger()
@@ -56,6 +65,15 @@ class aCTMain:
             print 'Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION
             sys.exit(1)
 
+    def makeDirs(self, dir, mode=0755):
+        """
+        Make a directory if it doesn't exist already
+        """
+        try:
+            os.makedirs(dir, mode)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
     def start(self):
         """
