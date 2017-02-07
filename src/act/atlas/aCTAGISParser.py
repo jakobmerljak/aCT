@@ -18,6 +18,7 @@ class aCTAGISParser:
     def __init__(self, logger):
         self.log=logger
         self.conf=aCTConfig.aCTConfigATLAS()
+        self.arcconf=aCTConfig.aCTConfigARC()
         self.tparse = 0
         self.getSites()
                 
@@ -66,6 +67,7 @@ class aCTAGISParser:
             if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
                 sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
+                self._dumpSchedConfig(sitename, sites[sitename])
             else:
                 sites[sitename]['enabled'] = False
                 sites[sitename]['maxjobs'] = 0
@@ -146,6 +148,17 @@ class aCTAGISParser:
             else:
                 dict1[d]=dict2[d]
 
+    def _dumpSchedConfig(self, sitename, sitedict):
+        # copy dict and turn bools to strings since pilot expects strings
+        schedconf = sitedict.copy()
+        for k,v in schedconf.items():
+            if type(v) == bool:
+                schedconf[k] = str(v)
+
+        # Dump to file
+        with open(os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', '%s.all.json' % sitename), 'w') as f:
+            json.dump(schedconf, f)
+
     def getSites(self):
         self.conf.parse()
         agisfile = self.conf.get(['agis','jsonfilename'])
@@ -181,7 +194,7 @@ class aCTAGISParser:
             for site, info in dict(self.sites).items():
                 if not info['enabled']:
                     continue
-                if not info['endpoints']:
+                if 'endpoints' not in info or not info['endpoints']:
                     self.log.warning("%s: No CE endpoints defined, this site cannot be used" % site)
                     del self.sites[site]
                 else:
