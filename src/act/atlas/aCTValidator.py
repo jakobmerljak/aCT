@@ -255,9 +255,14 @@ class aCTValidator(aCTATLASProcess):
                         result[surllist[i]['arcjobid']] = self.failed
                     else:
                         # compare metadata
-                        self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                       (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
-                                        surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
+                        try:
+                            self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
+                                           (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
+                                           surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
+                        except:
+                            self.log.warning("Unhandled issue %d",i)
+                            result[surllist[i]['arcjobid']] = self.failed
+                            continue
                         if int(surllist[i]['fsize']) != int(files[i].GetSize()):
                             self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
                                              (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
