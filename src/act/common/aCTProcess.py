@@ -1,5 +1,6 @@
 import time
 import os
+import re
 import sys
 import arc
 import traceback
@@ -22,11 +23,14 @@ class aCTProcess:
         # Get agent name from /path/to/aCTAgent.py
         self.name = os.path.basename(sys.argv[0])[:-3]
         self.cluster = ''
+        clusterhost = ''
         if len(sys.argv) == 2:
             self.cluster = sys.argv[1]
+            clusterhost = re.sub(r'\w*://(\S*)/.*', r'\1', self.cluster)
         
         # logger
-        self.logger=aCTLogger.aCTLogger(self.name, cluster=self.cluster)
+        logname = '%s-%s' % (self.name, clusterhost) if clusterhost else self.name
+        self.logger=aCTLogger.aCTLogger(logname, cluster=self.cluster)
         self.log=self.logger()
         self.criticallogger = aCTLogger.aCTLogger('aCTCritical', cluster=self.cluster, arclog=False)
         self.criticallog = self.criticallogger()
