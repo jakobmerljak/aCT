@@ -108,12 +108,9 @@ class aCTValidator(aCTATLASProcess):
             if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
                 t = jobinfo.pilotID.split("|")
             else:
-                t = []
+                t = ['Unknown'] * 5
             logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
-            if len(t) > 4:
-                jobinfo.pilotID = logurl+"|"+t[1]+"|"+t[2]+"|"+t[3]+"|"+t[4]
-            else:
-                jobinfo.pilotID = logurl+"|Unknown|Unknown|Unknown|Unknown"
+            jobinfo.pilotID = '|'.join([logurl] + t[1:])
 
             jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
