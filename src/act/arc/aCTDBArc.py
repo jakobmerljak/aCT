@@ -10,9 +10,6 @@ class aCTDBArc(aCTDB):
         aCTDB.__init__(self, logger, dbname)
 
         conf = aCTConfig.aCTConfigARC()
-        self.proxydir=conf.get(["voms","proxystoredir"])
-        if not os.path.isdir(self.proxydir):
-            os.makedirs(self.proxydir, 0755)
                 
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
@@ -84,7 +81,7 @@ class aCTDBArc(aCTDB):
           - myproxyid: id from myproxy
           - expirytime: timestamp for when proxy is expiring
         '''
-        aCTDB.createTables(self)
+
         # in MySQL the first timestamp specified gets automatically updated to
         # current time for each change. 
         create="""CREATE TABLE arcjobs (

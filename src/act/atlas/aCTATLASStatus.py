@@ -278,10 +278,6 @@ class aCTATLASStatus(aCTATLASProcess):
             # copy logfiles to failedlogs dir
             failedlogsd = self.arcconf.get(["tmp","dir"])+"/failedlogs"
             try:
-                os.mkdir(failedlogsd)
-            except:
-                pass
-            try:
                 f=open(os.path.join(failedlogsd, str(pandaid)+".log"),"w")
                 f.write(log)
                 f.close()

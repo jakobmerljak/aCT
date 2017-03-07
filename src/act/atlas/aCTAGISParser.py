@@ -103,8 +103,9 @@ class aCTAGISParser:
                 sites[sitename]['maxcputime'] = maxcputime
             else:
                 sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
-            # true pilot or not
-            sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv')
+            # true pilot or not, based on whether mv copytool is used
+            # TODO remove copytool once deprecated
+            sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv' and 'mv' not in sites[sitename]['copytools'])
             # set OS bucket IDs
             try:
                 objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]

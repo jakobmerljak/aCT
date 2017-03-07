@@ -19,11 +19,6 @@ class aCTLogger:
         self.logger=logging.LoggerAdapter(logging.getLogger(name), {'cluster': cluster})
         self.logger.logger.setLevel(logging.DEBUG)
         level = LEVELS.get(self.conf.get(["logger","level"]), logging.NOTSET)
-        try:
-            os.makedirs(self.conf.get(["logger", "logdir"]), 0755)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise e
         logfile = os.path.join(self.conf.get(["logger","logdir"]), name + '.log')
         self.logger.logger.setLevel(level)
         # aCTMain calls logrotate to rotate logs

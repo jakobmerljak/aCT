@@ -29,7 +29,8 @@ class aCTPanda2Xrsl:
             self.maxwalltime = 7*24*60
 
         self.tmpdir = tmpdir
-        self.inputdir = tmpdir + "/inputfiles/" + self.jobdesc['PandaID'][0]
+        self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
+        self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
         self.eventranges = eventranges
         self.longjob = False
         self.traces = []
@@ -62,6 +63,8 @@ class aCTPanda2Xrsl:
             #self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
             self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
         if self.sitename == 'RAL-LCG2_MCORE' and self.ncores > 1:
+            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+        if self.sitename == 'RAL-LCG2-ECHO_MCORE' and self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
         if self.sitename == 'FZK-LCG2_MCORE' and self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
@@ -200,6 +203,7 @@ class aCTPanda2Xrsl:
                 rte = rte.replace('P1HLT-', 'ATLASP1HLT-')
                 rte = rte.replace('TESTHLT-', 'ATLASTESTHLT-')
                 rte = rte.replace('CAFHLT-', 'ATLASCAFHLT-')
+                rte = rte.replace('21.0.13.1','ATLASPRODUCTION-21.0.13.1')
             if cache.find('AnalysisTransforms') != -1:
                 res=re.match('(21\..+)',rte)
                 if res is not None:
@@ -271,8 +275,8 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-        elif self.eventranges: # ES job
-            x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
+        #elif self.eventranges: # ES job
+        #    x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
         else:
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
 
@@ -285,14 +289,14 @@ class aCTPanda2Xrsl:
             # TODO create input file
             pandaid = self.jobdesc['PandaID'][0]
             try:
-                os.mkdir(self.inputdir, 0755)
+                os.makedirs(self.inputjobdir)
             except:
                 pass
-            tmpfile = self.inputdir+"/pandaJobData.out"
+            tmpfile = self.inputjobdir+"/pandaJobData.out"
             f = open(tmpfile, "w")
             f.write(self.pandajob)
             f.close()
-            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputdir
+            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if not self.truepilot:
             x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
@@ -336,10 +340,6 @@ class aCTPanda2Xrsl:
             if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
-                try:
-                    os.mkdir(os.path.join(self.tmpdir, 'eventranges'))
-                except:
-                    pass
                 tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
                 jsondata = json.loads(self.eventranges)
                 with open(tmpjsonfile, 'w') as f:
