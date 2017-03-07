@@ -4,6 +4,7 @@ import re
 import sys
 import arc
 import traceback
+from urlparse import urlparse
 
 import aCTLogger
 import aCTConfig
@@ -26,7 +27,8 @@ class aCTProcess:
         clusterhost = ''
         if len(sys.argv) == 2:
             self.cluster = sys.argv[1]
-            clusterhost = re.sub(r'\w*://(\S*)/.*', r'\1', self.cluster)
+            url = urlparse(self.cluster)
+            clusterhost = url.netloc.split(':')[0] if url.netloc else url.path
         
         # logger
         logname = '%s-%s' % (self.name, clusterhost) if clusterhost else self.name
