@@ -3,6 +3,7 @@ import os
 
 import aCTUtils
 from act.arc import aCTDBArc
+from act.condor import aCTDBCondor
 
 class aCTProcessManager:
     '''
@@ -17,11 +18,14 @@ class aCTProcessManager:
         self.actlocation = conf.get(["actlocation","dir"])
         self.logdir = self.conf.get(["logger", "logdir"])
         # DB connection
-        self.db = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db","file"]))
+        self.dbarc = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db","file"]))
+        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log, self.conf.get(["db","file"]))
         # list of processes to run per cluster
-        self.processes = ['act/arc/aCTStatus', 'act/arc/aCTFetcher', 'act/arc/aCTCleaner']
+        self.arcprocesses = ['act/arc/aCTStatus', 'act/arc/aCTFetcher', 'act/arc/aCTCleaner']
+        self.condorprocesses = ['act/condor/aCTStatus', 'act/condor/aCTFetcher', 'act/condor/aCTCleaner']
         # submitter process
-        self.submitter = 'act/arc/aCTSubmitter'
+        self.arcsubmitter = 'act/arc/aCTSubmitter'
+        self.condorsubmitter = 'act/condor/aCTSubmitter'
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         # TODO: app-specific processes in conf file instead of hard-coded
         self.processes_single = {'act/atlas/aCTAutopilot':None, 
@@ -67,21 +71,23 @@ class aCTProcessManager:
         Reconnect DB
         '''
         try:
-            del self.db
+            del self.dbarc
+            del self.dbcondor
         except AttributeError: # Already deleted
             pass
-        self.db = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db", "file"]))
+        self.dbarc = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db", "file"]))
+        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log, self.conf.get(["db","file"]))
  
 
-    def checkClusters(self):
+    def checkARCClusters(self):
         '''
         Get the list of current clusters and (re)start necessary processes
         '''
         
-        clusters = self.db.getActiveClusters()
+        clusters = self.dbarc.getActiveClusters()
         activeclusters = dict((k, v) for (k, v) in zip([c['cluster'] for c in clusters],
                                                        [c['COUNT(*)'] for c in clusters]))
-        clusters = self.db.getClusterLists()
+        clusters = self.dbarc.getClusterLists()
         clusterlists = dict((k, v) for (k, v) in zip([c['clusterlist'] for c in clusters],
                                                      [c['COUNT(*)'] for c in clusters]))
         
@@ -99,7 +105,7 @@ class aCTProcessManager:
                 self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
             elif proc.cluster and proc.cluster not in activeclusters.keys():
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
-                if proc.name == self.submitter:
+                if proc.name == self.arcsubmitter:
                     del self.submitters[proc.cluster]
                 elif proc.cluster in self.running:
                     del self.running[proc.cluster]
@@ -111,7 +117,7 @@ class aCTProcessManager:
         for cluster in activeclusters:
             if cluster and cluster not in self.running.keys():
                 self.running[cluster] = []
-                for proc in self.processes:
+                for proc in self.arcprocesses:
                     self.log.info("Starting process %s for %s", proc, cluster)
                     ph = self.aCTProcessHandler(proc, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
@@ -131,7 +137,70 @@ class aCTProcessManager:
         for cluster in clusterlist:
             if cluster not in self.submitters:
                 self.log.info("Starting process aCTSubmitter for %s", cluster)
-                ph = self.aCTProcessHandler(self.submitter, self.logdir, cluster, actlocation=self.actlocation)
+                ph = self.aCTProcessHandler(self.arcsubmitter, self.logdir, cluster, actlocation=self.actlocation)
+                ph.start()
+                self.submitters[cluster] = ph
+        
+    def checkCondorClusters(self):
+        '''
+        Get the list of current Condor clusters and (re)start necessary processes
+        TODO: merge this with ARC version to avoid duplication
+        '''
+        
+        clusters = self.dbcondor.getActiveClusters()
+        activeclusters = dict((k, v) for (k, v) in zip([c['cluster'] for c in clusters],
+                                                       [c['COUNT(*)'] for c in clusters]))
+        clusters = self.dbcondor.getClusterLists()
+        clusterlists = dict((k, v) for (k, v) in zip([c['clusterlist'] for c in clusters],
+                                                     [c['COUNT(*)'] for c in clusters]))
+        
+        # Check for processes that exited and if they should be restarted
+        # All running per-cluster processes
+        procs = [p for c in self.running for p in self.running[c]]
+        # Submitter processes
+        procs.extend(self.submitters.values())
+        
+        for proc in procs:
+            rc = proc.check()
+            if rc == None :
+                self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
+            elif proc.cluster and proc.cluster not in activeclusters.keys():
+                self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
+                if proc.name == self.condorsubmitter:
+                    del self.submitters[proc.cluster]
+                elif proc.cluster in self.running:
+                    del self.running[proc.cluster]
+            else:
+                self.log.info("Restarting process %s %s", proc.name, 'for %s' % proc.cluster if proc.cluster else '')
+                proc.restart()
+        
+        # Check for new processes to start
+        for cluster in activeclusters:
+            if cluster and cluster not in self.running.keys():
+                self.running[cluster] = []
+                for proc in self.condorprocesses:
+                    self.log.info("Starting process %s for %s", proc, cluster)
+                    ph = self.aCTProcessHandler(proc, self.logdir, cluster, actlocation=self.actlocation)
+                    ph.start()
+                    self.running[cluster].append(ph)
+        
+        # Get unique list of clusters from cluster lists
+        clusterlist = []
+        for cluster in clusterlists:
+            if not cluster:
+                cluster = ''
+            clist = cluster.split(',')
+            for c in clist:
+                # use only hostname for condor clusters
+                c = c.split()[-1]
+                if c not in clusterlist:
+                    clusterlist.append(c)
+
+        # Start any new submitters required
+        for cluster in clusterlist:
+            if cluster not in self.submitters:
+                self.log.info("Starting process aCTSubmitter for %s", cluster)
+                ph = self.aCTProcessHandler(self.condorsubmitter, self.logdir, cluster, actlocation=self.actlocation)
                 ph.start()
                 self.submitters[cluster] = ph
         

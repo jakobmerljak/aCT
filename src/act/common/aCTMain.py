@@ -220,7 +220,8 @@ class aCTMain:
                 # Rotate logs
                 self.logrotate()
                 # (re)start new processes as necessary
-                self.procmanager.checkClusters()
+                self.procmanager.checkARCClusters()
+                self.procmanager.checkCondorClusters()
                 # sleep
                 aCTUtils.sleep(10)
 
