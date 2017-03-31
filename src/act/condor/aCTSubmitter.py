@@ -184,8 +184,9 @@ class aCTSubmitter(aCTProcess):
                     continue
 
                 # Extract the GridResource
-                gridresource = re.search(r',*(\w* %s)' % self.cluster, j['clusterlist'])
+                gridresource = re.search(r',*(.* %s)' % self.cluster, j['clusterlist'])
                 gridresource = str(gridresource.group(1))
+                self.log.debug('%s: Set GridResource to %s' % (j['appjobid'], gridresource))
                 jobdesc['GridResource'] = gridresource
                 t = SubmitThr(Submit, j['id'], j['appjobid'], jobdesc, self.log, self.schedd)
                 self.RunThreadsSplit([t], 1)
