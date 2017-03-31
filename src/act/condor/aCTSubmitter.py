@@ -3,7 +3,6 @@ import time
 from htcondor import Schedd, JobAction
 from classad import ClassAd
 
-from urlparse import urlparse
 from threading import Thread
 from act.common.aCTProcess import aCTProcess
 
@@ -30,7 +29,8 @@ def Submit(jobdesc, log, appjobid, schedd):
         return None
 
     jobid = schedd.submit(jobdesc)
-    log.info('%s: Cluster ID %d' % (appjobid, jobid))
+    if not jobid:
+        pass
     return jobid
 
 
@@ -50,7 +50,8 @@ class aCTSubmitter(aCTProcess):
                     tl.append(t)
                     t.start()
                 except:
-                    it += 1
+                    pass
+                it += 1
             errfl = False
             for t in tl:
                 t.join(60.0)

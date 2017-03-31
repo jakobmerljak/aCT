@@ -63,9 +63,10 @@ class aCTDBCondor(aCTDB):
             fairshare VARCHAR(255),
             ClusterId BIGINT,
             GlobalJobId VARCHAR(255),
-            JobStatus SMALLINT,
+            JobStatus SMALLINT DEFAULT 0 NOT NULL,
             RemoteWallClockTime FLOAT,
-            RemoteUserCpu FLOAT
+            RemoteUserCpu FLOAT,
+            ExitCode SMALLINT
             )
             """
             
@@ -158,7 +159,7 @@ class aCTDBCondor(aCTDB):
 
     def updateCondorJobLazy(self, id, desc):
         '''
-        Update codnor job fields specified in desc. Does not commit after
+        Update condor job fields specified in desc. Does not commit after
         executing update.
         '''
         desc['modified'] = self.getTimeStamp()
@@ -170,7 +171,7 @@ class aCTDBCondor(aCTDB):
         if row is None:
             self.log.warning("Condor job id %d no longer exists" % id)
             return
-        c.execute(s,desc.values())
+        c.execute(s, desc.values())
 
     def updateCondorJobs(self, desc, select):
         '''
