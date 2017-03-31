@@ -63,6 +63,7 @@ class aCTDBCondor(aCTDB):
             fairshare VARCHAR(255),
             ClusterId BIGINT,
             GlobalJobId VARCHAR(255),
+            GridJobId VARCHAR(255),
             JobStatus SMALLINT DEFAULT 0 NOT NULL,
             RemoteWallClockTime FLOAT,
             RemoteUserCpu FLOAT,
