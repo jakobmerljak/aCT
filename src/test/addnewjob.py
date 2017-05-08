@@ -42,4 +42,6 @@ validHours=5
 proxyid =1 # p.createVOMSAttribute(voms, attribute, proxypath, validHours)
 
 #db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo5.cern.ch/fork', proxyid=proxyid, maxattempts=5)
-dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
+#dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
+#dbcondor.insertCondorJobDescription(cad, clusterlist='condor ce503.cern.ch ce503.cern.ch:9619', proxyid=proxyid, maxattempts=5)
+dbcondor.insertCondorJobDescription(cad, clusterlist='condor gridgk01.racf.bnl.gov gridgk01.racf.bnl.gov:9619', proxyid=proxyid, maxattempts=5)
