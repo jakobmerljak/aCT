@@ -457,10 +457,10 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                # Problem extracting files, resubmit the job
-                self.log.error("%s: Cannot validate output of arc job %s, will resubmit" % (job['pandaid'], job["arcjobid"]))
+                # Problem extracting files, fail the job
+                self.log.error("%s: Cannot validate output of arc job %s" % (job['pandaid'], job["arcjobid"]))
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
             else:
                 for se in jobsurls:
