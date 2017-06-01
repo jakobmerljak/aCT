@@ -193,7 +193,7 @@ class aCTMain:
                 dateext
                 missingok
                 rotate %s
-                create
+                nocreate
                 nocompress
             }''' % (self.conf.get(["logger", "logdir"]), 
                     self.conf.get(["logger", "rotate"]))
