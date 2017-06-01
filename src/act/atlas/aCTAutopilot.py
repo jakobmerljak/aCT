@@ -159,7 +159,7 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if t.result.has_key('command') and ( (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr") ):
+            if t.result.has_key('command') and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
                 self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
