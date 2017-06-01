@@ -131,7 +131,7 @@ class aCTPanda2Xrsl:
         # JEDI analysis hack
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
-        if self.sitename == 'BOINC':
+        if self.sitename.startswith('BOINC'):
             walltime = min(240, walltime)
         cputime = self.getNCores() * walltime
         self.log.info('%s: walltime: %d, cputime: %d' % (self.pandaid, walltime, cputime))
@@ -204,6 +204,7 @@ class aCTPanda2Xrsl:
                 rte = rte.replace('TESTHLT-', 'ATLASTESTHLT-')
                 rte = rte.replace('CAFHLT-', 'ATLASCAFHLT-')
                 rte = rte.replace('21.0.13.1','ATLASPRODUCTION-21.0.13.1')
+                rte = rte.replace('21.0.20.1','ATLASPRODUCTION-21.0.20.1')
             if cache.find('AnalysisTransforms') != -1:
                 res=re.match('(21\..+)',rte)
                 if res is not None:
@@ -299,7 +300,12 @@ class aCTPanda2Xrsl:
             x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if not self.truepilot:
+            #if self.sitename.find('SiGNET-NSC_MCORE') != -1:
+            #    x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/SiGNET_MCORE.all.json")'
+            #else:
             x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+            if self.sitename.find('BEIJING') != -1:
+                x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
 
         if 'inFiles' in self.jobdesc and not self.truepilot:
             inf = {}
