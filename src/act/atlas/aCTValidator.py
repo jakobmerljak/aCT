@@ -24,7 +24,8 @@ class aCTValidator(aCTATLASProcess):
         
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
-        uc = arc.UserConfig()
+        cred_type = arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+        uc = arc.UserConfig(cred_type)
         uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
@@ -34,8 +35,9 @@ class aCTValidator(aCTATLASProcess):
         proxyfile = actp.path(dn, '/atlas/Role=production')
         if not proxyfile:
             raise Exception('Could not find proxy with production role in proxy table')
+        self.log.info('set proxy path to %s' % proxyfile)
             
-        self.uc = arc.UserConfig()
+        self.uc = arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(proxyfile))
         self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
         
