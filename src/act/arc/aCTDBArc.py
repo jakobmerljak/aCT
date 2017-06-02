@@ -10,6 +10,7 @@ class aCTDBArc(aCTDB):
         aCTDB.__init__(self, logger, dbname)
 
         conf = aCTConfig.aCTConfigARC()
+        self.proxydir = conf.get(["voms","proxystoredir"])
                 
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
