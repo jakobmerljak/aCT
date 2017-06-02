@@ -36,7 +36,10 @@ class aCTDBMySQL(object):
     def getCursor(self):
         # make sure cursor reads newest db state
         self.conn.commit()
-        return self.conn.cursor(cursor_class=MySQLCursorDict)
+        try:
+            return self.conn.cursor(dictionary=True)
+        except:
+            return self.conn.cursor(cursor_class=MySQLCursorDict)
 
     def timeStampLessThan(self,column,timediff):
         return "UNIX_TIMESTAMP("+column+") < UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
