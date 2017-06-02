@@ -72,14 +72,20 @@ class aCTConfigARC(aCTConfig):
 
     def __init__(self):
         self.log="aCTConfigARC.log"
-        self.configfile="aCTConfigARC.xml"
+        if 'ACTCONFIGARC' in os.environ:
+            self.configfile = os.environ['ACTCONFIGARC']
+        else:
+            self.configfile="aCTConfigARC.xml"
         aCTConfig.__init__(self)
 
 class aCTConfigATLAS(aCTConfig):
     
     def __init__(self):
         self.log="aCTConfigATLAS.log"
-        self.configfile="aCTConfigATLAS.xml"
+        if 'ACTCONFIGATLAS' in os.environ:
+            self.configfile = os.environ['ACTCONFIGATLAS']
+        else:
+            self.configfile="aCTConfigATLAS.xml"
         aCTConfig.__init__(self)
 
 
