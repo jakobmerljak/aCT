@@ -119,7 +119,10 @@ class aCTDBPanda(aCTDB):
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.getCursor()
         c.execute(s,desc.values())
+        c.execute("SELECT LAST_INSERT_ID()")
+        row = c.fetchone()
         self.conn.commit()
+        return row
         
     def insertJobArchiveLazy(self,desc={}):
         s="insert into pandaarchive (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
