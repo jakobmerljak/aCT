@@ -388,7 +388,7 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' OR arcstate='submitting' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
     
