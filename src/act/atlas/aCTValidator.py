@@ -225,6 +225,8 @@ class aCTValidator(aCTATLASProcess):
                 continue
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
             if not dp or not dp.h:
+                self.log.warning("URL %s not supported, skipping validation" % str(surl['surl']))
+                result[surl['arcjobid']] = self.ok
                 continue
             datapointlist.append(dp.h)
             dummylist.append(dp) # to not destroy objects
