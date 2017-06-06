@@ -164,9 +164,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
             stopflag=False
 
             try:
-                getEventRanges = not attrs['truepilot']
+                getEventRanges = 'plugin=arc' in attrs['catchall']
             except:
-                getEventRanges = True
+                getEventRanges = False
 
             for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:
