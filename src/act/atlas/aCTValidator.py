@@ -235,7 +235,7 @@ class aCTValidator(aCTATLASProcess):
             
             # do bulk call
             (files, status) = dp.h.Stat(datapointlist)
-            if not status:
+            if not status and status.GetErrno() != os.errno.EOPNOTSUPP:
                 # If call fails it is generally a server or connection problem
                 # and in most cases should be retryable
                 if status.Retryable():
@@ -249,6 +249,21 @@ class aCTValidator(aCTATLASProcess):
                 # files is a list of FileInfo objects. If file is not found or has
                 # another error in the listing FileInfo object will be invalid
                 for i in range(len(datapointlist)):
+                    if status.GetErrno() == os.errno.EOPNOTSUPP:
+                        # Bulk stat was not supported, do non-bulk here
+                        f = arc.FileInfo()
+                        st = datapointlist[i].Stat(f)
+                        if not st or not f:
+                            if status.Retryable():
+                                self.log.warning("Failed to query files on %s, will retry later: %s" % (datapointlist[i].GetURL().Host(), str(st)))
+                                result[surllist[i]['arcjobid']] = self.retry
+                            else:
+                                self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
+                                result[surllist[i]['arcjobid']] = self.failed
+                            files.append(None)
+                        else:
+                            files.append(f)
+
                     if not files[i]:
                         self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
                         result[surllist[i]['arcjobid']] = self.failed
