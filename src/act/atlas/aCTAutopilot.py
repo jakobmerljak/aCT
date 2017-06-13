@@ -189,10 +189,11 @@ class aCTAutopilot(aCTATLASProcess):
             if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
                 
                 if not j['eventranges'] or j['eventranges'] == '[]':
-                    # Create the empty pickle so that heartbeat code below doesn't fail
-                    jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                    jobinfo.writeToFile(fname)
+                    if not os.path.exists(fname):
+                        # Create the empty pickle so that heartbeat code below doesn't fail
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                        jobinfo.writeToFile(fname)
                     continue
                 
                 # If zip is used we need to first send transferring heartbeat
