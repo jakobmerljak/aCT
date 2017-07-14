@@ -445,7 +445,9 @@ class aCTDBArc(aCTDB):
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))
                 d[attr] = str(tmpdict)[:1000]
-
+            # Force everything to ASCII
+            if attr in d:
+                d[attr] = ''.join([i for i in d[attr] if ord(i) < 128])
         return d
 
     def _writeProxyFile(self, proxypath, proxy):
