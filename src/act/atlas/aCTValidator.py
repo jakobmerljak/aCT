@@ -112,8 +112,10 @@ class aCTValidator(aCTATLASProcess):
             else:
                 t = ['Unknown'] * 5
             logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
-            jobinfo.pilotID = '|'.join([logurl] + t[1:])
-
+            try: # TODO catch and handle non-ascii
+                jobinfo.pilotID = '|'.join([logurl] + t[1:])
+            except:
+                pass
             jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
