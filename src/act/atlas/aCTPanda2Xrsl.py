@@ -36,6 +36,7 @@ class aCTPanda2Xrsl:
         self.traces = []
         if len(self.pandajob) > 50000:
             self.longjob = True
+        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","LRZ-LMU_MUC_MCORE1","MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
 
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
@@ -50,28 +51,22 @@ class aCTPanda2Xrsl:
 
     def getNCores(self):
 
-        if self.ncores == 0:
-            if 'CoreCount' in self.jobdesc:
-                self.ncores = int(self.jobdesc['CoreCount'][0])
-            else:
-                self.ncores = 1
+        # Unified panda queues: always use coreCount from job description
+        try:
+	    self.ncores = int(self.jobdesc.get('coreCount', [1])[0])
+        except: # corecount is NULL
+            self.ncores = 1
+        # For accounting BOINC running slots, force corecount to 1
+        if 'BOINC' in self.sitename:
+            self.ncores = 1
 
         self.xrsl['count'] = '(count=%d)' % self.ncores
 
         # force single-node jobs for now
         if self.ncores > 1:
-            #self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-            self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
-        if self.sitename == 'RAL-LCG2_MCORE' and self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-        if self.sitename == 'RAL-LCG2-ECHO_MCORE' and self.ncores > 1:
-            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-        if self.sitename == 'FZK-LCG2_MCORE' and self.ncores > 1:
-            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-        if self.sitename == 'FZK-LCG2_MCORE_HI' and self.ncores > 1:
-            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-        if self.sitename == 'FZK-LCG2_MCORE_LO' and self.ncores > 1:
-            self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
+            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0:
+                self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
 
@@ -85,10 +80,19 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
+        if 'UIO_MCORE' not in self.sitename:
+            return
+        # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
             disk = int(self.jobdesc['maxDiskCount'][0])
         else:
             disk = 500
+        # Add input file sizes
+        if 'fsize' in self.jobdesc:
+            disk += sum([int(f) for f in self.jobdesc['fsize'][0].split(',')]) / 1000000
+        # Add safety factor
+        disk += 2000
+        self.log.debug('%s: disk space %d' % (self.pandaid, disk))
         self.xrsl['disk'] = "(disk = %d)" % disk
 
     def setTime(self):
@@ -131,9 +135,10 @@ class aCTPanda2Xrsl:
         # JEDI analysis hack
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
+        cputime = self.getNCores() * walltime
         if self.sitename.startswith('BOINC'):
             walltime = min(240, walltime)
-        cputime = self.getNCores() * walltime
+            cputime = walltime
         self.log.info('%s: walltime: %d, cputime: %d' % (self.pandaid, walltime, cputime))
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
@@ -229,6 +234,12 @@ class aCTPanda2Xrsl:
         if self.truepilot:
             self.artes = ""
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
+        elif self.siteinfo['type'] == 'analysis':
+            self.artes = ""
+            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
+        elif self.sitename not in self.rtesites:
+            self.artes = ""
+            self.xrsl['rtes'] = "(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
 
     def setExecutable(self):
 
@@ -246,6 +257,11 @@ class aCTPanda2Xrsl:
             pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
 
         pandajobarg = self.pandajob
+        # Hack to tell job to start from checkpoint
+        if self.sitename == 'BOINC_CHECKPOINT':
+            pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
+            # use newest DB release
+            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         if self.longjob:
             pandajobarg = "FILE"
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
@@ -268,23 +284,38 @@ class aCTPanda2Xrsl:
 
         x = ""
         if self.truepilot:
-            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-true")'
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-true")'
         elif self.eventranges:
-            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es")'      
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
+        elif self.sitename == 'BOINC_CHECKPOINT':
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-nolimit")'
         else:
-            x += '(ARCpilot "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot")'
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot")'
 
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         #elif self.eventranges: # ES job
         #    x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
-        else:
+        elif re.match('BEIJING-.*_MCORE', self.sitename):
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+            x += '(agis_schedconf.agis.%s.json "http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&panda_queue=%s")' % (self.sitename,self.sitename)
+            x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
+            x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+        elif self.sitename in self.rtesites:
+            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
+        elif 'BOINC' in self.sitename:
+            # Use official pilot for BOINC
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        else:
+            # Use no kill pilot to avoid pilot killing too much at end of job
+            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-AF.tar.gz")'
 
         if self.eventranges:
-            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot-es.tar.gz")'
+            x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
         else:
-            x += '(ARCpilot-test.tar.gz "http://voatlas404.cern.ch;cache=check/data/data/ARCpilot.tar.gz")'
+            x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot.tar.gz")'
 
         if self.longjob:
             # TODO create input file
@@ -300,12 +331,7 @@ class aCTPanda2Xrsl:
             x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if not self.truepilot:
-            #if self.sitename.find('SiGNET-NSC_MCORE') != -1:
-            #    x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/SiGNET_MCORE.all.json")'
-            #else:
             x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
-            if self.sitename.find('BEIJING') != -1:
-                x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
 
         if 'inFiles' in self.jobdesc and not self.truepilot:
             inf = {}
@@ -328,7 +354,10 @@ class aCTPanda2Xrsl:
                 #    continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
-                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
+                if 'xxxSiGNET' in self.sitename or 'ARNES' in self.sitename:
+                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename]) 
+                else:
+                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
                 # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp,https;cache=invariant/replicas", scope, filename])
                 # lfn='/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https,gsiftp;cache=invariant/replicas", scope, filename])
                 inf[filename] = lfn
@@ -416,7 +445,7 @@ class aCTPanda2Xrsl:
     def parse(self):
         self.setTime()
         self.setJobname()
-        #self.setDisk()
+        self.setDisk()
         self.setMemory()
         self.setRTE()
         self.setExecutable()
