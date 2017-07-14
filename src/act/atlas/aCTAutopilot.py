@@ -104,12 +104,8 @@ class aCTAutopilot(aCTATLASProcess):
         hb = ''
         if pstatus == 'running' or pstatus == 'transferring':
             hb = ' and sendhb=1'
-        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount']
-        # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
-        if pstatus == 'transferring':
-            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) and eventranges is NULL limit 1000", columns)
-        else:
-            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount', 'eventranges']
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -119,8 +115,12 @@ class aCTAutopilot(aCTATLASProcess):
         if pstatus == 'sent':
             pstatus = 'starting'
             changed_pstatus = True
+
         tlist=[]
         for j in jobs:
+            # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
+            if pstatus == 'transferring' and j['eventranges']:
+                pstatus = 'running'
             jd = {}
             jd['startTime'] = j['startTime']
             jd['endTime'] = j['endTime']
