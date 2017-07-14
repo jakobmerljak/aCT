@@ -41,19 +41,22 @@ class aCTStatus(aCTProcess):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
-        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, ";".join([joberr for joberr in failedjob.Error])))
+        errors = ";".join([joberr for joberr in failedjob.Error])
+        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, errors))
         
         # First check if it was a data staging problem
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
-            self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
-            # Reset arc job state so that next time new state will be picked up
-            failedjob.State = arc.JobState('Undefined')
-            return "torerun"
+            # Don't retry when output list is not available
+            if 'Error reading user generated output file list' not in errors:
+                self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
+                # Reset arc job state so that next time new state will be picked up
+                failedjob.State = arc.JobState('Undefined')
+                return "torerun"
         
         newstate = "failed"
         # Check if any job runtime error matches any error in the toresubmit list
-        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
+        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if err in errors]
         attemptsleft = int(self.db.getArcJobInfo(id, ['attemptsleft'])['attemptsleft']) - 1
         if attemptsleft < 0:
             attemptsleft = 0
@@ -151,7 +154,7 @@ class aCTStatus(aCTProcess):
                     self.log.warning("%s: Fixing reported walltime %d to %d" % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), fixedwalltime.GetPeriod()))
                     updatedjob.UsedTotalWallTime = fixedwalltime
                 self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()}, updatedjob)
-                    
+
         self.log.info('Done')
         
     def checkLostJobs(self):
