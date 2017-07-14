@@ -427,11 +427,11 @@ class aCTDBArc(aCTDB):
         d = {}
         for attr in self.jobattrs:
             if self.jobattrs[attr] == int or self.jobattrs[attr] == str:
-                d[attr] = str(getattr(job, attr))
+                d[attr] = str(getattr(job, attr))[:250]
             elif self.jobattrs[attr] == arc.JobState:
                 d[attr] = getattr(job, attr).GetGeneralState()
             elif self.jobattrs[attr] == arc.StringList:
-                d[attr] = '|'.join(getattr(job, attr))
+                d[attr] = '|'.join(getattr(job, attr))[:1000]
             elif self.jobattrs[attr] == arc.URL:
                 d[attr] = getattr(job, attr).str().replace(r'\2f',r'/')
             elif self.jobattrs[attr] == arc.Period:
@@ -444,7 +444,7 @@ class aCTDBArc(aCTDB):
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))
-                d[attr] = str(tmpdict)
+                d[attr] = str(tmpdict)[:1000]
 
         return d
 
