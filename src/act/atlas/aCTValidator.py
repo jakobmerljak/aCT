@@ -71,10 +71,7 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
-        if aj['cluster'].find('://') == -1:
-            cluster = aj['cluster'].split('/')[0]
-        else:
-            cluster = arc.URL(str(aj['cluster'])).Host()
+        cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
