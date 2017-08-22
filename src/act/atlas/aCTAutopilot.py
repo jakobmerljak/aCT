@@ -200,7 +200,10 @@ class aCTAutopilot(aCTATLASProcess):
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
             eventrangestoupdate = []
-            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
+            if j['actpandastatus'] == 'finished' \
+              and j['sendhb'] \
+              and 'plugin=arc' in self.sites[j['siteName']]['catchall'] \
+              and re.search('eventService=True', j['pandajob']):
                 
                 if not j['eventranges'] or j['eventranges'] == '[]':
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
