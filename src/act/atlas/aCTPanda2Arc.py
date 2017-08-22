@@ -36,7 +36,12 @@ class aCTPanda2Arc(aCTATLASProcess):
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
-            parser.parse()
+            try:
+                parser.parse()
+            except Exception as e:
+                # try again later
+                 self.log.error('Cant handle job description: %s' % str(e))
+                 continue
             traces = []
             # Getting DDM endpoint. 'ddm' should be filled by _parseAgisJson
             if 'ddm' in self.sites[job['siteName']]:
