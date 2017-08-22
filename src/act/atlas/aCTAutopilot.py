@@ -124,9 +124,23 @@ class aCTAutopilot(aCTATLASProcess):
             jd = {}
             jd['startTime'] = j['startTime']
             jd['endTime'] = j['endTime']
-            jd['computingElement'] = j['computingElement']
+            if j['computingElement']:
+                if j['computingElement'].find('://') != -1: # this if is only needed during transition period
+                    jd['computingElement'] = arc.URL(str(j['computingElement'])).Host()
+                else:
+                    jd['computingElement'] = j['computingElement']
             jd['node'] = j['node']
             jd['siteName'] = j['siteName']
+            # For starting truepilot jobs send pilotID with expected log
+            # location so logs are available in case of lost heartbeat
+            if pstatus == 'starting' and not changed_pstatus and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
+                jobid = j['computingElement']
+                date = time.strftime('%Y%m%d')
+                cluster = arc.URL(str(jobid)).Host()
+                sessionid = jobid[jobid.rfind('/')+1:]
+                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid])
+                jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
+
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
             except:
