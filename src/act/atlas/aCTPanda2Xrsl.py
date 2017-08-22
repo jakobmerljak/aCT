@@ -36,7 +36,7 @@ class aCTPanda2Xrsl:
         self.traces = []
         if len(self.pandajob) > 50000:
             self.longjob = True
-        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","LRZ-LMU_MUC_MCORE1","MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
+        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
 
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
@@ -80,7 +80,7 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
-        if 'UIO_MCORE' not in self.sitename:
+        if 'UIO' not in self.sitename:
             return
         # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
@@ -257,6 +257,11 @@ class aCTPanda2Xrsl:
             pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
 
         pandajobarg = self.pandajob
+        # Set corecount to 1 to allow single core jobs to run. For other numbers
+        # corecount is set dynamically using ATHENA_PROC_NUMBER. This hack can be
+        # removed when ATHENA_PROC_NUMBER=1 works.
+        if 'BOINC' in self.sitename:
+            pandajobarg = re.sub(r'--coreCount=\d+', '--coreCount=1', pandajobarg)
         # Hack to tell job to start from checkpoint
         if self.sitename == 'BOINC_CHECKPOINT':
             pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
@@ -303,9 +308,10 @@ class aCTPanda2Xrsl:
             x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
         elif self.sitename in self.rtesites:
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
-        elif 'BOINC' in self.sitename:
-            # Use official pilot for BOINC
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+        elif 'BOINC' in self.sitename or (self.sitename.startswith('ANALY') and not self.truepilot) or ('MPPMU' in self.sitename):
+            # Use official pilot for BOINC and ND analy queues
+            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
         else:
             # Use no kill pilot to avoid pilot killing too much at end of job
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
