@@ -8,7 +8,7 @@ import uuid
 
 class aCTPanda2Xrsl:
 
-    def __init__(self, pandajob, sitename, siteinfo, osmap, tmpdir, eventranges, log):
+    def __init__(self, pandajob, sitename, siteinfo, osmap, tmpdir, atlasconf, eventranges, log):
         self.log = log
         self.pandajob = pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
@@ -31,6 +31,7 @@ class aCTPanda2Xrsl:
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
         self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
+        self.atlasconf = atlasconf
         self.eventranges = eventranges
         self.longjob = False
         self.traces = []
@@ -448,6 +449,15 @@ class aCTPanda2Xrsl:
             if self.sitename == 'ANALY_wuppertalprod':
                 self.xrsl['priority'] = ""
 
+    def setEnvironment(self):
+        # Set schedulerID and job log URL for true pilot jobs
+        if not self.truepilot:
+            return
+
+        schedid = self.atlasconf.get(["panda", "schedulerid"])
+        schedurl = self.atlasconf.get(["joblog", "urlprefix"])
+        self.xrsl['environment'] = '(environment = ("PANDA_JSID" "%s")("SCHED_URL" "%s"))' % (schedid, schedurl)
+
     def parse(self):
         self.setTime()
         self.setJobname()
@@ -461,6 +471,7 @@ class aCTPanda2Xrsl:
         self.setGMLog()
         self.setOutputs()
         self.setPriority()
+        self.setEnvironment()
 
     def getXrsl(self):
         x = "&"

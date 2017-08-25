@@ -32,7 +32,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), job['eventranges'], self.log)
+                                   self.arcconf.get(["tmp", "dir"]), self.conf, job['eventranges'], self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
@@ -40,8 +40,8 @@ class aCTPanda2Arc(aCTATLASProcess):
                 parser.parse()
             except Exception as e:
                 # try again later
-                 self.log.error('Cant handle job description: %s' % str(e))
-                 continue
+                self.log.error('Cant handle job description: %s' % str(e))
+                continue
             traces = []
             # Getting DDM endpoint. 'ddm' should be filled by _parseAgisJson
             if 'ddm' in self.sites[job['siteName']]:
