@@ -133,7 +133,7 @@ class aCTAutopilot(aCTATLASProcess):
             jd['siteName'] = j['siteName']
             # For starting truepilot jobs send pilotID with expected log
             # location so logs are available in case of lost heartbeat
-            if pstatus == 'starting' and not changed_pstatus and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
+            if pstatus == 'starting' and not changed_pstatus and j['computingElement'] and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
                 jobid = j['computingElement']
                 date = time.strftime('%Y%m%d')
                 cluster = arc.URL(str(jobid)).Host()
