@@ -268,6 +268,8 @@ class aCTPanda2Xrsl:
             pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
             # use newest DB release
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+        if self.sitename == 'LRZ-LMU_MUC_MCORE1':
+            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         if self.longjob:
             pandajobarg = "FILE"
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
