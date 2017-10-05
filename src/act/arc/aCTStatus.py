@@ -118,8 +118,10 @@ class aCTStatus(aCTProcess):
                 # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
                 if updatedjob.State.GetGeneralState() == 'Queuing' and (updatedjob.State.GetSpecificState() == 'INLRMS:S' or updatedjob.State.GetSpecificState() == 'INLRMS:O'):
                     updatedjob.State = arc.JobState('Hold')
-                if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
+                if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState() \
+                     and self.cluster != 'gsiftp://gar-ex-etpgrid1.garching.physik.uni-muenchen.de:2811/preempt':
                     # just update timestamp
+                    # Update numbers every time for superMUC since walltime is missing for finished jobs
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
                 
@@ -134,6 +136,7 @@ class aCTStatus(aCTProcess):
                         self.log.warning("%s: Job %s FINISHED but has missing exit code, setting to zero" % (appjobid, updatedjob.JobID))
                         updatedjob.ExitCode = 0
                     arcstate = 'finished'
+                    self.log.debug('%s: reported walltime %d, cputime %d' % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), updatedjob.UsedTotalCPUTime.GetPeriod()))
                 elif updatedjob.State == arc.JobState.FAILED:
                     arcstate = self.processJobErrors(id, appjobid, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
