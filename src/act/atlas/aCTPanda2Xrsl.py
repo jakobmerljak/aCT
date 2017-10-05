@@ -37,8 +37,9 @@ class aCTPanda2Xrsl:
         self.traces = []
         if len(self.pandajob) > 50000:
             self.longjob = True
-        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
 
+        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
+        self.artes = None
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
             if self.pandajob.startswith('GUID'):
@@ -183,6 +184,19 @@ class aCTPanda2Xrsl:
 
     def setRTE(self):
 
+        self.artes = ''
+        # Non-RTE setup only requires ATLAS-SITE and possibly ENV/PROXY
+        if self.truepilot:
+            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
+            return
+        if self.siteinfo['type'] == 'analysis':
+            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
+            return
+        if self.sitename not in self.rtesites:
+            self.xrsl['rtes'] = "(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
+            return
+        
+        # Old-style RTE setup
         atlasrtes = []
         for (package, cache) in zip(self.jobdesc['swRelease'][0].split('\n'), self.jobdesc['homepackage'][0].split('\n')):
             if cache.find('Production') > 1 and cache.find('AnalysisTransforms') < 0:
@@ -221,7 +235,6 @@ class aCTPanda2Xrsl:
 
             atlasrtes.append(rte)
 
-
         self.xrsl['rtes'] = ""
         for rte in atlasrtes[-1:]:
             self.xrsl['rtes'] += "(runtimeenvironment = APPS/HEP/ATLAS-" + rte + ")"
@@ -231,16 +244,6 @@ class aCTPanda2Xrsl:
 
         self.artes = ",".join(atlasrtes)
 
-        # Set proxy environment for truepilot jobs
-        if self.truepilot:
-            self.artes = ""
-            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
-        elif self.siteinfo['type'] == 'analysis':
-            self.artes = ""
-            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
-        elif self.sitename not in self.rtesites:
-            self.artes = ""
-            self.xrsl['rtes'] = "(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
 
     def setExecutable(self):
 
@@ -262,13 +265,15 @@ class aCTPanda2Xrsl:
         # corecount is set dynamically using ATHENA_PROC_NUMBER. This hack can be
         # removed when ATHENA_PROC_NUMBER=1 works.
         if 'BOINC' in self.sitename:
-            pandajobarg = re.sub(r'--coreCount=\d+', '--coreCount=1', pandajobarg)
+            self.log.debug('hacking boinc corecount')
+            pandajobarg = re.sub(r'&coreCount=\d+&', '&coreCount=1&', pandajobarg)
+            self.log.debug(pandajobarg)
         # Hack to tell job to start from checkpoint
         if self.sitename == 'BOINC_CHECKPOINT':
             pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
             # use newest DB release
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
-        if self.sitename == 'LRZ-LMU_MUC_MCORE1':
+        if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         if self.longjob:
             pandajobarg = "FILE"
@@ -302,8 +307,8 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-        #elif self.eventranges: # ES job
-        #    x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
+        elif self.sitename in ['LRZ-LMU_MUC1_MCORE']:
+            x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
         elif re.match('BEIJING-.*_MCORE', self.sitename):
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
             x += '(agis_schedconf.agis.%s.json "http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&panda_queue=%s")' % (self.sitename,self.sitename)
@@ -323,8 +328,6 @@ class aCTPanda2Xrsl:
 
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
-        else:
-            x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot.tar.gz")'
 
         if self.longjob:
             # TODO create input file
