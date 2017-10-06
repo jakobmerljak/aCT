@@ -480,6 +480,10 @@ class aCTValidator(aCTATLASProcess):
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJob(job['arcjobid'], desc)
+                self.cleanDownloadedJob(job['arcjobid'])
             else:
                 for se in jobsurls:
                     try:
