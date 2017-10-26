@@ -4,6 +4,7 @@
 #
 import time
 import htcondor
+import classad
 
 from act.common.aCTProcess import aCTProcess
 
@@ -32,39 +33,6 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
 
-    def processJobErrors(self, id, appjobid, failedjob):
-        '''
-        Examine errors of failed job and decide whether to resubmit or not
-        '''
-        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, ";".join([joberr for joberr in failedjob.Error])))
-        
-        # First check if it was a data staging problem
-        if failedjob.RestartState == arc.JobState.PREPARING or \
-           failedjob.RestartState == arc.JobState.FINISHING:
-            self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
-            # Reset arc job state so that next time new state will be picked up
-            failedjob.State = arc.JobState('Undefined')
-            return "torerun"
-        
-        newstate = "failed"
-        # Check if any job runtime error matches any error in the toresubmit list
-        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
-        attemptsleft = int(self.dbcondor.getArcJobInfo(id, ['attemptsleft'])['attemptsleft']) - 1
-        if attemptsleft < 0:
-            attemptsleft = 0
-        self.dbcondor.updateArcJob(id, {'attemptsleft': str(attemptsleft)})
-        if resub:
-            if not attemptsleft:
-                self.log.info("%s: Job %s out of retries" % (appjobid, failedjob.JobID))
-            else:
-                self.log.info("%s: Will resubmit job %s, %i attempts left" % (appjobid, failedjob.JobID, attemptsleft))
-                failedjob.State = arc.JobState('Undefined')
-                newstate = "toresubmit"
-        
-        else:
-            self.log.info("%s: Job %s has fatal errors, cannot resubmit" % (appjobid, failedjob.JobID))
-        return newstate
-        
     def checkJobs(self):
         '''
         Query all running jobs
@@ -140,7 +108,7 @@ class aCTStatus(aCTProcess):
                 condorstate = 'holding'
             
             # Filter out fields added by condor that we are not interested in
-            jobdesc = dict([(k,v) for (k,v) in updatedjob.items() if k in attrs])
+            jobdesc = dict([(k,v) for (k,v) in updatedjob.items() if k in attrs and v != classad.Value.Undefined])
             jobdesc['condorstate'] = condorstate
             jobdesc['tcondorstate'] = self.dbcondor.getTimeStamp()
             jobdesc['tstate'] = self.dbcondor.getTimeStamp()
