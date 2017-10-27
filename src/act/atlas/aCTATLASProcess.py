@@ -8,6 +8,7 @@ from act.common import aCTConfig
 from act.common import aCTUtils
 from act.common import aCTSignal
 from act.arc import aCTDBArc
+from act.condor import aCTDBCondor
 import aCTDBPanda
 
 
@@ -33,6 +34,7 @@ class aCTATLASProcess:
         self.arcconf=aCTConfig.aCTConfigARC()
         # database
         self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.dbcondor=aCTDBCondor.aCTDBCondor(self.log,self.conf.get(["db","file"]))
         self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
         
         # start time for periodic restart

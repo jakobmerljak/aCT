@@ -30,6 +30,10 @@ class aCTAGISParser:
             if configendpoints:
                 sites[sitename]['endpoints'] = configendpoints
             try:
+                sites[sitename]['flavour'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["flavour"])[0]
+            except:
+                sites[sitename]['flavour'] = 'ARC-CE'
+            try:
                 sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             except:
                 pass
@@ -76,6 +80,8 @@ class aCTAGISParser:
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
                 sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
+            if not sites[sitename].has_key('flavour') and sites[sitename]['queues']:
+                sites[sitename]['flavour'] = sites[sitename]['queues'][0]['ce_flavour']
             if not sites[sitename].has_key('maxtime') or sites[sitename]['maxtime'] == 0:
                 try:
                     maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
@@ -160,7 +166,9 @@ class aCTAGISParser:
         with open(os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', '%s.all.json' % sitename), 'w') as f:
             json.dump(schedconf, f)
 
-    def getSites(self):
+    def getSites(self, flavour=None):
+        '''Get site info, filtered by CE flavour if given'''
+
         self.conf.parse()
         agisfile = self.conf.get(['agis','jsonfilename'])
         if not agisfile:
@@ -201,6 +209,8 @@ class aCTAGISParser:
                 else:
                     self.log.info("%s: %s, maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['maxjobs']))
 
+        if flavour:
+            return dict((k,v) for (k,v) in self.sites.iteritems() if v.get('flavour') == flavour)
         return self.sites
     
     def getOSMap(self):

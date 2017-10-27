@@ -18,12 +18,12 @@ class aCTPanda2Arc(aCTATLASProcess):
         self.setSites()
 
     def setSites(self):
-        self.sites = self.agisparser.getSites()                        
+        self.sites = self.agisparser.getSites(flavour='ARC-CE')                        
         self.osmap = self.agisparser.getOSMap()                        
 
     def createArcJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL limit 10000")
+        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in ('%s') limit 10000" % "','".join(self.sites.keys()))
         proxies_map = {}
 
         for job in jobs:

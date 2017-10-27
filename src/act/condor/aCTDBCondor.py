@@ -39,7 +39,7 @@ class aCTDBCondor(aCTDB):
           - JobStatus
           - RemoteWallClockTime
           - RemoteUserCpu
-          - ...
+          - ExitCode
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
@@ -98,7 +98,7 @@ class aCTDBCondor(aCTDB):
         self.conn.commit()
 
 
-    def insertCondorJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', downloadfiles='', fairshare=''):
+    def insertCondorJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', fairshare=''):
         '''
         Add a new job description (ClassAd object) for the Condor engine to
         process.
@@ -127,7 +127,6 @@ class aCTDBCondor(aCTDB):
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
         desc['appjobid'] = appjobid
-        desc['downloadfiles'] = downloadfiles
         desc['priority'] = jobdesc['JobPrio']
         desc['fairshare'] = fairshare
         s="insert into condorjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
