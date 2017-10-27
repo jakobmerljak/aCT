@@ -24,7 +24,8 @@ class aCTValidator(aCTATLASProcess):
         
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
-        uc = arc.UserConfig()
+        cred_type = arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+        uc = arc.UserConfig(cred_type)
         uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
@@ -34,8 +35,9 @@ class aCTValidator(aCTATLASProcess):
         proxyfile = actp.path(dn, '/atlas/Role=production')
         if not proxyfile:
             raise Exception('Could not find proxy with production role in proxy table')
+        self.log.info('set proxy path to %s' % proxyfile)
             
-        self.uc = arc.UserConfig()
+        self.uc = arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(proxyfile))
         self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
         
@@ -69,10 +71,7 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         date = time.strftime('%Y%m%d')
-        if aj['cluster'].find('://') == -1:
-            cluster = aj['cluster'].split('/')[0]
-        else:
-            cluster = arc.URL(str(aj['cluster'])).Host()
+        cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
@@ -110,8 +109,10 @@ class aCTValidator(aCTATLASProcess):
             else:
                 t = ['Unknown'] * 5
             logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
-            jobinfo.pilotID = '|'.join([logurl] + t[1:])
-
+            try: # TODO catch and handle non-ascii
+                jobinfo.pilotID = '|'.join([logurl] + t[1:])
+            except:
+                pass
             jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
@@ -223,6 +224,8 @@ class aCTValidator(aCTATLASProcess):
                 continue
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
             if not dp or not dp.h:
+                self.log.warning("URL %s not supported, skipping validation" % str(surl['surl']))
+                result[surl['arcjobid']] = self.ok
                 continue
             datapointlist.append(dp.h)
             dummylist.append(dp) # to not destroy objects
@@ -233,7 +236,7 @@ class aCTValidator(aCTATLASProcess):
             
             # do bulk call
             (files, status) = dp.h.Stat(datapointlist)
-            if not status:
+            if not status and status.GetErrno() != os.errno.EOPNOTSUPP:
                 # If call fails it is generally a server or connection problem
                 # and in most cases should be retryable
                 if status.Retryable():
@@ -247,6 +250,21 @@ class aCTValidator(aCTATLASProcess):
                 # files is a list of FileInfo objects. If file is not found or has
                 # another error in the listing FileInfo object will be invalid
                 for i in range(len(datapointlist)):
+                    if status.GetErrno() == os.errno.EOPNOTSUPP:
+                        # Bulk stat was not supported, do non-bulk here
+                        f = arc.FileInfo()
+                        st = datapointlist[i].Stat(f)
+                        if not st or not f:
+                            if status.Retryable():
+                                self.log.warning("Failed to query files on %s, will retry later: %s" % (datapointlist[i].GetURL().Host(), str(st)))
+                                result[surllist[i]['arcjobid']] = self.retry
+                            else:
+                                self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
+                                result[surllist[i]['arcjobid']] = self.failed
+                            files.append(None)
+                        else:
+                            files.append(f)
+
                     if not files[i]:
                         self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
                         result[surllist[i]['arcjobid']] = self.failed
@@ -457,11 +475,15 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate:
             jobsurls = self.extractOutputFilesFromMetadata(job["arcjobid"])
             if not jobsurls:
-                # Problem extracting files, resubmit the job
-                self.log.error("%s: Cannot validate output of arc job %s, will resubmit" % (job['pandaid'], job["arcjobid"]))
+                # Problem extracting files, fail the job
+                self.log.error("%s: Cannot validate output of arc job %s" % (job['pandaid'], job["arcjobid"]))
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "toresubmit", "pandastatus": "starting"}
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJob(job['arcjobid'], desc)
+                self.cleanDownloadedJob(job['arcjobid'])
             else:
                 for se in jobsurls:
                     try:

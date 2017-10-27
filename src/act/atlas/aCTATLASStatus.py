@@ -108,7 +108,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
         select += " limit 100000"
-        columns = ["arcjobs.id", "arcjobs.cluster"]
+        columns = ["arcjobs.id", "arcjobs.JobID"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
@@ -121,11 +121,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
-            if aj['cluster'].find('://') == -1:
-                cluster = aj['cluster'].split('/')[0]
-            else:
-                cluster = arc.URL(str(aj['cluster'])).Host()
-            desc["computingElement"] = cluster
+            desc["computingElement"] = aj['JobID']
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -145,7 +141,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
         select += " limit 100000"
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
-                   "arcjobs.cluster", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
+                   "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
@@ -159,11 +155,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["pandastatus"] = "running"
             desc["actpandastatus"] = "running"
             desc["node"] = aj["ExecutionNode"]
-            if aj['cluster'].find('://') == -1:
-                cluster = aj['cluster'].split('/')[0]
-            else:
-                cluster = arc.URL(str(aj['cluster'])).Host()
-            desc["computingElement"] = cluster
+            desc["computingElement"] = aj['JobID']
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             desc["corecount"] = aj['RequestedSlots']
             # When true pilot job has started running, turn of aCT heartbeats
@@ -297,20 +289,13 @@ class aCTATLASStatus(aCTATLASProcess):
 
         self.log.info("processing %d failed jobs" % len(arcjobs))
         for aj in arcjobs:
-            cluster=aj['cluster']
-            try:
-                if cluster.find('://') == -1:
-                    cluster = cluster.split('/')[0]
-                else:
-                    cluster = arc.URL(str(cluster)).Host()
-            except:
-                pass
             jobid=aj['JobID']
-            if not jobid or not cluster:
+            if not jobid:
                 # Job was not even submitted, there is no more information
                 self.log.warning("%s: Job has not been submitted yet so no information to report", aj['appjobid'])
                 continue
             
+            cluster = arc.URL(str(jobid)).Host()
             sessionid=jobid[jobid.rfind('/')+1:]
             date = time.strftime('%Y%m%d')
             outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
@@ -406,7 +391,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
         select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
-                   'cluster', 'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
+                   'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
                    'UsedTotalWallTime', 'ExitCode', 'sendhb']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')

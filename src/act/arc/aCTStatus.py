@@ -41,19 +41,22 @@ class aCTStatus(aCTProcess):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
-        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, ";".join([joberr for joberr in failedjob.Error])))
+        errors = ";".join([joberr for joberr in failedjob.Error])
+        self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, errors))
         
         # First check if it was a data staging problem
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
-            self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
-            # Reset arc job state so that next time new state will be picked up
-            failedjob.State = arc.JobState('Undefined')
-            return "torerun"
+            # Don't retry when output list is not available
+            if 'Error reading user generated output file list' not in errors:
+                self.log.info("%s: Will rerun job %s" % (appjobid, failedjob.JobID))
+                # Reset arc job state so that next time new state will be picked up
+                failedjob.State = arc.JobState('Undefined')
+                return "torerun"
         
         newstate = "failed"
         # Check if any job runtime error matches any error in the toresubmit list
-        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if ";".join([joberr for joberr in failedjob.Error]).find(err) != -1]
+        resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if err in errors]
         attemptsleft = int(self.db.getArcJobInfo(id, ['attemptsleft'])['attemptsleft']) - 1
         if attemptsleft < 0:
             attemptsleft = 0
@@ -115,8 +118,10 @@ class aCTStatus(aCTProcess):
                 # map INLRMS:S and O to HOLD (not necessary when ARC 4.1 is used)
                 if updatedjob.State.GetGeneralState() == 'Queuing' and (updatedjob.State.GetSpecificState() == 'INLRMS:S' or updatedjob.State.GetSpecificState() == 'INLRMS:O'):
                     updatedjob.State = arc.JobState('Hold')
-                if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState():
+                if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState() \
+                     and self.cluster != 'gsiftp://gar-ex-etpgrid1.garching.physik.uni-muenchen.de:2811/preempt':
                     # just update timestamp
+                    # Update numbers every time for superMUC since walltime is missing for finished jobs
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
                 
@@ -131,6 +136,7 @@ class aCTStatus(aCTProcess):
                         self.log.warning("%s: Job %s FINISHED but has missing exit code, setting to zero" % (appjobid, updatedjob.JobID))
                         updatedjob.ExitCode = 0
                     arcstate = 'finished'
+                    self.log.debug('%s: reported walltime %d, cputime %d' % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), updatedjob.UsedTotalCPUTime.GetPeriod()))
                 elif updatedjob.State == arc.JobState.FAILED:
                     arcstate = self.processJobErrors(id, appjobid, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
@@ -145,13 +151,16 @@ class aCTStatus(aCTProcess):
                     # unexpected
                     arcstate = 'failed'
                     
-                # Fix crazy wallclock times
+                # Fix crazy wallclock and CPU times
                 if updatedjob.UsedTotalWallTime > arc.Time() - updatedjob.LocalSubmissionTime:
                     fixedwalltime = arc.Time() - updatedjob.LocalSubmissionTime
                     self.log.warning("%s: Fixing reported walltime %d to %d" % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), fixedwalltime.GetPeriod()))
                     updatedjob.UsedTotalWallTime = fixedwalltime
+                if updatedjob.UsedTotalCPUTime > arc.Period(10**7):
+                    self.log.warning("%s: Discarding reported CPUtime %d" % (appjobid, updatedjob.UsedTotalCPUTime.GetPeriod()))
+                    updatedjob.UsedTotalCPUTime = arc.Period(-1)
                 self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()}, updatedjob)
-                    
+
         self.log.info('Done')
         
     def checkLostJobs(self):

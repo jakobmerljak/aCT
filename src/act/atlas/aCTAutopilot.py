@@ -104,12 +104,8 @@ class aCTAutopilot(aCTATLASProcess):
         hb = ''
         if pstatus == 'running' or pstatus == 'transferring':
             hb = ' and sendhb=1'
-        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount']
-        # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
-        if pstatus == 'transferring':
-            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) and eventranges is NULL limit 1000", columns)
-        else:
-            jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount', 'eventranges']
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -119,14 +115,32 @@ class aCTAutopilot(aCTATLASProcess):
         if pstatus == 'sent':
             pstatus = 'starting'
             changed_pstatus = True
+
         tlist=[]
         for j in jobs:
+            # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
+            if pstatus == 'transferring' and j['eventranges']:
+                pstatus = 'running'
             jd = {}
             jd['startTime'] = j['startTime']
             jd['endTime'] = j['endTime']
-            jd['computingElement'] = j['computingElement']
+            if j['computingElement']:
+                if j['computingElement'].find('://') != -1: # this if is only needed during transition period
+                    jd['computingElement'] = arc.URL(str(j['computingElement'])).Host()
+                else:
+                    jd['computingElement'] = j['computingElement']
             jd['node'] = j['node']
             jd['siteName'] = j['siteName']
+            # For starting truepilot jobs send pilotID with expected log
+            # location so logs are available in case of lost heartbeat
+            if pstatus == 'starting' and not changed_pstatus and j['computingElement'] and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
+                jobid = j['computingElement']
+                date = time.strftime('%Y%m%d')
+                cluster = arc.URL(str(jobid)).Host()
+                sessionid = jobid[jobid.rfind('/')+1:]
+                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid])
+                jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
+
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
             except:
@@ -159,7 +173,7 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if t.result.has_key('command') and ( (t.result['command'][0] == "tobekilled") or (t.result['command'][0] == "badattemptnr") ):
+            if t.result.has_key('command') and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
                 self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
@@ -186,13 +200,17 @@ class aCTAutopilot(aCTATLASProcess):
         # If event service update event ranges. Validator filters for the successful ones
         for j in jobs:
             eventrangestoupdate = []
-            if j['actpandastatus'] == 'finished' and j['sendhb'] and re.search('eventService=True', j['pandajob']):
+            if j['actpandastatus'] == 'finished' \
+              and j['sendhb'] \
+              and 'plugin=arc' in self.sites[j['siteName']]['catchall'] \
+              and re.search('eventService=True', j['pandajob']):
                 
                 if not j['eventranges'] or j['eventranges'] == '[]':
-                    # Create the empty pickle so that heartbeat code below doesn't fail
-                    jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                    jobinfo.writeToFile(fname)
+                    if not os.path.exists(fname):
+                        # Create the empty pickle so that heartbeat code below doesn't fail
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                        jobinfo.writeToFile(fname)
                     continue
                 
                 # If zip is used we need to first send transferring heartbeat

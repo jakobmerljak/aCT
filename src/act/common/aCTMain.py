@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 import errno
 import os
 import signal
@@ -193,7 +195,7 @@ class aCTMain:
                 dateext
                 missingok
                 rotate %s
-                create
+                nocreate
                 nocompress
             }''' % (self.conf.get(["logger", "logdir"]), 
                     self.conf.get(["logger", "rotate"]))

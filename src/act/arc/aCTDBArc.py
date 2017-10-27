@@ -10,6 +10,7 @@ class aCTDBArc(aCTDB):
         aCTDB.__init__(self, logger, dbname)
 
         conf = aCTConfig.aCTConfigARC()
+        self.proxydir = conf.get(["voms","proxystoredir"])
                 
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
@@ -376,7 +377,7 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' OR arcstate='submitting' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
     
@@ -415,11 +416,11 @@ class aCTDBArc(aCTDB):
         d = {}
         for attr in self.jobattrs:
             if self.jobattrs[attr] == int or self.jobattrs[attr] == str:
-                d[attr] = str(getattr(job, attr))
+                d[attr] = str(getattr(job, attr))[:250]
             elif self.jobattrs[attr] == arc.JobState:
                 d[attr] = getattr(job, attr).GetGeneralState()
             elif self.jobattrs[attr] == arc.StringList:
-                d[attr] = '|'.join(getattr(job, attr))
+                d[attr] = '|'.join(getattr(job, attr))[:1000]
             elif self.jobattrs[attr] == arc.URL:
                 d[attr] = getattr(job, attr).str().replace(r'\2f',r'/')
             elif self.jobattrs[attr] == arc.Period:
@@ -432,8 +433,10 @@ class aCTDBArc(aCTDB):
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
                 tmpdict = dict(zip(ssm.keys(), ssm.values()))
-                d[attr] = str(tmpdict)
-
+                d[attr] = str(tmpdict)[:1000]
+            # Force everything to ASCII
+            if attr in d:
+                d[attr] = ''.join([i for i in d[attr] if ord(i) < 128])
         return d
 
     def _writeProxyFile(self, proxypath, proxy):

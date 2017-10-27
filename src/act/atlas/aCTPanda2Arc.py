@@ -1,4 +1,5 @@
 import httplib
+import traceback
 import json
 
 from aCTATLASProcess import aCTATLASProcess
@@ -32,11 +33,17 @@ class aCTPanda2Arc(aCTATLASProcess):
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), job['eventranges'], self.log)
+                                   self.arcconf.get(["tmp", "dir"]), self.conf, job['eventranges'], self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
-            parser.parse()
+            try:
+                parser.parse()
+            except Exception as e:
+                # try again later
+                self.log.error('%s: Cant handle job description: %s' % (job['pandaid'], str(e)))
+                self.log.error(traceback.format_exc())
+                continue
             traces = []
             # Getting DDM endpoint. 'ddm' should be filled by _parseAgisJson
             if 'ddm' in self.sites[job['siteName']]:
