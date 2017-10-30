@@ -113,7 +113,7 @@ class aCTStatus:
                 log += '%10s' % '-'
         print log+'\n\n'
 
-    def JobReport(self):
+    def ArcJobReport(self):
         c=self.db.conn.cursor()
         c.execute("select jobid,state from arcjobs")
         rows=c.fetchall()
@@ -167,6 +167,63 @@ class aCTStatus:
                 log += '%10s' % '-'
         print log+'\n\n'
 
+    def CondorJobReport(self):
+        
+        condorjobstatemap = ['Undefined', # used before real state is known
+                             'Idle',
+                             'Running',
+                             'Removed',
+                             'Completed',
+                             'Held',
+                             'Transferring',
+                             'Suspended']
+        
+        c = self.db.conn.cursor()
+        c.execute("select cluster, JobStatus from condorjobs")
+        rows = c.fetchall()
+        rep = {}
+        rtot = {}
+
+        print "All Condor jobs: %d" % len(rows)
+        print "%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap]))
+        for r in rows:
+
+            cl = str(r[0])
+            if not cl:
+                cl = 'WaitingSubmission'
+
+            jid = r[1]
+
+            try:
+                rep[cl][jid]+=1
+            except:
+                try:
+                    rep[cl][jid]=1
+                except:
+                    rep[cl]={}
+                    rep[cl][jid]=1
+            try:
+                rtot[jid]+=1
+            except:
+                rtot[jid]=1
+
+        for k in sorted(rep.keys()):
+            log="%28s:" % k[:28]
+            for s in range(8):
+                try:
+                    log += '%10s' % str(rep[k][s])
+                except KeyError:
+                    log += '%10s' % '-'
+            print log
+        log = "%28s:" % "Totals"
+        for s in range(8):
+            try:
+                log += '%10s' % str(rtot[s])
+            except:
+                log += '%10s' % '-'
+        print log+'\n\n'
+
+
     def StuckReport(self):
 
         # Query for lost jobs older than lostlimit
@@ -197,7 +254,8 @@ class aCTStatus:
 
 acts=aCTStatus()
 acts.PandaReport()
-acts.JobReport()
+acts.ArcJobReport()
+acts.CondorJobReport()
 acts.StuckReport()
 acts.ProcessReport()
 
