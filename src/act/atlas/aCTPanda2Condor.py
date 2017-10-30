@@ -1,6 +1,3 @@
-import httplib
-import json
-
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.atlas.aCTPanda2ClassAd import aCTPanda2ClassAd
 from act.atlas.aCTAGISParser import aCTAGISParser
@@ -31,8 +28,8 @@ class aCTPanda2Condor(aCTATLASProcess):
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
-            parser = aCTPanda2ClassAd(job['pandajob'], job['siteName'], self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), job['eventranges'], self.log)
+            parser = aCTPanda2ClassAd(job['pandajob'], job['siteName'], self.sites[job['siteName']],
+                                   self.arcconf.get(["tmp", "dir"]), self.conf, self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
