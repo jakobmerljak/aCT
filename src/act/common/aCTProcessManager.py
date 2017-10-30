@@ -31,6 +31,7 @@ class aCTProcessManager:
         self.processes_single = {'act/atlas/aCTAutopilot':None, 
                                  'act/atlas/aCTPandaGetJobs':None,
                                  'act/atlas/aCTPanda2Arc':None,
+                                 'act/atlas/aCTPanda2Condor':None,
                                  'act/common/aCTProxyHandler':None,
                                  'act/atlas/aCTATLASStatus':None,
                                  'act/atlas/aCTValidator':None,
