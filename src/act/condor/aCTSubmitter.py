@@ -1,7 +1,7 @@
+import ast
 import re
 import time
-from htcondor import Schedd, JobAction
-from classad import ClassAd
+import htcondor
 
 from threading import Thread
 from act.common.aCTProcess import aCTProcess
@@ -28,9 +28,11 @@ def Submit(jobdesc, log, appjobid, schedd):
         log.error("%s: no cluster free for submission" % appjobid)
         return None
 
-    jobid = schedd.submit(jobdesc)
-    if not jobid:
-        pass
+    # This method only works with condor version >= 8.5.8 but is needed to
+    # get $() variable expansion working
+    sub = htcondor.Submit(dict(jobdesc))
+    with schedd.transaction() as txn:
+        jobid = sub.queue(txn)
     return jobid
 
 
@@ -38,7 +40,7 @@ class aCTSubmitter(aCTProcess):
     
     def __init__(self):
         aCTProcess.__init__(self)
-        self.schedd = Schedd()
+        self.schedd = htcondor.Schedd()
 
     def RunThreadsSplit(self, plist, nthreads=1):
         it = 0
@@ -177,9 +179,13 @@ class aCTSubmitter(aCTProcess):
             # Just run one thread for each job in sequence.
             for j in jobs:
                 self.log.debug("%s: preparing submission" % j['appjobid'])
-                jobdescstr = str(self.dbcondor.getCondorJobDescription(str(j['jobdesc'])))
-                jobdesc = ClassAd(jobdescstr)
-                if not jobdesc:
+                jobdescstr = self.dbcondor.getCondorJobDescription(str(j['jobdesc']))
+                self.log.debug(jobdescstr)
+                try:
+                    # Not so nice using eval but condor doesn't accept unicode
+                    # strings returned from json.loads()
+                    jobdesc = ast.literal_eval(jobdescstr)
+                except:
                     self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                     continue
 
@@ -228,7 +234,7 @@ class aCTSubmitter(aCTProcess):
                                                           "tcondorstate": self.dbcondor.getTimeStamp()})
                 continue
 
-            self.schedd.act(JobAction.Remove, job['ClusterId'])
+            self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
             self.dbcondor.updateCondorJob(job['id'], {"condorstate": "cancelling",
                                                       "tcondorstate": self.dbcondor.getTimeStamp()})
             # TODO deal with failed cancel
@@ -263,7 +269,7 @@ class aCTSubmitter(aCTProcess):
 
             # Clean up jobs which were submitted
             if job['ClusterId']:
-                self.schedd.act(JobAction.Remove, job['ClusterId'])
+                self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
                 # TODO handle failed clean
 
             self.dbcondor.updateCondorJob(job['id'], {"condorstate": "tosubmit",

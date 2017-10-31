@@ -16,7 +16,6 @@ class aCTPanda2Condor(aCTATLASProcess):
 
     def setSites(self):
         self.sites = self.agisparser.getSites(flavour='HTCONDOR-CE')                        
-        self.osmap = self.agisparser.getOSMap()                        
 
     def createCondorJobs(self):
 
@@ -60,6 +59,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting
                 jd['actpandastatus'] = 'sent'
+                jd['corecount'] = int(classad['RequestCpus'])
                 self.dbpanda.updateJob(job['pandaid'], jd)
 
     def process(self):

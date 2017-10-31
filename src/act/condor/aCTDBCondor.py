@@ -1,3 +1,4 @@
+import json
 from act.db.aCTDB import aCTDB
 from act.common import aCTConfig
 
@@ -40,6 +41,8 @@ class aCTDBCondor(aCTDB):
           - RemoteWallClockTime
           - RemoteUserCpu
           - ExitCode
+          - JobCurrentStartDate
+          - CompletionDate
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
@@ -67,7 +70,9 @@ class aCTDBCondor(aCTDB):
             JobStatus SMALLINT DEFAULT 0 NOT NULL,
             RemoteWallClockTime FLOAT,
             RemoteUserCpu FLOAT,
-            ExitCode SMALLINT
+            ExitCode SMALLINT,
+            JobCurrentStartDate TIMESTAMP,
+            CompletionDate TIMESTAMP
             )
             """
             
@@ -108,11 +113,17 @@ class aCTDBCondor(aCTDB):
             self.log.error('%s: clusterlist cannot be empty for condor jobs' % appjobid)
             return None
 
+        try:
+            jobdescstr = json.dumps(jobdesc)
+        except:
+            self.log.error('%s: could not parse job description as dict: %s' % (appjobid, str(jobdesc)))
+            return None
+
         # todo: find some useful default for proxyid
         c = self.getCursor()
         
         s = "insert into jobdescriptions (jobdescription) values (%s)"
-        c.execute(s, [str(jobdesc)])
+        c.execute(s, [jobdescstr])
         c.execute("SELECT LAST_INSERT_ID()")
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
         
