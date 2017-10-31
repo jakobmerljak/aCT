@@ -11,18 +11,19 @@ import arc
 from act.common import aCTSignal
 from act.common import aCTUtils
 
-from aCTATLASProcess import aCTATLASProcess
-from aCTPandaJob import aCTPandaJob
-from aCTAGISParser import aCTAGISParser
+from act.atlas.aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTPandaJob import aCTPandaJob
+from act.atlas.aCTAGISParser import aCTAGISParser
 
 class aCTATLASStatus(aCTATLASProcess):
     
     def __init__(self):
         aCTATLASProcess.__init__(self)
         self.agisparser = aCTAGISParser(self.log)
+        self.sites = {}
                  
     def setSites(self):
-        self.sites = self.agisparser.getSites()
+        self.sites = self.agisparser.getSites(flavour='ARC-CE')
 
     def checkJobstoKill(self):
         """
@@ -51,7 +52,8 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and sitename in (" + sites + ")",
+                                    ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return
         
