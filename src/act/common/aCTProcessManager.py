@@ -34,6 +34,7 @@ class aCTProcessManager:
                                  'act/atlas/aCTPanda2Condor':None,
                                  'act/common/aCTProxyHandler':None,
                                  'act/atlas/aCTATLASStatus':None,
+                                 'act/atlas/aCTATLASStatusCondor':None,
                                  'act/atlas/aCTValidator':None,
                                  'act/atlas/aCTAGISFetcher':None
                                  }
