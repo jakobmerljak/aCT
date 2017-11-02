@@ -1,6 +1,5 @@
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.atlas.aCTPanda2ClassAd import aCTPanda2ClassAd
-from act.atlas.aCTAGISParser import aCTAGISParser
 
 
 class aCTPanda2Condor(aCTATLASProcess):
@@ -9,17 +8,11 @@ class aCTPanda2Condor(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-        self.sites = {}
-        self.setSites()
-
-    def setSites(self):
-        self.sites = self.agisparser.getSites(flavour='HTCONDOR-CE')                        
+        aCTATLASProcess.__init__(self, ceflavour='HTCONDOR-CE')
 
     def createCondorJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in ('%s') limit 10000" % "','".join(self.sites.keys()))
+        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:

@@ -109,6 +109,8 @@ class aCTStatus(aCTProcess):
             
             # Filter out fields added by condor that we are not interested in
             jobdesc = dict([(k,v) for (k,v) in updatedjob.items() if k in attrs and v != classad.Value.Undefined])
+            # Undefined is 2 in condor which means JobStatus running is ignored
+            jobdesc['JobStatus'] = updatedjob['JobStatus']
             jobdesc['condorstate'] = condorstate
             jobdesc['tcondorstate'] = self.dbcondor.getTimeStamp()
             jobdesc['tstate'] = self.dbcondor.getTimeStamp()

@@ -188,7 +188,7 @@ class aCTAutopilot(aCTATLASProcess):
         and cancelled jobs
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' or actpandastatus='cancelled' limit 1000");
+        jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' or actpandastatus='cancelled' limit 1000")
 
         if not jobs:
             return

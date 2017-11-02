@@ -13,17 +13,11 @@ from act.common import aCTUtils
 
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.atlas.aCTPandaJob import aCTPandaJob
-from act.atlas.aCTAGISParser import aCTAGISParser
 
 class aCTATLASStatus(aCTATLASProcess):
     
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-        self.sites = {}
-                 
-    def setSites(self):
-        self.sites = self.agisparser.getSites(flavour='ARC-CE')
+        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
 
     def checkJobstoKill(self):
         """
@@ -52,7 +46,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and sitename in (" + sites + ")",
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s" % self.sitesselect,
                                     ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return

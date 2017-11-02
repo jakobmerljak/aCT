@@ -20,7 +20,7 @@ class aCTValidator(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self)
+        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
         
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
@@ -446,7 +446,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 100000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "sendhb"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -532,7 +532,7 @@ class aCTValidator(aCTATLASProcess):
         Move actpandastatus to failed. 
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
-        select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
+        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 100000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "sendhb"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -602,7 +602,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # First check for resubmitting jobs with no arcjob id defined
-        select = "(actpandastatus='toresubmit' and arcjobid=NULL) limit 100000"
+        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 100000" % self.sitesselect
         columns = ["pandaid", "id"]
         
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
@@ -707,6 +707,7 @@ class aCTValidator(aCTATLASProcess):
     def process(self):
         self.logger.arclogfile.setReopen(True)
         self.logger.arclogfile.setReopen(False)
+        self.setSites()
         self.validateFinishedJobs()
         self.cleanFailedJobs()
         self.cleanResubmittingJobs()

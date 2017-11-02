@@ -9,12 +9,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
     '''
     
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-        self.sites = {}
-                 
-    def setSites(self):
-        self.sites = self.agisparser.getSites(flavour='HTCONDOR-CE')
+        aCTATLASProcess.__init__(self, ceflavour='HTCONDOR-CE')
 
     def checkJobstoKill(self):
         """
@@ -43,7 +38,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and sitename in (" + sites + ")",
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and sitename in %s" % self.sitesselect,
                                     ['pandaid', 'arcjobid', 'pandastatus', 'id'])
         if not jobs:
             return

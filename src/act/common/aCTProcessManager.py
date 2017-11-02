@@ -36,6 +36,7 @@ class aCTProcessManager:
                                  'act/atlas/aCTATLASStatus':None,
                                  'act/atlas/aCTATLASStatusCondor':None,
                                  'act/atlas/aCTValidator':None,
+                                 'act/atlas/aCTValidatorCondor':None,
                                  'act/atlas/aCTAGISFetcher':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers

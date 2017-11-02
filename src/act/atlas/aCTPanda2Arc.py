@@ -4,7 +4,6 @@ import json
 
 from aCTATLASProcess import aCTATLASProcess
 from aCTPanda2Xrsl import aCTPanda2Xrsl
-from aCTAGISParser import aCTAGISParser
 
 
 class aCTPanda2Arc(aCTATLASProcess):
@@ -13,18 +12,11 @@ class aCTPanda2Arc(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-        self.sites = {}
-        self.setSites()
-
-    def setSites(self):
-        self.sites = self.agisparser.getSites(flavour='ARC-CE')                        
-        self.osmap = self.agisparser.getOSMap()                        
+        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
 
     def createArcJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in ('%s') limit 10000" % "','".join(self.sites.keys()))
+        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:
