@@ -25,15 +25,16 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         if sites:
             
             sites = "'"+"','".join(sites)+"'"
-            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in (" + sites + ")",
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % self.sitesselect,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
             for job in jobs:
-                self.log.info("Cancelling starting job for %d for offline site %s", (job['pandaid'], job['siteName']))
+                continue
+                self.log.info("Cancelling starting job for %d for offline site %s" % (job['pandaid'], job['siteName']))
                 select = 'id=%s' % job['id']
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
                 if job['arcjobid']:
-                    self.dbcondor.updateCondorJob(job['arcjobid'], {'arcstate': 'tocancel'})
+                    self.dbcondor.updateCondorJob(job['arcjobid'], {'condorstate': 'tocancel'})
             
             self.dbpanda.Commit()
         
@@ -53,7 +54,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
                 continue
             
             # Put timings in the DB
-            condorselect = "arcjobid='%s' and condorjobs.id=pandajobs.arcjobid" % job['arcjobid']
+            condorselect = "arcjobid='%s' and condorjobs.id=pandajobs.arcjobid and siteName in %s" % (job['arcjobid'], self.sitesselect)
             condorjobs = self.dbcondor.getCondorJobsInfo(condorselect, tables='condorjobs,pandajobs')
             desc = {}
             if condorjobs:
@@ -91,7 +92,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         """
 
         select = "condorjobs.id=pandajobs.arcjobid and (condorjobs.condorstate='submitted' or condorjobs.condorstate='holding')"
-        select += " and pandajobs.actpandastatus='sent'"
+        select += " and pandajobs.actpandastatus='sent' and siteName in %s" % self.sitesselect
         select += " limit 100000"
         columns = ["condorjobs.id", "condorjobs.cluster"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables="condorjobs,pandajobs")
@@ -122,7 +123,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
 
         # do an inner join to pick up all jobs that should be set to running
         select = "condorjobs.id=pandajobs.arcjobid and condorjobs.condorstate='running' and pandajobs.actpandastatus='starting'"
-        select += " limit 100000"
+        select += " and siteName in %s limit 100000" % self.sitesselect
         columns = ["condorjobs.id", "condorjobs.JobCurrentStartDate",
                    "condorjobs.cluster", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables="condorjobs,pandajobs")
@@ -162,7 +163,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         select += " and pandajobs.actpandastatus != 'toresubmit'"
         select += " and pandajobs.actpandastatus != 'toclean'"
         select += " and pandajobs.actpandastatus != 'finished'"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["condorjobs.id", "condorjobs.JobCurrentStartDate", "condorjobs.CompletionDate",
                    "condorjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, tables="condorjobs,pandajobs", columns=columns)
@@ -208,7 +209,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         # Look for failed final states
         select = "(condorstate='donefailed' or condorstate='cancelled' or condorstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
-        select += " and pandajobs.arcjobid = condorjobs.id limit 100000"
+        select += " and pandajobs.arcjobid = condorjobs.id and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ['condorstate', 'appjobid', 'arcjobid', 'JobCurrentStartDate', 'CompletionDate']
 
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables='condorjobs,pandajobs')
@@ -292,7 +293,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbcondor.Commit()
             
         select = "condorstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
-                 "and pandajobs.arcjobid = condorjobs.id"
+                 "and pandajobs.arcjobid = condorjobs.id and pandajobs.sitename in %s" % self.sitesselect
         cleandesc = {"condorstate":"toclean", "tcondorstate": self.dbcondor.getTimeStamp()}
         jobs = self.dbcondor.getCondorJobsInfo(select, ['condorjobs.id', 'condorjobs.appjobid'], tables='condorjobs, pandajobs')
         for job in jobs:

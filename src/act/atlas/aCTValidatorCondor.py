@@ -16,7 +16,7 @@ class aCTValidatorCondor(aCTATLASProcess):
         Remove temporary files needed for this job
         '''
 
-        pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', pandaid)
+        pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
         shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
@@ -115,7 +115,7 @@ class aCTValidatorCondor(aCTATLASProcess):
                 self.dbcondor.updateCondorJob(job['arcjobid'], desc)
                 
             self.log.info('%s: resubmitting' % job['pandaid'])
-            select = "id="+str(job['id'])
+            select = "pandaid="+str(job['pandaid'])
             desc = {"actpandastatus": "starting", "arcjobid": None}
             self.dbpanda.updateJobs(select, desc)
 

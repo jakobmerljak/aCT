@@ -33,7 +33,7 @@ class aCTATLASStatus(aCTATLASProcess):
         if sites:
             
             sites = "'"+"','".join(sites)+"'"
-            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in (" + sites + ")",
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % self.sitesselect,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
             for job in jobs:
@@ -61,7 +61,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 continue
             
             # Put timings in the DB
-            arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
+            arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
@@ -103,7 +103,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
         select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.JobID"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
@@ -135,7 +135,7 @@ class aCTATLASStatus(aCTATLASProcess):
         # todo: pandajobs.starttime will not be updated if a job is resubmitted 
         # internally by the ARC part.
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
                    "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
@@ -177,7 +177,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.actpandastatus != 'toresubmit'"
         select += " and pandajobs.actpandastatus != 'toclean'"
         select += " and pandajobs.actpandastatus != 'finished'"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime", "arcjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
         
@@ -385,7 +385,7 @@ class aCTATLASStatus(aCTATLASProcess):
         # Look for failed final states
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
-        select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
+        select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
                    'UsedTotalWallTime', 'ExitCode', 'sendhb']
@@ -495,7 +495,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.Commit()
             
         select = "arcstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
-                 "and pandajobs.arcjobid = arcjobs.id"
+                 "and pandajobs.arcjobid = arcjobs.id and siteName in %s" % self.sitesselect
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid', 'arcjobs.JobID'], tables='arcjobs, pandajobs')
         for job in jobs:

@@ -225,7 +225,7 @@ class aCTDBCondor(aCTDB):
         c=self.getCursor()
         if lock:
             #select += self.addLock()
-            res = self.getMutexLock('arcjobs', timeout=2)
+            res = self.getMutexLock('condorjobs', timeout=2)
             if not res:
                 self.log.debug("Could not get lock: %s"%str(res))
                 return []
