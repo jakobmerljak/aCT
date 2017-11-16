@@ -147,15 +147,15 @@ class aCTStatus(aCTProcess):
         
         # Loop over possible states
         # Note: MySQL is case-insensitive. Need to watch out with other DBs
-        for jobstate in [state.lower() for state in self.condorjobstatemap.values()]:
-            maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate])
+        for jobstateid, jobstate in self.condorjobstatemap.items():
+            maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate.lower()])
             if not maxtime:
                 continue
             
             # be careful not to cancel jobs that are stuck in cleaning
-            select = "state='%s' and %s" % (jobstate, self.dbcondor.timeStampLessThan("tstate", maxtime))
+            select = "JobStatus='%s' and %s" % (jobstateid, self.dbcondor.timeStampLessThan("tstate", maxtime))
             jobs = self.dbcondor.getCondorJobsInfo(select, columns=['id', 'ClusterId', 'appjobid', 'condorstate'])
-            
+
             for job in jobs:
                 if job['condorstate'] == 'toclean' or job['condorstate'] == 'cancelling':
                     # delete jobs stuck in toclean/cancelling
@@ -164,7 +164,7 @@ class aCTStatus(aCTProcess):
                     continue
 
                 self.log.warning("%s: Job %s too long in state %s, cancelling" % (job['appjobid'], job['ClusterId'], jobstate))
-                if job['JobID']:
+                if job['ClusterId']:
                     # If jobid is defined, cancel
                     self.dbcondor.updateCondorJob(job['id'], {'condorstate': 'tocancel',
                                                         'tcondorstate': self.dbcondor.getTimeStamp(),
