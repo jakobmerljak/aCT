@@ -20,12 +20,11 @@ class aCTATLASStatusCondor(aCTATLASProcess):
           and report failed back to panda
         """
 
-        sites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
+        sites = "','".join([s for s,a in self.sites.iteritems() if a['status'] == 'offline'])
         
         if sites:
             
-            sites = "'"+"','".join(sites)+"'"
-            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % self.sitesselect,
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in ('%s')" % sites,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
             for job in jobs:
