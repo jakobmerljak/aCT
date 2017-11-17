@@ -4,7 +4,7 @@ import time
 
 class aCTPanda2ClassAd:
 
-    def __init__(self, pandajob, sitename, siteinfo, tmpdir, atlasconf, log):
+    def __init__(self, pandajob, sitename, siteinfo, proxypath, tmpdir, atlasconf, log):
         # To work with htcondor.Submit() a plain dict is used instead of a
         # ClassAd object. All values must be strings.
         self.classad = {'Universe': '9'} # Always use grid universe
@@ -14,15 +14,17 @@ class aCTPanda2ClassAd:
         self.pandaid = self.jobdesc['PandaID'][0]
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
+        self.proxy = proxypath
 
         self.defaults = {}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*24*3600
+        self.memory = 0
         self.sitename = sitename
         self.schedconfig = siteinfo['schedconfig']
-        self.maxwalltime = siteinfo['maxwalltime'] * 60
-        if self.maxwalltime == 0:
-            self.maxwalltime = 7*24*3600
+        self.walltime = siteinfo['maxwalltime'] * 60
+        if self.walltime == 0:
+            self.walltime = 4*24*3600
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -53,7 +55,7 @@ class aCTPanda2ClassAd:
         except: # corecount is NULL
             self.ncores = 1
 
-        self.classad['RequestCpus'] = str(self.ncores)
+        self.classad['+xcount'] = str(self.ncores)
         return self.ncores
 
     def setDisk(self):
@@ -88,13 +90,14 @@ class aCTPanda2ClassAd:
 
         # Give jobs at least 1 hour
         walltime = max(3600, walltime)
-        # .. and at most 1 week
-        walltime = min(self.maxwalltime, walltime)
+        # .. and at most 4 days
+        walltime = min(self.walltime, walltime)
 
+        self.walltime = walltime
         cputime = self.getNCores() * walltime
         self.log.info('%s: walltime: %ds, cputime: %ds' % (self.pandaid, walltime, cputime))
 
-        self.classad['MaxRuntime'] = str(walltime)
+        self.classad['+MaxRuntime'] = str(walltime)
 
     def setMemory(self):
 
@@ -121,8 +124,9 @@ class aCTPanda2ClassAd:
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
-
-        self.classad['RequestMemory'] = str(memory)
+        self.memory = memory
+        
+        self.classad['+maxMemory'] = str(memory)
 
     def setExecutable(self):
 
@@ -130,7 +134,7 @@ class aCTPanda2ClassAd:
 
     def setArguments(self):
 
-        pargs = 'pilot.py -h %s -s %s -f false -p 25443 -d {HOME} -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename)
+        pargs = '-h %s -s %s -f false -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename)
         self.classad['Arguments'] = str(pargs)
 
     def setInputs(self):
@@ -177,18 +181,37 @@ class aCTPanda2ClassAd:
             self.classad['JobPrio'] = str(prio)
 
     def setEnvironment(self):
+        environment = []
         # Set schedulerID and job log URL
-        environment = 'PANDA_JSID=%s' % self.schedid
-        environment += ' GTAG=%s/$(Cluster).$(Process).out' % self.logurl
+        environment.append('PANDA_JSID=%s' % self.schedid)
+        environment.append('GTAG=%s/$(Cluster).$(Process).out' % self.logurl)
         
         # Vars for APFMon
-        environment += ' APFCID=$(Cluster).$(Process)'
-        environment += ' APFFID=%s' % self.schedid
+        environment.append('APFCID=$(Cluster).$(Process)')
+        environment.append('APFFID=%s' % self.schedid)
         if self.monitorurl:
-            environment += ' APFMON=%s' % self.monitorurl
-        environment += ' FACTORYQUEUE=%s' % self.sitename
+            environment.append('APFMON=%s' % self.monitorurl)
+        environment.append('FACTORYQUEUE=%s' % self.sitename)
 
-        self.classad['Environment'] = str(environment)
+        self.classad['Environment2'] = '"%s"' % ' '.join(environment)
+        
+
+    def setProxy(self):
+        self.classad['X509UserProxy'] = self.proxy
+
+    def setAttrs(self):
+        
+        if len([e for e in self.siteinfo['endpoints'] if e.startswith('cream')]) > 0:
+            creamattrs = 'CpuNumber=%d;WholeNodes=false;SMPGranularity=%d;' % (self.ncores, self.ncores)
+            creamattrs += 'CERequirements = "other.GlueCEPolicyMaxCPUTime == %d' % (self.walltime * self.ncores)
+            creamattrs += ' && other.GlueCEPolicyMaxWallClockTime == %d' % self.walltime
+            creamattrs += ' && other.GlueHostMainMemoryRAMSize == %d' % (self.memory * self.ncores)
+            creamattrs += ' && other.GlueHostMainMemoryVirtualSize == %d";' % (self.memory * self.ncores * 3)
+            self.classad['CreamAttributes'] = creamattrs
+
+        # For special cern queue
+        if 'CERN' in self.sitename:
+            self.classad['+RemoteQueue'] = 'AtlasWithReq'
 
     def parse(self):
         self.setTime()
@@ -201,6 +224,8 @@ class aCTPanda2ClassAd:
         self.setOutputs()
         self.setPriority()
         self.setEnvironment()
+        self.setProxy()
+        self.setAttrs()
 
     def getClassAd(self):
         return self.classad
