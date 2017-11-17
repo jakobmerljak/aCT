@@ -193,10 +193,18 @@ class aCTProcessManager:
             if not cluster:
                 cluster = ''
             clist = cluster.split(',')
+            # Here we handle the different formats used by condor
             for c in clist:
                 # use only hostname for condor clusters
-                c = c.split()[-1]
-                if c not in clusterlist:
+                cinfo = c.split()
+                if not cinfo or len(cinfo) == 1:
+                    clusterlist.append(c)
+                elif cinfo[0] in ['nordugrid', 'condor']:
+                    clusterlist.append(cinfo[-1])
+                elif cinfo[0] == 'cream':
+                    clusterlist.append(cinfo[1][:cinfo[1].find('/')])
+                else:
+                    # unknown flavour, just use whole string
                     clusterlist.append(c)
 
         # Start any new submitters required

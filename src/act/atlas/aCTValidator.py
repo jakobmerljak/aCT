@@ -20,7 +20,7 @@ class aCTValidator(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
         
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file

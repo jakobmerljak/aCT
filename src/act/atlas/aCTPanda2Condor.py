@@ -8,7 +8,7 @@ class aCTPanda2Condor(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='HTCONDOR-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['HTCONDOR-CE', 'CREAM-CE'])
 
     def createCondorJobs(self):
 
@@ -20,7 +20,7 @@ class aCTPanda2Condor(aCTATLASProcess):
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
-            parser = aCTPanda2ClassAd(job['pandajob'], job['siteName'], self.sites[job['siteName']],
+            parser = aCTPanda2ClassAd(job['pandajob'], job['siteName'], self.sites[job['siteName']], proxies_map[job['proxyid']],
                                    self.arcconf.get(["tmp", "dir"]), self.conf, self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
@@ -32,19 +32,16 @@ class aCTPanda2Condor(aCTATLASProcess):
             except:
                 pass
             if classad is not None:
-                endpoints = self.sites[job['siteName']]['endpoints']
-                cl = []
-                for e in endpoints:
-                    cl.append('condor %s %s' % (e.split(':')[0], e))
-                cls = ",".join(cl)
-                self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))
+                endpoints = ','.join(self.sites[job['siteName']]['endpoints'])
+                self.log.info("Inserting job %d with clusterlist %s" % (job['pandaid'], endpoints))
+                self.log.debug("%d: classad: %s" % (job['pandaid'], classad))
                 maxattempts = 0 # Never resubmit condor jobs
 
-                aid = self.dbcondor.insertCondorJobDescription(classad, maxattempts=maxattempts, clusterlist=cls,
+                aid = self.dbcondor.insertCondorJobDescription(classad, maxattempts=maxattempts, clusterlist=endpoints,
                                                                proxyid=job['proxyid'], appjobid=str(job['pandaid']),
                                                                fairshare=job['siteName'])
                 if not aid:
-                    self.log.error("%s: Failed to insert condor job description: %s" % (job['pandaid'], classad))
+                    self.log.error("%d: Failed to insert condor job description: %s" % (job['pandaid'], classad))
                     continue
 
                 jd = {}
@@ -52,7 +49,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting
                 jd['actpandastatus'] = 'sent'
-                jd['corecount'] = int(classad['RequestCpus'])
+                jd['corecount'] = int(classad['+xcount'])
                 self.dbpanda.updateJob(job['pandaid'], jd)
 
     def process(self):

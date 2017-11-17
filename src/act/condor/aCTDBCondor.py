@@ -260,7 +260,7 @@ class aCTDBCondor(aCTDB):
         c = self.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM condorjobs WHERE condorstate='tosubmit' OR condorstate='submitting' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM condorjobs WHERE condorstate in ('tosubmit', 'submitting', 'torerun', 'toresubmit', 'tocancel') GROUP BY clusterlist")
         rows = c.fetchall()
         return rows
 

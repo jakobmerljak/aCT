@@ -110,7 +110,7 @@ class aCTSubmitter(aCTProcess):
             try:
                 # catch any exceptions here to avoid leaving lock
                 # Lock row for update in case multiple clusters are specified
-                jobs = self.dbcondor.getCondorJobsInfo("condorstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                jobs = self.dbcondor.getCondorJobsInfo("condorstate='tosubmit' and ( clusterlist like '% {0}%' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
                                             columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"], lock=True)
                 if jobs:
                     self.log.debug("started lock for writing %d jobs" % len(jobs))
@@ -190,7 +190,7 @@ class aCTSubmitter(aCTProcess):
                     continue
 
                 # Extract the GridResource
-                gridresource = re.search(r',*(.* %s)' % self.cluster, j['clusterlist'])
+                gridresource = re.search(r',*(.* %s.*),*' % self.cluster, j['clusterlist'])
                 gridresource = str(gridresource.group(1))
                 self.log.debug('%s: Set GridResource to %s' % (j['appjobid'], gridresource))
                 jobdesc['GridResource'] = gridresource

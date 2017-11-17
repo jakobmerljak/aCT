@@ -9,7 +9,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
     '''
     
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='HTCONDOR-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['HTCONDOR-CE', 'CREAM-CE'])
 
     def checkJobstoKill(self):
         """
@@ -154,7 +154,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         - startTime
         - endTime
         """
-
+        self.log.info(self.sitesselect)
         # don't get jobs already having actpandastatus states treated by
         # validator to avoid race conditions
         select = "condorjobs.id=pandajobs.arcjobid and condorjobs.condorstate='done'"

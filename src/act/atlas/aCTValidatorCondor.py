@@ -9,7 +9,7 @@ class aCTValidatorCondor(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='HTCONDOR-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['HTCONDOR-CE', 'CREAM-CE'])
 
     def cleanFinishedJob(self, pandaid):
         '''

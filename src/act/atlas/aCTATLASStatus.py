@@ -17,7 +17,7 @@ from act.atlas.aCTPandaJob import aCTPandaJob
 class aCTATLASStatus(aCTATLASProcess):
     
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
 
     def checkJobstoKill(self):
         """

@@ -19,7 +19,7 @@ class aCTATLASProcess:
     provides basic start and stop functionality.
     '''
     
-    def __init__(self, ceflavour='ARC-CE'):
+    def __init__(self, ceflavour=['ARC-CE']):
         
         # Get agent name from /path/to/aCTAgent.py
         self.name = os.path.basename(sys.argv[0])[:-3]

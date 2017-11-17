@@ -12,7 +12,7 @@ class aCTPanda2Arc(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self, ceflavour='ARC-CE')
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
 
     def createArcJobs(self):
 
