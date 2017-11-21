@@ -190,7 +190,7 @@ class aCTSubmitter(aCTProcess):
                     continue
 
                 # Extract the GridResource
-                gridresource = re.search(r',*(.* %s.*),*' % self.cluster, j['clusterlist'])
+                gridresource = re.search(r',*([^,]* %s[^,]*),*' % self.cluster, j['clusterlist'])
                 gridresource = str(gridresource.group(1))
                 self.log.debug('%s: Set GridResource to %s' % (j['appjobid'], gridresource))
                 jobdesc['GridResource'] = gridresource
@@ -240,25 +240,6 @@ class aCTSubmitter(aCTProcess):
             # TODO deal with failed cancel
             continue
 
-
-            if job.JobID in notcancelled:
-                if job.State == arc.JobState.UNDEFINED:
-                    # If longer than one hour since submission assume job never made it
-                    if job.StartTime + arc.Period(3600) < arc.Time():
-                        self.log.warning("%s: Assuming job %s is lost and marking as cancelled" % (appjobid, job.JobID))
-                        self.dbcondor.updateCondorJob(id, {"condorstate": "cancelled",
-                                                  "tcondorstate": self.dbcondor.getTimeStamp()})
-                    else:
-                        # Job has not yet reached info system
-                        self.log.warning("%s: Job %s is not yet in info system so cannot be cancelled" % (appjobid, job.JobID))
-                else:
-                    self.log.error("%s: Could not cancel job %s" % (appjobid, job.JobID))
-                    # Just to mark as cancelled so it can be cleaned
-                    self.dbcondor.updateCondorJob(id, {"condorstate": "cancelled",
-                                              "tcondorstate": self.dbcondor.getTimeStamp()})
-            else:
-                self.dbcondor.updateCondorJob(id, {"condorstate": "cancelling",
-                                          "tcondorstate": self.dbcondor.getTimeStamp()})
 
     def processToResubmit(self):
         
