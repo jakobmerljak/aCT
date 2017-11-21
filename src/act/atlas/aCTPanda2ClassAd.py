@@ -101,6 +101,7 @@ class aCTPanda2ClassAd:
 
     def setMemory(self):
 
+        # condor uses total memory, not per core
         if 'minRamCount' in self.jobdesc:
             memory = int(self.jobdesc['minRamCount'][0])
         elif not self.sitename.startswith('ANALY'):
@@ -114,13 +115,6 @@ class aCTPanda2ClassAd:
         # fix until maxrss in pandajob is better known
         if memory <= 500:
             memory = 500
-
-        if self.getNCores() > 1:
-            # hack for 0 ramcount, defaulting to 4000, see above, fix to 2000/core
-            if memory == 4000:
-                memory = 2000
-            else:
-                memory = memory / self.getNCores()
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
@@ -204,14 +198,14 @@ class aCTPanda2ClassAd:
         if len([e for e in self.siteinfo['endpoints'] if e.startswith('cream')]) > 0:
             creamattrs = 'CpuNumber=%d;WholeNodes=false;SMPGranularity=%d;' % (self.ncores, self.ncores)
             creamattrs += 'CERequirements = "other.GlueCEPolicyMaxCPUTime == %d' % (self.walltime * self.ncores)
-            creamattrs += ' && other.GlueCEPolicyMaxWallClockTime == %d' % self.walltime
-            creamattrs += ' && other.GlueHostMainMemoryRAMSize == %d' % (self.memory * self.ncores)
-            creamattrs += ' && other.GlueHostMainMemoryVirtualSize == %d";' % (self.memory * self.ncores * 3)
+            creamattrs += ' && other.GlueCEPolicyMaxWallClockTime == %d' % (self.walltime)
+            creamattrs += ' && other.GlueHostMainMemoryRAMSize == %d' % (self.memory)
+            creamattrs += ' && other.GlueHostMainMemoryVirtualSize == %d";' % (self.memory * 3)
             self.classad['CreamAttributes'] = creamattrs
 
         # For special cern queue
         if 'CERN' in self.sitename:
-            self.classad['+RemoteQueue'] = 'AtlasWithReq'
+            self.classad['+queue'] = '"AtlasWithReq"'
 
     def parse(self):
         self.setTime()
