@@ -163,7 +163,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
             # if no jobs available
             stopflag=False
 
-            getEventRanges = not attrs['truepilot']
+            #getEventRanges = not attrs['truepilot']
+            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES']
 
             for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:

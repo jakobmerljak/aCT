@@ -136,7 +136,10 @@ class aCTAGISParser:
             except:
                 if sites[sitename]['enabled']:
                     self.log.debug('No LOGS object store for %s', sitename)
-        self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
+        if len(sites) < 100:
+            self.log.info("Parsed sites from AGIS: %s" % str(sites.keys()))
+        else:
+            self.log.info("Parsed %d sites from AGIS" % len(sites))
         return sites
 
     def _parseDDMEndpoints(self, filename):

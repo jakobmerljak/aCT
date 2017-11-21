@@ -38,7 +38,7 @@ class aCTPanda2Xrsl:
         if len(self.pandajob) > 50000:
             self.longjob = True
 
-        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
+        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","IN2P3-CC_HPC_IDRIS_MCORE1","IN2P3-CC_HPC_IDRIS_MCORE","IN2P3-CC_HPC_DEBUG"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
         self.artes = None
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
@@ -61,13 +61,15 @@ class aCTPanda2Xrsl:
         # For accounting BOINC running slots, force corecount to 1
         if 'BOINC' in self.sitename:
             self.ncores = 1
+        if self.sitename == 'CSCS-LCG2-HPC_MCORE_TEST':
+	    self.ncores = 18
 
         self.xrsl['count'] = '(count=%d)' % self.ncores
 
         # force single-node jobs for now
         if self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0:
+            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0:
                 self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
@@ -82,7 +84,7 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
-        if 'UIO' not in self.sitename:
+        if 'UIO' not in self.sitename or self.sitename == 'UIO_MCORE_LOPRI':
             return
         # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
@@ -135,7 +137,7 @@ class aCTPanda2Xrsl:
         #    walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
-        walltime = max(60, walltime)
+        walltime = max(120, walltime)
         walltime = min(self.maxwalltime, walltime)
         cputime = self.getNCores() * walltime
         if self.sitename.startswith('BOINC'):
@@ -179,6 +181,9 @@ class aCTPanda2Xrsl:
 
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
+	# temp hack
+        if self.sitename == 'CSCS-LCG2-HPC_MCORE_TEST':
+		memory = 850
 
         self.xrsl['memory'] = '(memory = %d)' % (memory)
 
@@ -189,7 +194,7 @@ class aCTPanda2Xrsl:
         if self.truepilot:
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
             return
-        if self.siteinfo['type'] == 'analysis':
+        if self.siteinfo['type'] == 'analysis' and 'BOINC' not in self.sitename:
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
             return
         if self.sitename not in self.rtesites:
@@ -261,12 +266,17 @@ class aCTPanda2Xrsl:
             pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
 
         pandajobarg = self.pandajob
+	# CSCS terst hack
+        if self.sitename == 'CSCS-LCG2-HPC_MCORE_TEST':
+	    pandajobarg = re.sub(r'&coreCount=\d+&', '&coreCount=18&', pandajobarg)
         # Set corecount to 1 to allow single core jobs to run. For other numbers
         # corecount is set dynamically using ATHENA_PROC_NUMBER. This hack can be
         # removed when ATHENA_PROC_NUMBER=1 works.
         if 'BOINC' in self.sitename:
             self.log.debug('hacking boinc corecount')
             pandajobarg = re.sub(r'&coreCount=\d+&', '&coreCount=1&', pandajobarg)
+            # Set maxCPUCount to one week to avoid pilot killing suspended jobs
+            pandajobarg = re.sub(r'&maxCpuCount=\d+&', '&maxCpuCount=604800&', pandajobarg)
             self.log.debug(pandajobarg)
         # Hack to tell job to start from checkpoint
         if self.sitename == 'BOINC_CHECKPOINT':

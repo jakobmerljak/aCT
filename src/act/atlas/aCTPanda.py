@@ -193,7 +193,7 @@ class aCTPanda:
             node['state'] = state
         urldesc=None
         urldata=self.__HTTPConnect__('updateJob',node)
-        self.log.debug('panda returned %s' % str(urldata))
+        #self.log.debug('panda returned %s' % str(urldata))
         try:
             urldesc = cgi.parse_qs(urldata)
         except Exception,x:

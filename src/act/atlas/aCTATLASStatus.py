@@ -134,8 +134,9 @@ class aCTATLASStatus(aCTATLASProcess):
         # do an inner join to pick up all jobs that should be set to running
         # todo: pandajobs.starttime will not be updated if a job is resubmitted 
         # internally by the ARC part.
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus='starting'"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus in ('starting', 'sent')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
+
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
                    "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
@@ -206,6 +207,10 @@ class aCTATLASStatus(aCTATLASProcess):
         failedjobs = []
         resubmitting=False
         for aj in arcjobs:
+            if self.sites[aj['siteName']]['truepilot']:
+                self.log.info('%s: No resubmission for true pilot job', aj['appjobid'])
+                failedjobs += [aj]
+                continue
             resubmit=False
             # todo: errors part of aCTConfigARC should probably be moved to aCTConfigATLAS.
             for error in self.arcconf.getList(['errors','toresubmit','arcerrors','item']):
@@ -366,7 +371,7 @@ class aCTATLASStatus(aCTATLASProcess):
     def updateFailedJobs(self):
         """
         Query jobs in arcstate failed, set to tofetch
-        Query jobs in arcstate donefailed, cancelled and lost.
+        Query jobs in arcstate donefailed, cancelled and lost and not finished in panda.
         If they should be resubmitted, set arcjobid to null in pandajobs and
         cleanupLeftovers() will take care of cleaning up the old jobs.
         If not do post-processing and fill status in pandajobs
@@ -382,9 +387,9 @@ class aCTATLASStatus(aCTATLASProcess):
                 self.dbarc.updateArcJobsLazy(desc, select)
             self.dbarc.Commit()
         
-        # Look for failed final states
+        # Look for failed final states in ARC which are still starting or running in panda
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
-        select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
+        select += " and actpandastatus in ('starting', 'running')"
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
@@ -441,10 +446,8 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select,desc)
 
         for aj in cancelledjobs:
-            # For jobs that panda cancelled, don't do anything, they already
-            # have actpandastatus=cancelled or failed. For jobs that were
-            # killed in arc, resubmit and clean
-            select = "arcjobid='"+str(aj["arcjobid"])+"' and actpandastatus not in ('cancelled', 'donecancelled', 'failed', 'donefailed')"
+            # Jobs were unexpectedly killed in arc, resubmit and clean
+            select = "arcjobid='"+str(aj["arcjobid"])+"'"
             desc = {}
             # For truepilot, just set to clean and transferring to clean up arc job
             if self.sites[aj['siteName']]['truepilot']:

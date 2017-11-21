@@ -642,7 +642,7 @@ class aCTValidator(aCTATLASProcess):
                           (job['pandaid'], job['JobID']))
             desc = {'arcstate': 'tocancel', 'tarcstate': self.dbarc.getTimeStamp()}
             self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
-        self.dbpanda.Commit()
+        self.dbarc.Commit()
             
         # pull out output file info from metadata.xml into dict, order by SE
         surls = {}
