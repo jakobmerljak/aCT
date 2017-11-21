@@ -108,6 +108,8 @@ class aCTPanda:
                 node['jobsetID'] = urldesc['jobsetID'][0]
                 node['taskID'] = urldesc['taskID'][0] 
                 node['nRanges'] = 500 # TODO: configurable?
+                if siteName == 'BOINC-ES':
+                    node['nRanges'] = 100
                 eventranges = self.getEventRanges(node)
         elif status == '60':
             self.log.error('Failed to contact Panda, proxy may have expired')             
