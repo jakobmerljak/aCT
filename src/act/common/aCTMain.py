@@ -39,13 +39,19 @@ class aCTMain:
         self.logger = aCTLogger.aCTLogger("aCTMain")
         self.log = self.logger()
         
+        # Check if we should run
+        self.shouldrun = not os.path.exists(os.path.join(self.conf.get(["actlocation","dir"]), "act.stop"))
+        if not self.shouldrun:
+            self.log.warning("Detected act.stop file, won't start child processes")
+
         # daemon operations
         if len(args) >= 2:
             self.daemon(args[1])
          
         # process manager
         try:
-            self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf)
+            if self.shouldrun:
+                self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf)
         except Exception, e:
             self.log.critical("*** Unexpected exception! ***")
             self.log.critical(traceback.format_exc())
@@ -222,8 +228,9 @@ class aCTMain:
                 # Rotate logs
                 self.logrotate()
                 # (re)start new processes as necessary
-                self.procmanager.checkARCClusters()
-                self.procmanager.checkCondorClusters()
+                if self.shouldrun:
+                    self.procmanager.checkClusters()
+                    self.procmanager.checkCondorClusters()
                 # sleep
                 aCTUtils.sleep(10)
 
