@@ -138,6 +138,11 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.info("Site %s: No activated jobs" % site)
                 continue
             
+            prodsourcelabel = None
+            if attrs['status'] == 'test' and attrs['type'] == 'production':
+                self.log.info("Site %s is in test, will set prodSourceLabel to prod_test" % site)
+                prodsourcelabel = 'prod_test'
+            
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
 
@@ -187,7 +192,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         elif attrs['type'] == "analysis":
                             t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='user', getEventRanges=getEventRanges)
                         else:
-                            t = PandaGetThr(self.getPanda(site).getJob, site, getEventRanges=getEventRanges)
+                            t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel=prodsourcelabel, getEventRanges=getEventRanges)
                     tlist.append(t)
                     t.start()
                     nall += 1
