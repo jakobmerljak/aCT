@@ -28,16 +28,16 @@ class aCTATLASStatus(aCTATLASProcess):
           and report failed back to panda
         """
 
-        sites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
+        offlinesites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
         
-        if sites:
+        if offlinesites:
             
-            sites = "'"+"','".join(sites)+"'"
-            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % self.sitesselect,
+            offlinesitesselect = "('%s')" % "','".join(offlinesites)
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % offlinesitesselect,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
             for job in jobs:
-                self.log.info("Cancelling starting job for %d for offline site %s", (job['pandaid'], job['siteName']))
+                self.log.info("Cancelling starting job for %d for offline site %s" % (job['pandaid'], job['siteName']))
                 select = 'id=%s' % job['id']
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
                 if job['arcjobid']:
