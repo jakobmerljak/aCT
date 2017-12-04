@@ -158,17 +158,19 @@ class aCTStatus(aCTProcess):
 
             for job in jobs:
                 if job['condorstate'] == 'toclean' or job['condorstate'] == 'cancelling':
-                    # delete jobs stuck in toclean/cancelling
-                    self.log.info("%s: Job stuck in toclean/cancelling for too long, deleting" % (job['appjobid']))
-                    self.dbcondor.deleteCondorJob(job['id'])
+                    # mark as cancelled jobs stuck in toclean/cancelling
+                    self.log.info("%s: Job stuck in toclean/cancelling for too long, marking cancelled" % (job['appjobid']))
+                    self.dbcondor.updateCondorJob(job['id'], {'condorstate': 'cancelled',
+                                                              'tcondorstate': self.dbcondor.getTimeStamp(),
+                                                              'tstate': self.dbcondor.getTimeStamp()})
                     continue
 
                 self.log.warning("%s: Job %s too long in state %s, cancelling" % (job['appjobid'], job['ClusterId'], jobstate))
                 if job['ClusterId']:
                     # If jobid is defined, cancel
                     self.dbcondor.updateCondorJob(job['id'], {'condorstate': 'tocancel',
-                                                        'tcondorstate': self.dbcondor.getTimeStamp(),
-                                                        'tstate': self.dbcondor.getTimeStamp()})
+                                                              'tcondorstate': self.dbcondor.getTimeStamp(),
+                                                              'tstate': self.dbcondor.getTimeStamp()})
                 else:
                     # Otherwise delete it
                     self.dbcondor.deleteCondorJob(job['id'])
