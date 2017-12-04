@@ -59,18 +59,18 @@ class aCTValidator(aCTATLASProcess):
         - if extractmetadata: (normal arc jobs, not true pilot jobs) 
            - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
            - extract metadata-surl.xml and update pickle. store xml under tmp/xml
-        - copy .job.log file to jobs/date/cluster/jobid
-        - copy gmlog dir to jobs/date/cluster/jobid
+        - copy .job.log file to jobs/date/pandaqueue/pandaid.out
+        - copy gmlog errors to jobs/date/pandaqueue/pandaid.log
         """
         
-        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'EndTime', 'ExecutionNode', 'stdout']
+        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'EndTime', 'ExecutionNode', 'stdout', 'fairshare']
         aj = self.dbarc.getArcJobInfo(arcjobid, columns=columns)
         if not aj.has_key('JobID') or not aj['JobID']:
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
-        date = time.strftime('%Y%m%d')
+        date = time.strftime('%Y-%m-%d')
         cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
@@ -108,7 +108,7 @@ class aCTValidator(aCTATLASProcess):
                 t = jobinfo.pilotID.split("|")
             else:
                 t = ['Unknown'] * 5
-            logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
+            logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, aj['fairshare'], '%s.out' % aj['appjobid'])
             try: # TODO catch and handle non-ascii
                 jobinfo.pilotID = '|'.join([logurl] + t[1:])
             except:
@@ -116,20 +116,20 @@ class aCTValidator(aCTATLASProcess):
             jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
-        outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
+        outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['fairshare'])
         try:
             os.makedirs(outd, 0755)
         except:
             pass
 
         localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
-        gmlogerrors = os.path.join(localdir,"gmlog","errors")
-        
-        if not os.path.exists(os.path.join(outd,"arc-ce.log")):
+        gmlogerrors = os.path.join(localdir, "gmlog", "errors")
+        arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
+        if not os.path.exists(arcjoblog):
             try:
-                shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.log"))
+                shutil.copy(gmlogerrors, arcjoblog)
             except:
-                self.log.error("Failed to copy %s" % os.path.join(outd,"arc-ce.log") ) 
+                self.log.error("Failed to copy %s" % gmlogerrors) 
 
         pilotlog = aj['stdout']
         if not pilotlog:
@@ -138,8 +138,8 @@ class aCTValidator(aCTATLASProcess):
                 pilotlog = pilotlogs[0]
         if pilotlog:
             try:
-                shutil.copy(os.path.join(localdir,pilotlog),
-                            os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
+                shutil.copy(os.path.join(localdir, pilotlog),
+                            os.path.join(outd, '%s.out' % aj['appjobid']))
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False

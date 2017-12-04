@@ -35,10 +35,11 @@ class aCTPanda2ClassAd:
             self.longjob = True
             
         self.schedid = atlasconf.get(["panda", "schedulerid"])
+        self.wrapper = atlasconf.get(["executable", "wrapperurl"])
         # Condor out/err/log
         now = time.gmtime() # gmtime() is like localtime() but in UTC
         today = "%04d-%02d-%02d" % (now[0], now[1], now[2])
-        self.logdir = os.path.join(atlasconf.get(['joblog','dir']), sitename, today)
+        self.logdir = os.path.join(atlasconf.get(['joblog','dir']), today, sitename)
         try: os.makedirs(self.logdir)
         except: pass
         
@@ -124,7 +125,7 @@ class aCTPanda2ClassAd:
 
     def setExecutable(self):
 
-        self.classad['Cmd'] = "runpilot3-wrapper.sh"
+        self.classad['Cmd'] = self.wrapper
 
     def setArguments(self):
 
@@ -146,12 +147,12 @@ class aCTPanda2ClassAd:
 
     def setLog(self):
 
-        self.classad['UserLog'] = str(os.path.join(self.logdir, '$(Cluster).$(Process).log'))
+        self.classad['UserLog'] = str(os.path.join(self.logdir, '%s.log' % self.pandaid))
 
     def setOutputs(self):
 
-        self.classad['Output'] = str(os.path.join(self.logdir, '$(Cluster).$(Process).out'))
-        self.classad['Error'] = str(os.path.join(self.logdir, '$(Cluster).$(Process).err'))
+        self.classad['Output'] = str(os.path.join(self.logdir, '%s.out' % self.pandaid))
+        self.classad['Error'] = str(os.path.join(self.logdir, '%s.err' % self.pandaid))
 
     def setPriority(self):
 
@@ -178,10 +179,10 @@ class aCTPanda2ClassAd:
         environment = []
         # Set schedulerID and job log URL
         environment.append('PANDA_JSID=%s' % self.schedid)
-        environment.append('GTAG=%s/$(Cluster).$(Process).out' % self.logurl)
+        environment.append('GTAG=%s/%s.out' % (self.logurl, self.pandaid))
         
         # Vars for APFMon
-        environment.append('APFCID=$(Cluster).$(Process)')
+        environment.append('APFCID=%s' % self.pandaid)
         environment.append('APFFID=%s' % self.schedid)
         if self.monitorurl:
             environment.append('APFMON=%s' % self.monitorurl)

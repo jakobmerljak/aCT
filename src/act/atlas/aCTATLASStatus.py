@@ -298,8 +298,8 @@ class aCTATLASStatus(aCTATLASProcess):
             
             cluster = arc.URL(str(jobid)).Host()
             sessionid=jobid[jobid.rfind('/')+1:]
-            date = time.strftime('%Y%m%d')
-            outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
+            date = time.strftime('%Y-%m-%d')
+            outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
             # Make sure the path up to outd exists
             try:
                 os.makedirs(os.path.dirname(outd), 0755)
@@ -311,15 +311,30 @@ class aCTATLASStatus(aCTATLASProcess):
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
             localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
-            try:
-                shutil.copytree(localdir, outd)
-            except (OSError, shutil.Error) as e:
-                self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
-                # Sometimes fetcher fails to get output, so just make empty dir
+            gmlogerrors = os.path.join(localdir, "gmlog", "errors")
+            arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
+            if not os.path.exists(arcjoblog):
                 try:
-                    os.makedirs(outd, 0755)
-                except OSError, e:
-                    self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
+                    shutil.copy(gmlogerrors, arcjoblog)
+                except:
+                    self.log.error("Failed to copy %s" % gmlogerrors) 
+
+            pilotlog = aj['stdout']
+            if not pilotlog:
+                pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
+                if pilotlogs:
+                    pilotlog = pilotlogs[0]
+            if pilotlog:
+                try:
+                    shutil.copy(os.path.join(localdir, pilotlog),
+                                os.path.join(outd, '%s.out' % aj['appjobid']))
+                except Exception, e:
+                    self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
+                    # Sometimes fetcher fails to get output, so just make empty dir
+                    try:
+                        os.makedirs(outd, 0755)
+                    except OSError, e:
+                        self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
                 
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
@@ -333,7 +348,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.siteName = aj['siteName']
             pupdate.computingElement = cluster
             pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
-            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+'/'+sessionid+"|Unknown|Unknown|Unknown|Unknown"
+            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['siteName']+'/'+aj['appjobid']+".out|Unknown|Unknown|Unknown|Unknown"
             pupdate.node = aj['ExecutionNode']
             pupdate.pilotLog = self.createPilotLog(outd, aj['pandaid'])
             pupdate.cpuConsumptionTime = aj['UsedTotalCPUTime']
