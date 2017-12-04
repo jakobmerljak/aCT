@@ -224,8 +224,8 @@ class aCTSubmitter(aCTProcess):
         if not jobstocancel:
             return
         
-        self.log.info("Cancelling %d jobs" % len(jobstocancel))
         for job in jobstocancel:
+	    self.log.info("%s: Cancelling condor job" % job['appjobid'])
     
             if not job['ClusterId']:
                 # Job not submitted
@@ -234,7 +234,8 @@ class aCTSubmitter(aCTProcess):
                                                           "tcondorstate": self.dbcondor.getTimeStamp()})
                 continue
 
-            self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
+            remove = self.schedd.act(htcondor.JobAction.Remove, ['%d.0' % job['ClusterId']])
+            self.log.debug("%s: Cancellation returned %s" % (job['appjobid'], remove))
             self.dbcondor.updateCondorJob(job['id'], {"condorstate": "cancelling",
                                                       "tcondorstate": self.dbcondor.getTimeStamp()})
             # TODO deal with failed cancel
