@@ -267,7 +267,7 @@ class aCTPanda2Xrsl:
         # Set options for true pilot
         if self.truepilot:
             pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig, self.sitename)
-            self.xrsl['arguments'] = '(arguments = "%s")' % pargs
+            self.xrsl['arguments'] = '(arguments = %s)' % pargs
             return
         
         # Optons for ARC pilot
