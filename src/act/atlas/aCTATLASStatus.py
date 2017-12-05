@@ -47,7 +47,7 @@ class aCTATLASStatus(aCTATLASProcess):
         
         # Get jobs killed by panda
         jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s" % self.sitesselect,
-                                    ['pandaid', 'arcjobid', 'pandastatus', 'id'])
+                                    ['pandaid', 'arcjobid', 'pandastatus', 'id', 'siteName'])
         if not jobs:
             return
         
@@ -77,7 +77,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 # Skip validator since there is no metadata.xml
                 desc['actpandastatus'] = 'failed'
                 desc['pandastatus'] = 'failed'
-                if self.sites[aj['siteName']]['truepilot']:
+                if self.sites[job['siteName']]['truepilot']:
                     desc['sendhb'] = 0
             else:
                 desc['actpandastatus'] = 'cancelled'

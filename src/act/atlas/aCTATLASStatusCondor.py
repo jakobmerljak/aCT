@@ -62,11 +62,9 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             
             # Check if job was manually killed
             if job['pandastatus'] is not None:
-                self.log.info('%s: Manually killed, marking failed' % job['pandaid'])
-                desc['actpandastatus'] = 'failed'
-                desc['pandastatus'] = 'failed'
-            else:
-                desc['actpandastatus'] = 'cancelled'
+                self.log.info('%s: Manually killed, marking cancelled' % job['pandaid'])
+                desc['pandastatus'] = None
+            desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
 
             # Finally cancel the condor job                
@@ -209,7 +207,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         select = "(condorstate='donefailed' or condorstate='cancelled' or condorstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
         select += " and pandajobs.arcjobid = condorjobs.id and pandajobs.sitename in %s limit 100000" % self.sitesselect
-        columns = ['condorstate', 'appjobid', 'arcjobid', 'JobCurrentStartDate', 'CompletionDate']
+        columns = ['condorstate', 'appjobid', 'arcjobid', 'JobCurrentStartDate', 'CompletionDate', 'actpandastatus']
 
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables='condorjobs,pandajobs')
 
@@ -222,7 +220,8 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         lostjobs = [job for job in jobstoupdate if job['condorstate']=='lost']
         if len(lostjobs) != 0:
             self.log.debug("Found %d lost jobs", len(lostjobs))
-        cancelledjobs = [job for job in jobstoupdate if job['condorstate']=='cancelled']
+        # Cancelled jobs already in terminal state will be cleaned up in cleanupLeftovers()
+        cancelledjobs = [job for job in jobstoupdate if job['condorstate']=='cancelled' and job['actpandastatus'] not in ('cancelled', 'donecancelled', 'failed', 'donefailed')]
         if len(cancelledjobs) != 0:
             self.log.debug("Found %d cancelled jobs", len(cancelledjobs))
 
@@ -249,11 +248,9 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select,desc)
 
         for cj in cancelledjobs:
-            # For jobs that panda cancelled, don't do anything, they already
-            # have actpandastatus=cancelled or failed. For jobs that were
-            # killed in condor, clean the condor job
+            # Only applies to manually cancelled jobs, simply clean them
             self.log.info("%s: Job was cancelled, cleaning up condor job", cj['appjobid'])
-            select = "arcjobid='"+str(cj["arcjobid"])+"' and actpandastatus not in ('cancelled', 'donecancelled', 'failed', 'donefailed')"
+            select = "arcjobid='%s'" % str(cj["arcjobid"])
             desc = {}
             desc['sendhb'] = 0
             desc['pandastatus'] = 'transferring'
