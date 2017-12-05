@@ -62,7 +62,9 @@ class aCTATLASStatus(aCTATLASProcess):
             
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
-            arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
+            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName',
+                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb']
+            arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
                 desc['endTime'] = arcjobs[0]['EndTime'] if arcjobs[0]['EndTime'] else datetime.datetime.utcnow()
@@ -75,6 +77,8 @@ class aCTATLASStatus(aCTATLASProcess):
                 # Skip validator since there is no metadata.xml
                 desc['actpandastatus'] = 'failed'
                 desc['pandastatus'] = 'failed'
+                if self.sites[aj['siteName']]['truepilot']:
+                    desc['sendhb'] = 0
             else:
                 desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
@@ -408,7 +412,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
-                   'UsedTotalWallTime', 'ExitCode', 'sendhb']
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
