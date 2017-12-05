@@ -28,6 +28,7 @@ class aCTPanda2Xrsl:
         if self.maxwalltime == 0:
             self.maxwalltime = 7*24*60
 
+        self.wrapper = atlasconf.get(["executable", "wrapperurl"])
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
         self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
@@ -35,11 +36,12 @@ class aCTPanda2Xrsl:
         self.eventranges = eventranges
         self.longjob = False
         self.traces = []
-        if len(self.pandajob) > 50000:
+        if len(self.pandajob) > 50000 or self.truepilot:
             self.longjob = True
 
         self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","IN2P3-CC_HPC_IDRIS_MCORE1","IN2P3-CC_HPC_IDRIS_MCORE","IN2P3-CC_HPC_DEBUG"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
         self.artes = None
+        self.monitorurl = atlasconf.get(["monitor", "apfmon"])
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
             if self.pandajob.startswith('GUID'):
@@ -252,18 +254,24 @@ class aCTPanda2Xrsl:
 
     def setExecutable(self):
 
-        self.xrsl['executable'] = "(executable = ARCpilot)"
+        if self.truepilot:
+            self.xrsl['executable'] = "(executable = runpilot3-wrapper.sh)"
+        else:
+            self.xrsl['executable'] = "(executable = ARCpilot)"
 
     def setArguments(self):
 
         if self.artes is None:
             self.setRTE()
 
-        # Set options for NG/true pilot
+        # Set options for true pilot
         if self.truepilot:
-            pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-d" "{HOME}" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig, self.sitename)
-        else:
-            pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
+            pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-p" "25443" "-w" "https://pandaserver.cern.ch"' % (self.schedconfig, self.sitename)
+            self.xrsl['arguments'] = '(arguments = "%s")' % pargs
+            return
+        
+        # Optons for ARC pilot
+        pargs = '"pilot3/pilot.py" "-h" "%s" "-s" "%s" "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-f" "false" "-z" "true" "-b" "2" "-t" "false"' % (self.sitename, self.sitename)
 
         pandajobarg = self.pandajob
 	# CSCS terst hack
@@ -306,8 +314,23 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""
+        if self.longjob:
+            # TODO create input file
+            pandaid = self.jobdesc['PandaID'][0]
+            try:
+                os.makedirs(self.inputjobdir)
+            except:
+                pass
+            tmpfile = self.inputjobdir+"/pandaJobData.out"
+            f = open(tmpfile, "w")
+            f.write(self.pandajob)
+            f.close()
+            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
+
         if self.truepilot:
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-true")'
+            x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
+            self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
+            return
         elif self.eventranges:
             x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
         elif self.sitename == 'BOINC_CHECKPOINT':
@@ -338,19 +361,6 @@ class aCTPanda2Xrsl:
 
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
-
-        if self.longjob:
-            # TODO create input file
-            pandaid = self.jobdesc['PandaID'][0]
-            try:
-                os.makedirs(self.inputjobdir)
-            except:
-                pass
-            tmpfile = self.inputjobdir+"/pandaJobData.out"
-            f = open(tmpfile, "w")
-            f.write(self.pandajob)
-            f.close()
-            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if not self.truepilot:
             x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
@@ -469,9 +479,20 @@ class aCTPanda2Xrsl:
         if not self.truepilot:
             return
 
+        environment = {}
         schedid = self.atlasconf.get(["panda", "schedulerid"])
         schedurl = self.atlasconf.get(["joblog", "urlprefix"])
-        self.xrsl['environment'] = '(environment = ("PANDA_JSID" "%s")("SCHED_URL" "%s"))' % (schedid, schedurl)
+        environment['PANDA_JSID'] = schedid
+        environment['SCHED_URL'] = schedurl
+
+        # Vars for APFMon
+        if self.monitorurl:
+            environment['APFCID'] = self.pandaid
+            environment['APFFID'] = schedid
+            environment['APFMON'] = self.monitorurl
+            environment['FACTORYQUEUE'] = self.sitename
+
+        self.xrsl['environment'] = '(environment = %s)' % ''.join(['("%s" "%s")' % (k,v) for (k,v) in environment.items()])
 
     def parse(self):
         self.setTime()

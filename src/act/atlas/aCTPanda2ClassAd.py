@@ -46,7 +46,7 @@ class aCTPanda2ClassAd:
         self.logurl = '%s/%s/%s' % (atlasconf.get(['joblog', 'urlprefix']), sitename, today)
         
         # APFmon
-        self.monitorurl = 'http://apfmon.lancs.ac.uk/api'
+        self.monitorurl = atlasconf.get(["monitor", "apfmon"])
 
     def getNCores(self):
 
