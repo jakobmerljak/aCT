@@ -3,8 +3,6 @@ import re
 import time
 import random
 import arc
-import json
-import requests
 import aCTPanda
 from act.common import aCTProxy
 from aCTATLASProcess import aCTATLASProcess
@@ -41,7 +39,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
         self.log.info("Running under DN %s" % dn)
-        self.agisparser = aCTAGISParser(self.log)
         # Keep a panda object per proxy. The site "type" maps to a specific
         # proxy role
         self.pandas = {}
@@ -66,6 +63,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
         # queue interval
         self.queuestamp=0
 
+        # Register this aCT to APFMon
+        self.apfmon.registerFactory()
         # AGIS queue info
         self.sites={}
         # Panda info on activated jobs: {queue: {'rc_test': 2, 'rest': 40}}
@@ -172,6 +171,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
             #getEventRanges = not attrs['truepilot']
             getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES']
+            apfmonjobs = []
 
             for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:
@@ -229,30 +229,17 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     n['eventranges'] = eventranges
                     self.dbpanda.insertJob(pandaid, pandajob, n)
                     count += 1
+                    apfmonjobs.append(pandaid)
 
-                    self.apfmonregisterjob(pandaid, site)
                 if not activatedjobs:
                     if site in self.activated:
                         self.activated[site] = {'rest': 0, 'rc_test': 0}
                     stopflag = True
 
+            self.apfmon.registerJobs(apfmonjobs, site)
+
         return count
 
-    def apfmonregisterjob(self, pandaid, site):
-
-        apfmonurl = self.conf.get(["monitor", "apfmon"])
-        if not apfmonurl:
-            return
-
-        apfmonjobs = '%s/jobs' % apfmonurl
-        jobs = [{'cid'        : '%s' % pandaid,
-                 'factory'    : self.conf.get(["panda", "schedulerid"]),
-                 'label'      : site}]
-        payload = json.dumps(jobs)
-
-        self.log.debug("sending to %s: %s" % (apfmonjobs, jobs))
-        r = requests.put(apfmonjobs, data=payload)
-        self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
     def process(self):
         """
@@ -263,6 +250,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
             self.getActivated()
             self.starttime = time.time()
             self.getjob = True
+            # Each 5 mins send the list of queues with maxjobs>0 to APFmon
+            self.apfmon.registerLabels([k for (k,v) in self.sites.items() if v['maxjobs'] > 0])    
 
         # request new jobs
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))

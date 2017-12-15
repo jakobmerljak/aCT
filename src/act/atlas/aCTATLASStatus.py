@@ -163,6 +163,9 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot']:
                 self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
                 desc['sendhb'] = 0
+            else:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['pandaid'], 'running')
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -203,6 +206,9 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
+            if not self.sites[aj['siteName']]['truepilot']:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=0)
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -444,6 +450,9 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
+            if not self.sites[aj['siteName']]['truepilot']:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=aj['ExitCode'])
             self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:

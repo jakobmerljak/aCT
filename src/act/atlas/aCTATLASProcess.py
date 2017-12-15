@@ -10,7 +10,8 @@ from act.common import aCTSignal
 from act.arc import aCTDBArc
 from act.condor import aCTDBCondor
 from act.atlas import aCTAGISParser
-import aCTDBPanda
+from act.atlas import aCTAPFMon
+from act.atlas import aCTDBPanda
 
 
 class aCTATLASProcess:
@@ -37,6 +38,9 @@ class aCTATLASProcess:
         self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         self.dbcondor=aCTDBCondor.aCTDBCondor(self.log,self.conf.get(["db","file"]))
         self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+
+        # APFMon
+        self.apfmon = aCTAPFMon.aCTAPFMon(self.conf)
 
         # AGIS info    
         self.flavour = ceflavour    

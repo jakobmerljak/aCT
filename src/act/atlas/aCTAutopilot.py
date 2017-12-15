@@ -56,7 +56,6 @@ class aCTAutopilot(aCTATLASProcess):
         cred = arc.Credential(uc)
         dn = cred.GetIdentityName()
         self.log.info("Running under DN %s" % dn)
-        self.agisparser = aCTAGISParser(self.log)
         # Keep a panda object per proxy. The site "type" maps to a specific
         # proxy role
         self.pandas = {}
@@ -335,6 +334,8 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['actpandastatus']='donecancelled'
             jd['theartbeat']=self.dbpanda.getTimeStamp()
             self.dbpanda.updateJob(t.id,jd)
+            # Send done message to APFMon
+            self.apfmon.updateJob(t.id, 'done' if jd['actpandastatus'] == 'done' else 'fault')
 
         self.log.info("Threads finished")
 
