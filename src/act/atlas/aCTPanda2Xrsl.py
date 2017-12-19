@@ -483,7 +483,7 @@ class aCTPanda2Xrsl:
         schedid = self.atlasconf.get(["panda", "schedulerid"])
         schedurl = self.atlasconf.get(["joblog", "urlprefix"])
         environment['PANDA_JSID'] = schedid
-        environment['SCHED_URL'] = schedurl
+        environment['GTAG'] = '%s/%s/%s/%s.out' % (schedurl, time.strftime('%Y-%m-%d'), self.sitename, self.pandaid)
 
         # Vars for APFMon
         if self.monitorurl:
