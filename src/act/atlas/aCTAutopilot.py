@@ -122,7 +122,8 @@ class aCTAutopilot(aCTATLASProcess):
             if pstatus == 'transferring' and j['eventranges']:
                 pstatus = 'running'
             jd = {}
-            jd['startTime'] = j['startTime']
+            if pstatus != 'starting':
+                jd['startTime'] = j['startTime']
             if j['computingElement']:
                 if j['computingElement'].find('://') != -1: # this if is only needed during transition period
                     jd['computingElement'] = arc.URL(str(j['computingElement'])).Host()
