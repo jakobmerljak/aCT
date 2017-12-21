@@ -210,6 +210,10 @@ class aCTATLASStatus(aCTATLASProcess):
         failedjobs = []
         resubmitting=False
         for aj in arcjobs:
+            if self.sites[aj['siteName']]['truepilot']:
+                self.log.info('%s: No resubmission for true pilot job', aj['appjobid'])
+                failedjobs += [aj]
+                continue
             resubmit=False
             # todo: errors part of aCTConfigARC should probably be moved to aCTConfigATLAS.
             for error in self.arcconf.getList(['errors','toresubmit','arcerrors','item']):
