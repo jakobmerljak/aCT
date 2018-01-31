@@ -79,6 +79,9 @@ class aCTStatus(aCTProcess):
                 except StopIteration:
                     self.log.warning('%s: Job id %d not found!' % (appjobid, clusterid))
                     continue
+                except RuntimeError as e: # Usually a timeout connecting to remote host
+                    self.log.error('%s: Problem getting history: %s' % (appjobid, str(e)))
+                    continue
                 updatedjob = hist
                 jobstatus = updatedjob['JobStatus']
 
