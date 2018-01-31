@@ -43,7 +43,7 @@ class aCTPanda2ClassAd:
         try: os.makedirs(self.logdir)
         except: pass
         
-        self.logurl = '%s/%s/%s' % (atlasconf.get(['joblog', 'urlprefix']), sitename, today)
+        self.logurl = '%s/%s/%s' % (atlasconf.get(['joblog', 'urlprefix']), today, sitename)
         
         # APFmon
         self.monitorurl = atlasconf.get(["monitor", "apfmon"])
