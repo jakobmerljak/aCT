@@ -331,7 +331,7 @@ class aCTSubmitter(aCTProcess):
             
             notcancelled = job_supervisor.GetIDsNotProcessed()
     
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
 
                 if not job.JobID:
                     # Job not submitted
@@ -399,7 +399,7 @@ class aCTSubmitter(aCTProcess):
             
             # Empty job to reset DB info
             j = arc.Job()
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 self.db.updateArcJob(id, {"arcstate": "tosubmit",
                                           "tarcstate": self.db.getTimeStamp(),
                                           "cluster": None}, j)
@@ -429,7 +429,7 @@ class aCTSubmitter(aCTProcess):
             
             notresumed = job_supervisor.GetIDsNotProcessed()
     
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 if job.JobID in notresumed:
                     self.log.error("%s: Could not resume job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": "failed",
