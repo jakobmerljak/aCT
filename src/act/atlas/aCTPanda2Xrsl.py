@@ -283,8 +283,9 @@ class aCTPanda2Xrsl:
             pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
             # use newest DB release
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
-        if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
-            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+        # Commented on request from Rod
+        #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
+        #    pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         if self.longjob:
             pandajobarg = "FILE"
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
@@ -317,12 +318,16 @@ class aCTPanda2Xrsl:
 
         if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-        elif self.sitename in ['LRZ-LMU_MUC1_MCORE']:
+        elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1']:
             x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
+        elif re.match('.*XXXXXXXXXXXXSiGNET.*', self.sitename):
+	    # test new pilotcode
+            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch/project-atlas-gmsb/pilotcode-PICARD-72.3-PRE.tar.gz")'
         elif re.match('BEIJING-.*_MCORE', self.sitename):
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
             x += '(agis_schedconf.agis.%s.json "http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&panda_queue=%s")' % (self.sitename,self.sitename)
             x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
+            x += '(agis_ddmblacklisting.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmblacklisting.json")'
             x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
         elif self.sitename in self.rtesites:
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
@@ -376,7 +381,7 @@ class aCTPanda2Xrsl:
                 #    continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
-                if 'xxxSiGNET' in self.sitename or 'ARNES' in self.sitename:
+                if 'SiGNET' in self.sitename or 'ARNES' in self.sitename:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename]) 
                 else:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
