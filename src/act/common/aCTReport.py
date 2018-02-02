@@ -35,7 +35,7 @@ class aCTStatus:
         cluster_procs = {}
         longprocesses = []
         for line in out.split('\n'):
-            reg = re.match('\s*(\d*)\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            reg = re.match(r'\s*(\d*)\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
             if reg:
                 pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
@@ -43,7 +43,7 @@ class aCTStatus:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
-                elif not re.match('\d\d:\d\d$', runningtime):
+                elif not re.match(r'\d\d:\d\d$', runningtime):
                     # Check for overrunning processes
                     longprocesses.append((process, pid, cluster, runningtime))
                 if cluster in cluster_procs:
@@ -79,16 +79,6 @@ class aCTStatus:
         for r in rows:
 
             site, state = (str(r[0]), str(r[1]))
-            reg=re.search('.+//([^:]+)',str(r[0]))
-            cl=""
-            try:
-                cl=reg.group(1)
-            except:
-                cl='WaitingSubmission'
-
-            jid=str(r[1])
-            if jid == 'None':
-                jid="Other"
 
             try:
                 rep[site][state]+=1
