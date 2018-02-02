@@ -100,12 +100,8 @@ class aCTAutopilot(aCTATLASProcess):
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        # Check if we should send heartbeats
-        hb = ''
-        if pstatus == 'running' or pstatus == 'transferring':
-            hb = ' and sendhb=1'
         columns = ['pandaid', 'siteName', 'startTime', 'computingElement', 'node', 'corecount', 'eventranges']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -209,7 +205,9 @@ class aCTAutopilot(aCTATLASProcess):
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     if not os.path.exists(fname):
                         # Create the empty pickle so that heartbeat code below doesn't fail
-                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                        # Mark job substatus failed so that job is failed rather than closed
+                        self.log.info('%s: Job has no eventranges to update, marking failed' % j['pandaid'])
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': 'pilot_failed'})
                         jobinfo.writeToFile(fname)
                     continue
                 
