@@ -101,7 +101,11 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.endTime = aj['EndTime']
             else:
                 self.log.warning('%s: no endtime found' % aj['appjobid'])
-            jobinfo.node = aj['ExecutionNode']
+            if len(aj["ExecutionNode"]) > 255:
+                jobinfo.node = aj["ExecutionNode"][:254]
+                self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['appjobid'], aj['ExecutionNode'], jobinfo.node))
+            else:
+                jobinfo.node = aj["ExecutionNode"]
 
             # Add url of logs
             if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
