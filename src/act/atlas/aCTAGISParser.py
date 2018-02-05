@@ -125,6 +125,9 @@ class aCTAGISParser:
                 sites[sitename]['maxcputime'] = maxcputime
             else:
                 sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
+
+            if sites[sitename]['type'] == 'special':
+                sites[sitename]['type'] = 'production'
             # true pilot or not, based on whether mv copytool is used
             # TODO remove copytool once deprecated
             sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv' and ('mv' not in sites[sitename]['copytools'] or len(sites[sitename]['copytools']) > 1))
