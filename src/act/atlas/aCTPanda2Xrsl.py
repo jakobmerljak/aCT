@@ -280,12 +280,17 @@ class aCTPanda2Xrsl:
             self.log.debug(pandajobarg)
         # Hack to tell job to start from checkpoint
         if self.sitename == 'BOINC_CHECKPOINT':
-            pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
+            # Filter by task ID, one task using checkpoint and the other not
+            if int(self.jobdesc['taskID'][0]) == 12522345:
+                self.log.debug('%s: setting checkpoint restart arg for task %s' % (self.pandaid, self.jobdesc['taskID'][0]))
+                pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
             # use newest DB release
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
-        # Commented on request from Rod
+        # Commented on request of Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
         #    pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+        # Add log to OS
+        pandajobarg += '&putLogToOS=true'
         if self.longjob:
             pandajobarg = "FILE"
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
@@ -307,8 +312,10 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""
-        if self.truepilot:
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-true")'
+        if self.sitename == 'ANALY_SiGNET_DIRECT':
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-true-test")'
+        elif self.truepilot:
+            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-true-test")'
         elif self.eventranges:
             x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
         elif self.sitename == 'BOINC_CHECKPOINT':
@@ -333,15 +340,20 @@ class aCTPanda2Xrsl:
             x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
         elif self.sitename in self.rtesites:
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
-        elif 'BOINC' in self.sitename or (self.sitename.startswith('ANALY') and not self.truepilot) or ('MPPMU' in self.sitename):
+        #elif 'BOINC' in self.sitename or (self.sitename.startswith('ANALY') and not self.truepilot) or ('MPPMU' in self.sitename):
             # Use official pilot for BOINC and ND analy queues
             #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+        elif 'RAL' in self.sitename:
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+        elif self.sitename == 'BOINC-ES':
+            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-72.1-PRE.tar.gz")'
         else:
             # Use no kill pilot to avoid pilot killing too much at end of job
-            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
             #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-AF.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://dcameron.web.cern.ch;cache=check/dcameron/dev/pilotcode-DC.tar.gz")'
 
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
