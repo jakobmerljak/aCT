@@ -230,7 +230,7 @@ class aCTAGISParser:
                     self.log.warning("%s: No CE endpoints defined, this site cannot be used" % site)
                     del self.sites[site]
                 else:
-                    self.log.info("%s: %s (%s), maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['flavour'], info['maxjobs']))
+                    self.log.info("%s (%s): %s (%s), maxjobs %d" % (site, info['status'], 'True pilot' if info['truepilot'] else 'ARC pilot', info['flavour'], info['maxjobs']))
 
         if flavour:
             return dict((k,v) for (k,v) in self.sites.iteritems() if v.get('flavour') in flavour)

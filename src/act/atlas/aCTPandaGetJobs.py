@@ -128,11 +128,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 continue        
 
             if attrs['status'] == 'offline':
-                self.log.info("Site %s is offline, will not fetch new jobs" % site)
                 continue
 
             if attrs['maxjobs'] == 0:
-                self.log.info("Site %s: accepting new jobs disabled" % site)
                 continue
 
             if (not self.getjob) and site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
