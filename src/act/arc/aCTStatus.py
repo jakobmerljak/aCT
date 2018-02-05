@@ -106,7 +106,7 @@ class aCTStatus(aCTProcess):
             jobsnotupdated = job_supervisor.GetIDsNotProcessed()
             
             for (originaljobinfo, updatedjob) in zip(jobs, jobsupdated):
-                (id, appjobid, originaljob) = originaljobinfo
+                (id, appjobid, originaljob, created) = originaljobinfo
                 if updatedjob.JobID in jobsnotupdated:
                     self.log.error("%s: Failed to find information on %s" % (appjobid, updatedjob.JobID))
                     continue
@@ -152,8 +152,8 @@ class aCTStatus(aCTProcess):
                     arcstate = 'failed'
                     
                 # Fix crazy wallclock and CPU times
-                if updatedjob.UsedTotalWallTime > arc.Time() - updatedjob.LocalSubmissionTime:
-                    fixedwalltime = arc.Time() - updatedjob.LocalSubmissionTime
+                if updatedjob.UsedTotalWallTime > arc.Time() - arc.Time(int(created.strftime("%s"))):
+                    fixedwalltime = arc.Time() - arc.Time(int(created.strftime("%s")))
                     self.log.warning("%s: Fixing reported walltime %d to %d" % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), fixedwalltime.GetPeriod()))
                     updatedjob.UsedTotalWallTime = fixedwalltime
                 if updatedjob.UsedTotalCPUTime > arc.Period(10**7):

@@ -155,7 +155,11 @@ class aCTATLASStatus(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "running"
             desc["actpandastatus"] = "running"
-            desc["node"] = aj["ExecutionNode"]
+            if len(aj["ExecutionNode"]) > 255:
+                desc["node"] = aj["ExecutionNode"][:254]
+                self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['pandaid'], aj['ExecutionNode'], desc['node']))
+            else:
+                desc["node"] = aj["ExecutionNode"]
             desc["computingElement"] = aj['JobID']
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             desc["corecount"] = aj['RequestedSlots']
@@ -359,6 +363,11 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.computingElement = cluster
             pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
             pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['siteName']+'/'+aj['appjobid']+".out|Unknown|Unknown|Unknown|Unknown"
+            if len(aj["ExecutionNode"]) > 255:
+                pupdate.node = aj["ExecutionNode"][:254]
+                self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['pandaid'], aj['ExecutionNode'], pupdate.node))
+            else:
+                pupdate.node = aj["ExecutionNode"]
             pupdate.node = aj['ExecutionNode']
             pupdate.pilotLog = self.createPilotLog(outd, aj['pandaid'])
             pupdate.cpuConsumptionTime = aj['UsedTotalCPUTime']

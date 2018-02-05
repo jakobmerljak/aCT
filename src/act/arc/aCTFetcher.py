@@ -163,7 +163,7 @@ class aCTFetcher(aCTProcess):
             return
         
         for proxyid, jobs in jobstofetch.items():
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 if job.JobID in notfetchedretry:
                     self.log.warning("%s: Could not get output from job %s" % (appjobid, job.JobID))
                     # Remove download directory to allow retry
