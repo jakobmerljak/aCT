@@ -190,10 +190,16 @@ class aCTSubmitter(aCTProcess):
                     continue
 
                 # Extract the GridResource
+                # CREAM has the queue at the end of the GridResource, for condor it's a separate attribute
                 gridresource = re.search(r',*([^,]* %s[^,]*),*' % self.cluster, j['clusterlist'])
                 gridresource = str(gridresource.group(1))
+                queue = gridresource.split()[-1]
+                if gridresource.startswith('condor'):
+                    gridresource = re.sub(r' %s$' % queue, '', gridresource)
                 self.log.debug('%s: Set GridResource to %s' % (j['appjobid'], gridresource))
                 jobdesc['GridResource'] = gridresource
+                # Set the remote queue
+                jobdesc['+queue'] = '"%s"' % queue 
                 t = SubmitThr(Submit, j['id'], j['appjobid'], jobdesc, self.log, self.schedd)
                 self.RunThreadsSplit([t], 1)
                 count += 1

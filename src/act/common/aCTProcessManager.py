@@ -199,8 +199,10 @@ class aCTProcessManager:
                 cinfo = c.split()
                 if not cinfo or len(cinfo) == 1:
                     clusterlist.append(c)
-                elif cinfo[0] in ['nordugrid', 'condor']:
+                elif cinfo[0] == 'nordugrid':
                     clusterlist.append(cinfo[-1])
+                elif cinfo[0] == 'condor':
+                    clusterlist.append(cinfo[-2])
                 elif cinfo[0] == 'cream':
                     clusterlist.append(cinfo[1][:cinfo[1].find('/')])
                 else:

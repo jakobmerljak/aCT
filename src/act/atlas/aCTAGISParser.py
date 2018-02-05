@@ -86,13 +86,18 @@ class aCTAGISParser:
                     if queue['ce_flavour'] == 'CREAM-CE':
                         endpoints.append('cream %s/ce-cream/services/CREAM2 %s %s' % (queue['ce_endpoint'], queue['ce_jobmanager'], queue['ce_queue_name']))
                     elif queue['ce_flavour'] == 'HTCONDOR-CE':
-                        endpoints.append('condor %s %s' % (queue['ce_endpoint'].split(':')[0], queue['ce_endpoint']))
+                        endpoints.append('condor %s %s %s' % (queue['ce_endpoint'].split(':')[0], queue['ce_endpoint'], queue['ce_queue_name']))
                     elif queue['ce_flavour'] == 'ARC-CE':
                         endpoints.append('%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']))
                     else:
                         if sites[sitename]['enabled']:
                             self.log.warning('Cannot use CE flavour %s for queue %s' % (queue['ce_flavour'], sitename))
-                sites[sitename]['endpoints'] = endpoints
+                # Ignore endpoints with "default" queue unless that is the only queue
+                nondefaultendpoints = [e for e in endpoints if not e.endswith(' default')]
+                if not nondefaultendpoints:
+                    sites[sitename]['endpoints'] = endpoints
+                else:
+                    sites[sitename]['endpoints'] = nondefaultendpoints
             if not sites[sitename].has_key('maxtime') or sites[sitename]['maxtime'] == 0:
                 try:
                     maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
