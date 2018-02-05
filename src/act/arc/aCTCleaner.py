@@ -26,7 +26,7 @@ class aCTCleaner(aCTProcess):
             
             notcleaned = job_supervisor.GetIDsNotProcessed()
     
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 if job.JobID in notcleaned:
                     self.log.error("%s: Could not clean job %s" % (appjobid, job.JobID))
     

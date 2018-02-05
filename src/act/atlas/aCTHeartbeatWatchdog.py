@@ -27,22 +27,23 @@ dbpanda = aCTDBPanda(log, conf.get(["db","file"]))
 select = "sendhb=1 and " \
          "pandastatus in ('sent', 'starting', 'running', 'transferring') and " \
          "theartbeat != 0 and " + dbpanda.timeStampLessThan("theartbeat", timelimit)
-columns = ['pandaid', 'pandastatus', 'proxyid', 'sitename']
+columns = ['pandaid', 'pandastatus', 'proxyid', 'sitename', 'theartbeat']
 jobs = dbpanda.getJobs(select, columns)
 
 if jobs:
     print 'Found %d jobs with outdated heartbeat (older than %d seconds):\n' % (len(jobs), timelimit)
+    print '\t'.join(['pandaid', 'site', 'status', 'theartbeat', 'Panda response'])
     
     # Panda server for each proxy
     pandas = {}
     for job in jobs:
-        print job['pandaid'], job['sitename']
         proxyid = job['proxyid']
         if proxyid not in pandas:
             panda = aCTPanda(log, dbarc.getProxyPath(proxyid))
             pandas[proxyid] = panda
                    
-        pandas[proxyid].updateStatus(job['pandaid'], job['pandastatus'])
+        response = pandas[proxyid].updateStatus(job['pandaid'], job['pandastatus'])
+        print '\t'.join([str(job['pandaid']), job['sitename'], job['pandastatus'], str(job['theartbeat']), str(response)])
         # update heartbeat time in the DB
         dbpanda.updateJob(job['pandaid'], {'theartbeat': dbpanda.getTimeStamp(time.time()+1)})
 

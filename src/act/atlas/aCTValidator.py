@@ -101,7 +101,11 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.endTime = aj['EndTime']
             else:
                 self.log.warning('%s: no endtime found' % aj['appjobid'])
-            jobinfo.node = aj['ExecutionNode']
+            if len(aj["ExecutionNode"]) > 255:
+                jobinfo.node = aj["ExecutionNode"][:254]
+                self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['appjobid'], aj['ExecutionNode'], jobinfo.node))
+            else:
+                jobinfo.node = aj["ExecutionNode"]
 
             # Add url of logs
             if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
@@ -642,7 +646,7 @@ class aCTValidator(aCTATLASProcess):
                           (job['pandaid'], job['JobID']))
             desc = {'arcstate': 'tocancel', 'tarcstate': self.dbarc.getTimeStamp()}
             self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
-        self.dbpanda.Commit()
+        self.dbarc.Commit()
             
         # pull out output file info from metadata.xml into dict, order by SE
         surls = {}

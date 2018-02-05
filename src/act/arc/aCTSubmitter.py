@@ -1,9 +1,11 @@
 import re
 import time
 import arc
+from random import shuffle
 from urlparse import urlparse
 from threading import Thread
 from act.common.aCTProcess import aCTProcess
+from act.common.aCTSignal import ExceptInterrupt
 
 class SubmitThr(Thread):
     def __init__ (self,func,id,appjobid,jobdescs,uc,logger):
@@ -125,7 +127,9 @@ class aCTSubmitter(aCTProcess):
             self.log.info('Nothing to submit')
             return 0
         
-        fairshares = set([p['fairshare'] for p in fairshares])
+        fairshares = list(set([p['fairshare'] for p in fairshares]))
+        # For EMI-ES proxy bug - see below
+        shuffle(fairshares)
         count = 0
 
         for fairshare in fairshares:
@@ -234,21 +238,23 @@ class aCTSubmitter(aCTProcess):
                     target.ExecutionEnvironment.CPUClockSpeed = 2000
                     qjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='submitted' and fairshare='%s'" % fairshare, ['id','priority'])
                     rjobs=self.db.getArcJobsInfo("cluster='" +str(self.cluster)+ "' and  arcstate='running' and fairshare='%s'" % fairshare, ['id'])
-                    
+
                     # max queued priority
                     try:
                         maxprioqueued = max(qjobs,key = lambda x : x['priority'])['priority']
                     except:
                         maxprioqueued = 0
                     self.log.info("Max priority queued: %d" % maxprioqueued)
-    
+
                     # Set number of submitted jobs to running * 0.15 + 400/num of shares
                     # Note: assumes only a few shares are used
                     jlimit = len(rjobs)*0.15 + 100/len(fairshares)
                     if str(self.cluster).find('arc-boinc-0') != -1:
-                        jlimit = len(rjobs)*0.15 + 200
+                        jlimit = len(rjobs)*0.15 + 400
                     if str(self.cluster).find('XXXpikolit') != -1:
                         jlimit = len(rjobs)*0.15 + 100
+                    if str(self.cluster).find('arc05.lcg') != -1:
+                        jlimit = len(rjobs)*0.15 + 400
                     target.ComputingShare.PreLRMSWaitingJobs=len(qjobs)
                     if len(qjobs) < jlimit or ( ( maxpriowaiting > maxprioqueued ) and ( maxpriowaiting > 10 ) ) :
                         if maxpriowaiting > maxprioqueued :
@@ -262,6 +268,9 @@ class aCTSubmitter(aCTProcess):
             if not queuelist:
                 self.log.info("No free queues available")
                 self.db.Commit()
+                # EMI-ES proxy problem - see bug 3685
+                if self.cluster and self.cluster.startswith('https://'):
+                    raise ExceptInterrupt(15)
                 continue
     
             self.log.info("start submitting")
@@ -285,6 +294,10 @@ class aCTSubmitter(aCTProcess):
             self.log.info("threads finished")
             # commit transaction to release row locks
             self.db.Commit()
+
+            # EMI-ES proxy problem - see bug 3685
+            if self.cluster and self.cluster.startswith('https://'):
+                raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
@@ -318,7 +331,7 @@ class aCTSubmitter(aCTProcess):
             
             notcancelled = job_supervisor.GetIDsNotProcessed()
     
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
 
                 if not job.JobID:
                     # Job not submitted
@@ -386,7 +399,7 @@ class aCTSubmitter(aCTProcess):
             
             # Empty job to reset DB info
             j = arc.Job()
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 self.db.updateArcJob(id, {"arcstate": "tosubmit",
                                           "tarcstate": self.db.getTimeStamp(),
                                           "cluster": None}, j)
@@ -416,7 +429,7 @@ class aCTSubmitter(aCTProcess):
             
             notresumed = job_supervisor.GetIDsNotProcessed()
     
-            for (id, appjobid, job) in jobs:
+            for (id, appjobid, job, created) in jobs:
                 if job.JobID in notresumed:
                     self.log.error("%s: Could not resume job %s" % (appjobid, job.JobID))
                     self.db.updateArcJob(id, {"arcstate": "failed",

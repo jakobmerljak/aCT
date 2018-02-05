@@ -100,12 +100,8 @@ class aCTAutopilot(aCTATLASProcess):
         Heartbeat status updates.
         """
         nthreads=int(self.conf.get(["panda","threads"]))
-        # Check if we should send heartbeats
-        hb = ''
-        if pstatus == 'running' or pstatus == 'transferring':
-            hb = ' and sendhb=1'
-        columns = ['pandaid', 'siteName', 'startTime', 'endTime', 'computingElement', 'node', 'corecount', 'eventranges']
-        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"'"+hb+" and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        columns = ['pandaid', 'siteName', 'startTime', 'computingElement', 'node', 'corecount', 'eventranges']
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
         
@@ -122,8 +118,8 @@ class aCTAutopilot(aCTATLASProcess):
             if pstatus == 'transferring' and j['eventranges']:
                 pstatus = 'running'
             jd = {}
-            jd['startTime'] = j['startTime']
-            jd['endTime'] = j['endTime']
+            if pstatus != 'starting':
+                jd['startTime'] = j['startTime']
             if j['computingElement']:
                 if j['computingElement'].find('://') != -1: # this if is only needed during transition period
                     jd['computingElement'] = arc.URL(str(j['computingElement'])).Host()
@@ -156,7 +152,7 @@ class aCTAutopilot(aCTATLASProcess):
             if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
-            self.log.debug('%s: %s' % (t.id, t.result))
+            #self.log.debug('%s: %s' % (t.id, t.result))
             if t.result.has_key('command')  and t.result['command'][0] != "NULL":
                 self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
@@ -209,7 +205,9 @@ class aCTAutopilot(aCTATLASProcess):
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     if not os.path.exists(fname):
                         # Create the empty pickle so that heartbeat code below doesn't fail
-                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'finished'})
+                        # Mark job substatus failed so that job is failed rather than closed
+                        self.log.info('%s: Job has no eventranges to update, marking failed' % j['pandaid'])
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': 'pilot_failed'})
                         jobinfo.writeToFile(fname)
                     continue
                 

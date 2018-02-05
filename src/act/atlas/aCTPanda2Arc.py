@@ -1,4 +1,5 @@
 import httplib
+import traceback
 import json
 
 from aCTATLASProcess import aCTATLASProcess
@@ -40,7 +41,8 @@ class aCTPanda2Arc(aCTATLASProcess):
                 parser.parse()
             except Exception as e:
                 # try again later
-                self.log.error('Cant handle job description: %s' % str(e))
+                self.log.error('%s: Cant handle job description: %s' % (job['pandaid'], str(e)))
+                self.log.error(traceback.format_exc())
                 continue
             traces = []
             # Getting DDM endpoint. 'ddm' should be filled by _parseAgisJson

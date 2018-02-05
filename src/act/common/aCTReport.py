@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
+import os
 import re
+import signal
 import subprocess
 from act.common import aCTConfig
 from act.common import aCTLogger
@@ -13,14 +15,15 @@ class aCTStatus:
         self.conf=aCTConfig.aCTConfigARC()
         self.logger=aCTLogger.aCTLogger("aCTReport")
         self.log=self.logger()
-
+        self.criticallogger = aCTLogger.aCTLogger('aCTCritical', arclog=False)
+        self.criticallog = self.criticallogger()
 
         #self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
         self.pandadb=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
 
     def ProcessReport(self):
-        actprocscmd = 'ps ax -ww -o etime,args'
+        actprocscmd = 'ps ax -ww -o pid,etime,args'
         p = subprocess.Popen(actprocscmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         
@@ -32,17 +35,17 @@ class aCTStatus:
         cluster_procs = {}
         longprocesses = []
         for line in out.split('\n'):
-            reg = re.match('\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            reg = re.match(r'\s*(\d*)\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
             if reg:
-                runningtime, process, cluster = reg.groups()
+                pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
                 if process == 'aCTReport' or process == 'aCTMain':
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
-                elif not re.match('\d\d:\d\d$', runningtime):
+                elif not re.match(r'\d\d:\d\d$', runningtime):
                     # Check for overrunning processes
-                    longprocesses.append((process, cluster, runningtime))
+                    longprocesses.append((process, pid, cluster, runningtime))
                 if cluster in cluster_procs:
                     cluster_procs[cluster].append(process)
                 else:
@@ -55,7 +58,10 @@ class aCTStatus:
             print '%38s: %s' % (cluster, ' '.join(procs))
         print
         for proc in longprocesses:
-            print 'WARNING: %s for %s running for more than one hour (%s)' % proc
+            print 'WARNING: %s (pid %s) for %s running for more than one hour (%s)' % proc
+            # Kill process and log a critical message to send email
+            self.criticallog.critical('Killing process %s (pid %s) for %s running for more than one hour (%s)' % proc)
+            os.kill(int(proc[1]), signal.SIGKILL)
         print
         
     def PandaReport(self):
@@ -73,16 +79,6 @@ class aCTStatus:
         for r in rows:
 
             site, state = (str(r[0]), str(r[1]))
-            reg=re.search('.+//([^:]+)',str(r[0]))
-            cl=""
-            try:
-                cl=reg.group(1)
-            except:
-                cl='WaitingSubmission'
-
-            jid=str(r[1])
-            if jid == 'None':
-                jid="Other"
 
             try:
                 rep[site][state]+=1

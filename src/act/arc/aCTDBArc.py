@@ -333,10 +333,10 @@ class aCTDBArc(aCTDB):
 
     def getArcJobs(self,select):
         '''
-        Return a dictionary of {proxyid: [(id, appjobid, arc.Job), ...]} for jobs matching select
+        Return a dictionary of {proxyid: [(id, appjobid, arc.Job, created), ...]} for jobs matching select
         '''
         c=self.getCursor()
-        c.execute("SELECT id, proxyid, appjobid, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT id, proxyid, appjobid, created, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
@@ -348,7 +348,7 @@ class aCTDBArc(aCTDB):
             for row in rows:
                 if not row['proxyid'] in d:
                     d[row['proxyid']] = []
-                d[row['proxyid']].append((row['id'], row['appjobid'], self._db2job(row)))
+                d[row['proxyid']].append((row['id'], row['appjobid'], self._db2job(row), row['created']))
             
         return d
     
@@ -388,7 +388,7 @@ class aCTDBArc(aCTDB):
         c=self.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
     

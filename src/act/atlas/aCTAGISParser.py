@@ -111,13 +111,18 @@ class aCTAGISParser:
                 objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
                 sites[sitename]['ddmoses'] = objstore
             except:
-                self.log.debug('No ES object store for %s', sitename)
+                if sites[sitename]['enabled']:
+                    self.log.debug('No ES object store for %s', sitename)
             try:
                 objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_LOGS'][0]
                 sites[sitename]['ddmoslogs'] = objstore
             except:
-                self.log.debug('No LOGS object store for %s', sitename)
-        self.log.info("Parsed sites from AGIS: %s"%str(sites.keys()))
+                if sites[sitename]['enabled']:
+                    self.log.debug('No LOGS object store for %s', sitename)
+        if len(sites) < 100:
+            self.log.info("Parsed sites from AGIS: %s" % str(sites.keys()))
+        else:
+            self.log.info("Parsed %d sites from AGIS" % len(sites))
         return sites
 
     def _parseDDMEndpoints(self, filename):
@@ -127,6 +132,8 @@ class aCTAGISParser:
             self.ddmjson = json.load(f)
         # make map of bucket_id: endpoint
         for ep in self.ddmjson:
+            if ep['state'] != 'ACTIVE':
+                continue
             try:
                 bucket_id = ep['resource']['bucket_id']
             except:
