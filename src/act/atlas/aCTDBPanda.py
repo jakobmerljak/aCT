@@ -115,7 +115,6 @@ class aCTDBPanda(aCTDB):
         desc['created']=self.getTimeStamp()
         desc['pandaid']=pandaid
         desc['pandajob']=pandajob
-        desc['sendhb']=1
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.getCursor()
         c.execute(s,desc.values())

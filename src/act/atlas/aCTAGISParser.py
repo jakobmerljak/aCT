@@ -54,6 +54,10 @@ class aCTAGISParser:
                 sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["truepilot"])[0])
             except:
                 pass
+            try:
+                sites[sitename]['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["push"])[0])
+            except:
+                pass
             sites[sitename]['status'] = 'online'
             sites[sitename]['enabled'] = True
         self.log.info("Parsed sites from config: %s"%str(sites.keys()))
@@ -66,6 +70,7 @@ class aCTAGISParser:
             agisjson=json.load(f)
         sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
+            sites[sitename]['push'] = True # TODO configure in AGIS 
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
             if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':

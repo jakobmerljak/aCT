@@ -17,8 +17,9 @@ class aCTPanda2ClassAd:
         self.proxy = proxypath
 
         self.defaults = {}
-        self.defaults['memory'] = 2000
-        self.defaults['cputime'] = 2*24*3600
+        self.defaults['memory'] = siteinfo['maxrss']
+        self.defaults['cputime'] = siteinfo['maxtime']
+        self.defaults['corecount'] = siteinfo['corecount']
         self.memory = 0
         self.sitename = sitename
         self.schedconfig = siteinfo['schedconfig']
@@ -28,7 +29,7 @@ class aCTPanda2ClassAd:
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
-        self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
+        self.inputjobdir = os.path.join(self.inputfiledir, self.pandaid)
         self.longjob = False
         self.traces = []
         if len(self.pandajob) > 50000:
@@ -52,7 +53,7 @@ class aCTPanda2ClassAd:
 
         # Unified panda queues: always use coreCount from job description
         try:
-            self.ncores = int(self.jobdesc.get('coreCount', [1])[0])
+            self.ncores = int(self.jobdesc.get('coreCount', [self.defaults['corecount']])[0])
         except: # corecount is NULL
             self.ncores = 1
 
@@ -105,10 +106,8 @@ class aCTPanda2ClassAd:
         # condor uses total memory, not per core
         if 'minRamCount' in self.jobdesc:
             memory = int(self.jobdesc['minRamCount'][0])
-        elif not self.sitename.startswith('ANALY'):
-            memory = 4000
         else:
-            memory = 2000
+            memory = self.defaults['memory']
 
         if memory <= 0:
             memory = self.defaults['memory']
@@ -129,13 +128,16 @@ class aCTPanda2ClassAd:
 
     def setArguments(self):
 
-        pargs = '-h %s -s %s -f false -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename)
+        fetchjob = 'false' if self.siteinfo['push'] else 'true'
+        pargs = '-h %s -s %s -f %s -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename, fetchjob)
         self.classad['Arguments'] = str(pargs)
 
     def setInputs(self):
 
         # Write panda job desc to a file to upload with the job. Condor doesn't
         # allow different src and dest filenames so make a dir per panda job id
+        if not self.siteinfo['push']:
+            return
         try:
             os.makedirs(self.inputjobdir)
         except:

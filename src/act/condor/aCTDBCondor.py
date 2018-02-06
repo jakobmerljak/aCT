@@ -138,7 +138,7 @@ class aCTDBCondor(aCTDB):
         desc['attemptsleft'] = maxattempts
         desc['proxyid'] = proxyid
         desc['appjobid'] = appjobid
-        desc['priority'] = jobdesc['JobPrio']
+        desc['priority'] = jobdesc.get('JobPrio', 0)
         desc['fairshare'] = fairshare
         s="insert into condorjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
