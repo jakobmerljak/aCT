@@ -46,7 +46,7 @@ class aCTAPFMon:
     def registerJobs(self, pandaids, site):
         '''Register new jobs'''
 
-        if not self.apfmonurl:
+        if not self.apfmonurl or not pandaids:
             return
 
         jobregister = '%s/jobs' % self.apfmonurl
