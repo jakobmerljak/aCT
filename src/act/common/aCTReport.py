@@ -39,7 +39,7 @@ class aCTStatus:
             if reg:
                 pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
-                if process == 'aCTReport' or process == 'aCTMain':
+                if process in ['aCTReport', 'aCTMain', 'aCTHeartbeatWatchdog']:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
@@ -61,7 +61,10 @@ class aCTStatus:
             print 'WARNING: %s (pid %s) for %s running for more than one hour (%s)' % proc
             # Kill process and log a critical message to send email
             self.criticallog.critical('Killing process %s (pid %s) for %s running for more than one hour (%s)' % proc)
-            os.kill(int(proc[1]), signal.SIGKILL)
+            try:
+                os.kill(int(proc[1]), signal.SIGKILL)
+            except OSError:
+                pass
         print
         
     def PandaReport(self):
