@@ -23,7 +23,7 @@ class PandaGetThr(Thread):
         self.result = (None, None, None)
     def run(self):
         if not self.push:
-            self.result = (0, '', None)
+            self.result = (0, '', None, self.prodSourceLabel)
         else:
             self.result = self.func(self.siteName, self.prodSourceLabel, self.getEventRanges)
 
@@ -208,7 +208,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 activatedjobs = False
                 for t in tlist:
                     t.join()
-                    (pandaid, pandajob, eventranges) = t.result
+                    (pandaid, pandajob, eventranges, prodsrclabel) = t.result
                     if pandaid == -1: # No jobs available
                         continue
                     activatedjobs = True
@@ -234,7 +234,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     if pandaid == 0:
                         # Pull mode: use row id as job id for output files and APFmon
                         pandaid = rowid['LAST_INSERT_ID()']
-                        pandajob = 'PandaID=%d' % pandaid
+                        pandajob = 'PandaID=%d&prodSourceLabel=%s' % (pandaid, prodsrclabel)
                         self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob})
                     apfmonjobs.append(pandaid)
                     count += 1

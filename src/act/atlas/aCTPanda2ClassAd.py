@@ -12,6 +12,7 @@ class aCTPanda2ClassAd:
         self.pandajob = pandajob
         self.jobdesc = cgi.parse_qs(pandajob)
         self.pandaid = self.jobdesc['PandaID'][0]
+        self.prodsourcelabel = self.jobdesc.get('prodSourceLabel', ['None'])[0]
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
         self.proxy = proxypath
@@ -129,7 +130,8 @@ class aCTPanda2ClassAd:
     def setArguments(self):
 
         fetchjob = 'false' if self.siteinfo['push'] else 'true'
-        pargs = '-h %s -s %s -f %s -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename, fetchjob)
+        psrclabel = '-u %s' % self.prodsourcelabel if self.prodsourcelabel != 'None' else ''
+        pargs = '-h %s -s %s -f %s %s -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename, fetchjob, psrclabel)
         self.classad['Arguments'] = str(pargs)
 
     def setInputs(self):
