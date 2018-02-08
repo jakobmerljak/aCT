@@ -89,16 +89,16 @@ class aCTPanda:
         urldata=self.__HTTPConnect__('getJob',node)
         if not urldata:
             self.log.info('No job from panda')
-            return (None,None,None)
+            return (None,None,None,None)
         try:
             urldesc = cgi.parse_qs(urldata)
         except Exception,x:
             self.log.error(x)
-            return (None,None,None)
+            return (None,None,None,None)
         status = urldesc['StatusCode'][0]
         if status == '20':
             self.log.debug('No Panda activated jobs available')
-            return (-1,None,None)
+            return (-1,None,None,None)
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
@@ -114,7 +114,7 @@ class aCTPanda:
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         self.log.debug("%s %s" % (pid,urldesc))
-        return (pid,urldata,eventranges)
+        return (pid,urldata,eventranges,prodSourceLabel)
 
     def getEventRanges(self, node):
         self.log.debug('%s: Fetching event ranges' % node['pandaID'])
