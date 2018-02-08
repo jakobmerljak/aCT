@@ -146,7 +146,7 @@ class aCTSubmitter(aCTProcess):
             queuelist = []
 
             # Check queued jobs and limits
-            qjobs=self.dbcondor.getCondorJobsInfo("cluster='" +str(self.cluster)+ "' and condorstate='submitted' and fairshare='%s'" % fairshare, ['id', 'priority'])
+            qjobs=self.dbcondor.getCondorJobsInfo("cluster='" +str(self.cluster)+ "' and ( condorstate='submitted' or condorstate='holding' ) and fairshare='%s'" % fairshare, ['id', 'priority'])
             rjobs=self.dbcondor.getCondorJobsInfo("cluster='" +str(self.cluster)+ "' and condorstate='running' and fairshare='%s'" % fairshare, ['id'])
                     
             # max queued priority
@@ -158,7 +158,7 @@ class aCTSubmitter(aCTProcess):
 
             # Set number of submitted jobs to running * 0.15 + 400/num of shares
             # Note: assumes only a few shares are used
-            jlimit = len(rjobs)*0.15 + 100/len(fairshares)
+            jlimit = len(rjobs)*0.1 + 10/len(fairshares)
 
             if len(qjobs) < jlimit or ( ( maxpriowaiting > maxprioqueued ) and ( maxpriowaiting > 10 ) ) :
                 if maxpriowaiting > maxprioqueued :
@@ -240,7 +240,11 @@ class aCTSubmitter(aCTProcess):
                                                           "tcondorstate": self.dbcondor.getTimeStamp()})
                 continue
 
-            remove = self.schedd.act(htcondor.JobAction.Remove, ['%d.0' % job['ClusterId']])
+            try:
+                remove = self.schedd.act(htcondor.JobAction.Remove, ['%d.0' % job['ClusterId']])
+            except RuntimeError as e:
+                self.log.error("%s: Failed to cancel in condor: %s" % (job['appjobid'], str(e)))
+                continue
             self.log.debug("%s: Cancellation returned %s" % (job['appjobid'], remove))
             self.dbcondor.updateCondorJob(job['id'], {"condorstate": "cancelling",
                                                       "tcondorstate": self.dbcondor.getTimeStamp()})
@@ -257,7 +261,10 @@ class aCTSubmitter(aCTProcess):
 
             # Clean up jobs which were submitted
             if job['ClusterId']:
-                self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
+                try:
+                    self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
+                except RuntimeError as e:
+                    self.log.error("%s: Failed to cancel in condor: %s" % (job['appjobid'], str(e)))
                 # TODO handle failed clean
 
             self.dbcondor.updateCondorJob(job['id'], {"condorstate": "tosubmit",
