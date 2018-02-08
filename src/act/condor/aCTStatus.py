@@ -66,7 +66,11 @@ class aCTStatus(aCTProcess):
             # Add here attributes we eventually want in the DB
             attrs = ['JobStatus', 'ExitCode', 'GlobalJobId', 'GridJobId', 'JobCurrentStartDate', 'CompletionDate']
             self.log.debug('%s: Checking for job id %d in Condor queue' % (appjobid, clusterid))
-            status = self.schedd.query('ClusterID=?=%d' % clusterid, attrs)
+            try:
+                status = self.schedd.query('ClusterID=?=%d' % clusterid, attrs)
+            except IOError as e:
+                self.log.error('%s: Failed querying schedd: %s', appjobid, str(e))
+                status = None
             if status:
                 updatedjob = status[0]
                 jobstatus = updatedjob['JobStatus']
