@@ -100,7 +100,10 @@ class aCTPanda2ClassAd:
         cputime = self.getNCores() * walltime
         self.log.info('%s: walltime: %ds, cputime: %ds' % (self.pandaid, walltime, cputime))
 
+        # CERN uses MaxRunTime (seconds)
         self.classad['+MaxRuntime'] = str(walltime)
+        # US sites use maxWallTime (in minutes)
+        self.classad['+maxWallTime'] = str(walltime/60)
 
     def setMemory(self):
 
