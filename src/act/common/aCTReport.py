@@ -39,7 +39,7 @@ class aCTStatus:
             if reg:
                 pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
-                if process == 'aCTReport' or process == 'aCTMain':
+                if process in ['aCTReport', 'aCTMain', 'aCTHeartbeatWatchdog']:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
