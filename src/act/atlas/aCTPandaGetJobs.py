@@ -230,12 +230,16 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     n['proxyid'] = self.proxymap[attrs['type']]
                     n['eventranges'] = eventranges
                     n['sendhb'] = attrs['push']
+                    if pandaid == 0:
+                        # Pull mode: set dummy arcjobid to avoid job getting picked
+                        # up before setting proper job desc after insertion
+                        n['arcjobid'] = -1
                     rowid = self.dbpanda.insertJob(pandaid, pandajob, n)
                     if pandaid == 0:
                         # Pull mode: use row id as job id for output files and APFmon
                         pandaid = rowid['LAST_INSERT_ID()']
                         pandajob = 'PandaID=%d&prodSourceLabel=%s' % (pandaid, prodsrclabel)
-                        self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob})
+                        self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob, 'arcjobid': None})
                     apfmonjobs.append(pandaid)
                     count += 1
 
