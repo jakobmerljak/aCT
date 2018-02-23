@@ -37,7 +37,8 @@ class aCTProcessManager:
                                  'act/atlas/aCTATLASStatusCondor':None,
                                  'act/atlas/aCTValidator':None,
                                  'act/atlas/aCTValidatorCondor':None,
-                                 'act/atlas/aCTAGISFetcher':None
+                                 'act/atlas/aCTAGISFetcher':None,
+                                 'act/client/client2arc':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
