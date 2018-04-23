@@ -38,7 +38,7 @@ class aCTPanda2Xrsl:
         if len(self.pandajob) > 50000:
             self.longjob = True
 
-        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE","IN2P3-CC_HPC_IDRIS_MCORE1","IN2P3-CC_HPC_IDRIS_MCORE","IN2P3-CC_HPC_DEBUG"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
+        self.rtesites = ["BEIJING-CS-TH-1A_MCORE","BEIJING-ERAII_MCORE","BEIJING-TIANJIN-TH-1A_MCORE","LRZ-LMU_MUC1_MCORE"]#,"LRZ-LMU_MUC_MCORE1"]#"MPPMU-DRACO_MCORE","MPPMU-HYDRA_MCORE"]
         self.artes = None
         # ES merge jobs need unique guids because pilot uses them as dict keys
         if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
@@ -69,7 +69,7 @@ class aCTPanda2Xrsl:
         # force single-node jobs for now
         if self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0:
+            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0 and self.sitename.find('IFIC'):
                 self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
@@ -285,7 +285,8 @@ class aCTPanda2Xrsl:
             pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         # Commented on request from Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
-        #    pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+        if self.sitename in ['IN2P3-CC_HPC_IDRIS_MCORE']:
+            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
         if self.longjob:
             pandajobarg = "FILE"
         self.xrsl['arguments'] = '(arguments = "' + self.artes + '" "' + pandajobarg + '" ' + pargs + ')'
@@ -297,11 +298,13 @@ class aCTPanda2Xrsl:
             if i == 'None':
                 # Rucio file
                 lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", s, f])
-            elif int(i) in self.osmap:
-                lfn = '/'.join([self.osmap[int(i)], f])
             else:
-                # TODO this exception is ignored by panda2arc
-                raise Exception("No OS defined in AGIS for bucket id %s" % i)
+                i = int(i.split("/")[0])
+                if i in self.osmap:
+                    lfn = '/'.join([self.osmap[i], f])
+                else:
+                    # TODO this exception is ignored by panda2arc
+                    raise Exception("No OS defined in AGIS for bucket id %d" % i)
             inf[f] = lfn
 
     def setInputs(self):
@@ -320,7 +323,7 @@ class aCTPanda2Xrsl:
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
         elif self.jobdesc['prodSourceLabel'][0] == 'ptest':
             x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
-        elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1']:
+        elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1', 'IN2P3-CC_HPC_IDRIS_MCORE']:
             x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
         elif re.match('.*XXXXXXXXXXXXSiGNET.*', self.sitename):
 	    # test new pilotcode
