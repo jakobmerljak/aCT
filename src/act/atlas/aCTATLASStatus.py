@@ -69,8 +69,8 @@ class aCTATLASStatus(aCTATLASProcess):
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
-                desc['endTime'] = arcjobs[0]['EndTime'] if arcjobs[0]['EndTime'] else datetime.datetime.utcnow()
-                desc['startTime'] = self.getStartTime(desc['endTime'], arcjobs[0]['UsedTotalWallTime']) if arcjobs[0]['UsedTotalWallTime'] else datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                desc['startTime'] = datetime.datetime.utcnow()
             
             # Check if job was manually killed
             if job['pandastatus'] is not None:
@@ -166,7 +166,11 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot']:
                 self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
                 desc['sendhb'] = 0
-            self.dbpanda.updateJobsLazy(select, desc)
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
         
@@ -206,7 +210,12 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
-            self.dbpanda.updateJobsLazy(select, desc)
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
 
@@ -437,7 +446,12 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
-            self.dbpanda.updateJobsLazy(select, desc)
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
             # There is no cleaning to do for lost jobs so just resubmit them
