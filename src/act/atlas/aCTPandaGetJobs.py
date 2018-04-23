@@ -169,7 +169,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             stopflag=False
 
             #getEventRanges = not attrs['truepilot']
-            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES']
+            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES','IN2P3-CC_HPC_IDRIS_MCORE']
 
             for nc in range(0, max(int(num/nthreads), 1)):
                 if stopflag:
@@ -179,7 +179,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
                 for i in range(0, nthreads):
                     r = random.Random()
-                    if site == 'DESY-HH_UCORE': # for Paul's tests
+                    if site in ['BOINC-TEST', 'DESY-HH_UCORE']: # for Paul's tests
                         t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
                     elif r.randint(0,100) <= 2:
                         if (not self.getjob) and site in self.activated and self.activated[site]['rc_test'] == 0:
