@@ -131,7 +131,7 @@ class aCTValidator(aCTATLASProcess):
         
         if not os.path.exists(os.path.join(outd,"arc-ce.log")):
             try:
-                shutil.copy(gmlogerrors, os.path.join(outd,"arc-ce.log"))
+                shutil.move(gmlogerrors, os.path.join(outd,"arc-ce.log"))
             except:
                 self.log.error("Failed to copy %s" % os.path.join(outd,"arc-ce.log") ) 
 
@@ -142,7 +142,7 @@ class aCTValidator(aCTATLASProcess):
                 pilotlog = pilotlogs[0]
         if pilotlog:
             try:
-                shutil.copy(os.path.join(localdir,pilotlog),
+                shutil.move(os.path.join(localdir,pilotlog),
                             os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
@@ -320,7 +320,7 @@ class aCTValidator(aCTATLASProcess):
         # As yet there is no bulk remove in ARC
         for surl in surls:
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
-            if not dp.h:
+            if not dp.h or surl['surl'].startswith('root://'):
                 self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid']))
                 result[surl['arcjobid']] = self.ok
                 continue
@@ -450,7 +450,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 100000"
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 1000"
         columns = ["arcjobid", "pandaid", "sendhb"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
