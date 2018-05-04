@@ -3,6 +3,7 @@
 
 import time
 import datetime
+import json
 import re
 import os
 import shutil
@@ -312,15 +313,11 @@ class aCTATLASStatus(aCTATLASProcess):
             
             cluster = arc.URL(str(jobid)).Host()
             sessionid=jobid[jobid.rfind('/')+1:]
-            date = time.strftime('%Y-%m-%d')
+            date = aj['created'].strftime('%Y-%m-%d')
             outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
             # Make sure the path up to outd exists
             try:
                 os.makedirs(os.path.dirname(outd), 0755)
-            except:
-                pass
-            try:
-                shutil.rmtree(outd)
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
@@ -353,6 +350,11 @@ class aCTATLASStatus(aCTATLASProcess):
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
+            try:
+                smeta = json.loads(aj['metadata'])
+            except:
+                smeta = None
+            
             # set update, pickle from pilot is not available
             # some values might not be properly set
             # TODO synchronize error codes with the rest of production
@@ -361,7 +363,10 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.state = 'failed'
             pupdate.siteName = aj['siteName']
             pupdate.computingElement = cluster
-            pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
+            try:
+                pupdate.schedulerID = smeta['schedulerid']
+            except:
+                pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
             pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['siteName']+'/'+aj['appjobid']+".out|Unknown|Unknown|Unknown|Unknown"
             if len(aj["ExecutionNode"]) > 255:
                 pupdate.node = aj["ExecutionNode"][:254]
@@ -392,12 +397,16 @@ class aCTATLASStatus(aCTATLASProcess):
                 pupdate.pilotErrorCode = 1212
             pupdate.pilotErrorDiag = aj['Error']
             # set start/endtime
-            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
-            pupdate.endTime = aj['EndTime']
+            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
+            pupdate.endTime = aj['EndTime'].isoformat()
             # save the pickle file to be used by aCTAutopilot panda update
             try:
-                picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
-                pupdate.writeToFile(picklefile)
+                if smeta and smeta.get('harvesteraccesspoint'):
+                    picklefile = os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json')
+                    pupdate.writeToJsonFile(picklefile)
+                else:
+                    picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
+                    pupdate.writeToFile(picklefile)
             except Exception as e:
                 self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))
 
@@ -426,8 +435,8 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and actpandastatus in ('starting', 'running')"
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
-                   'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
-                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout']
+                   'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 

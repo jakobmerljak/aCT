@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 
@@ -62,6 +63,18 @@ class aCTPandaJob:
         with open(filename, 'w') as f:
             pickle.dump(self.dictionary(), f)
             
+    def writeToJsonFile(self, filename):
+        '''
+        Write a json of job info to filename. Overwrites an existing file.
+        '''
+        try:
+            os.makedirs(os.path.dirname(filename), 0755)
+        except:
+            pass
+        
+        with open(filename, 'w') as f:
+            json.dump(self.dictionary(), f)
+
 if __name__ == '__main__':
     pj = aCTPandaJob(jobinfo={'jobId': 1234, 'state': 'running', 'batchID': 1234})  
     pj.newfield = 'blabla'
