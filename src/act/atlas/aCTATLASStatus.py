@@ -315,9 +315,9 @@ class aCTATLASStatus(aCTATLASProcess):
             sessionid=jobid[jobid.rfind('/')+1:]
             date = aj['created'].strftime('%Y-%m-%d')
             outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
-            # Make sure the path up to outd exists
+            # Make sure the path to outd exists
             try:
-                os.makedirs(os.path.dirname(outd), 0755)
+                os.makedirs(outd, 0755)
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
