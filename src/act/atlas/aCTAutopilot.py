@@ -203,10 +203,16 @@ class aCTAutopilot(aCTATLASProcess):
                 if not j['eventranges'] or j['eventranges'] == '[]':
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     if not os.path.exists(fname):
+                        # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
+                        if j['arcjobid'] == -1 or j['arcjobid'] is None:
+                            substatus = 'pilot_noevents'
+                            self.log.info('%s: Job did not run and has no eventranges to update, marking pilot_noevents' % j['pandaid'])
+                        # Jobs which ran but produced no events have pilot_failed so they go to failed
+                        else:
+                            substatus = 'pilot_failed'
+                            self.log.info('%s: Job ran but has no eventranges to update, marking failed' % j['pandaid'])
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': substatus})
                         # Create the empty pickle so that heartbeat code below doesn't fail
-                        # Mark job substatus failed so that job is failed rather than closed
-                        self.log.info('%s: Job has no eventranges to update, marking failed' % j['pandaid'])
-                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': 'pilot_failed'})
                         jobinfo.writeToFile(fname)
                     continue
                 

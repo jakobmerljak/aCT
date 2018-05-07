@@ -1,10 +1,11 @@
 import cgi
+import json
 import os
 import time
 
 class aCTPanda2ClassAd:
 
-    def __init__(self, pandajob, sitename, siteinfo, proxypath, tmpdir, atlasconf, log):
+    def __init__(self, pandajob, sitename, siteinfo, proxypath, tmpdir, atlasconf, metadata, log):
         # To work with htcondor.Submit() a plain dict is used instead of a
         # ClassAd object. All values must be strings.
         self.classad = {'Universe': '9'} # Always use grid universe
@@ -35,8 +36,12 @@ class aCTPanda2ClassAd:
         self.traces = []
         if len(self.pandajob) > 50000:
             self.longjob = True
-            
-        self.schedid = atlasconf.get(["panda", "schedulerid"])
+
+        try:
+            self.schedulerid = json.loads(metadata)['schedulerid']
+        except:
+            self.schedulerid = atlasconf.get(["panda", "schedulerid"])
+
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
         # Condor out/err/log
         now = time.gmtime() # gmtime() is like localtime() but in UTC
@@ -185,12 +190,12 @@ class aCTPanda2ClassAd:
     def setEnvironment(self):
         environment = []
         # Set schedulerID and job log URL
-        environment.append('PANDA_JSID=%s' % self.schedid)
+        environment.append('PANDA_JSID=%s' % self.schedulerid)
         environment.append('GTAG=%s/%s.out' % (self.logurl, self.pandaid))
         
         # Vars for APFMon
         environment.append('APFCID=%s' % self.pandaid)
-        environment.append('APFFID=%s' % self.schedid)
+        environment.append('APFFID=%s' % self.schedulerid)
         if self.monitorurl:
             environment.append('APFMON=%s' % self.monitorurl)
         environment.append('FACTORYQUEUE=%s' % self.sitename)
@@ -242,6 +247,6 @@ if __name__ == '__main__':
     info = {'schedconfig': 'ANALY_SiGNET_DIRECT', 'corecount': 1, 'truepilot': True, 'maxwalltime': 10800, 'direct_access_lan': True, 'type': 'analysis', 'endpoints': ['condor ce509.cern.ch ce509.cern.ch:9619']}
     proxy = '/tmp/x509up_u%d' % os.getuid()
     conf = aCTConfigATLAS()
-    a = aCTPanda2ClassAd(pjob, 'ANALY_SiGNET_DIRECT', info, proxy, '/tmp', conf, l)
+    a = aCTPanda2ClassAd(pjob, 'ANALY_SiGNET_DIRECT', info, proxy, '/tmp', conf, '{}', l)
     a.parse()
     print a.getClassAd()
