@@ -64,7 +64,7 @@ class aCTValidator(aCTATLASProcess):
         - copy gmlog errors to jobs/date/pandaqueue/pandaid.log
         """
         
-        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'EndTime',
+        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'arcjobs.EndTime',
                    'ExecutionNode', 'stdout', 'fairshare', 'pandajobs.created']
         select = "arcjobs.id=%d AND arcjobs.id=pandajobs.arcjobid" % arcjobid
         aj = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
