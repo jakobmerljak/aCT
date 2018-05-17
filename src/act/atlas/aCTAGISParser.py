@@ -73,7 +73,7 @@ class aCTAGISParser:
             sites[sitename]['push'] = True # TODO configure in AGIS 
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
-            if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
+            if (pilotmgr == 'all' or sites[sitename]['pilot_manager'] == pilotmgr) and sites[sitename]['state'] == 'ACTIVE':
                 sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
                 self._dumpSchedConfig(sitename, sites[sitename])
