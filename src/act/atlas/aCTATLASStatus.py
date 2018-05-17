@@ -64,7 +64,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
             columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName',
-                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb']
+                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb', 'pandajobs.created']
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
