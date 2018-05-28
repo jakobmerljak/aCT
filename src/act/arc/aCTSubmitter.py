@@ -186,7 +186,6 @@ class aCTSubmitter(aCTProcess):
                     aris.ChangePath('/arex')
                     infoendpoints = [arc.Endpoint(aris.str(), arc.Endpoint.COMPUTINGINFO, 'org.ogf.glue.emies.resourceinfo')]
                 elif aris.Protocol() == 'local':
-                    self.log.debug('maiken selected local as protocol!')
                     infoendpoints = [arc.Endpoint(aris.str(), arc.Endpoint.COMPUTINGINFO, 'org.nordugrid.local')]
                 else:
                     aris = 'ldap://'+aris.Host()+'/mds-vo-name=local,o=grid'
