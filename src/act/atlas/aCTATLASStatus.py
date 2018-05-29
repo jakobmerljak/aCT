@@ -68,8 +68,8 @@ class aCTATLASStatus(aCTATLASProcess):
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
-                desc['endTime'] = arcjobs[0]['EndTime'] if arcjobs[0]['EndTime'] else datetime.datetime.utcnow()
-                desc['startTime'] = self.getStartTime(desc['endTime'], arcjobs[0]['UsedTotalWallTime']) if arcjobs[0]['UsedTotalWallTime'] else datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                desc['startTime'] = datetime.datetime.utcnow()
             
             # Check if job was manually killed
             if job['pandastatus'] is not None:
@@ -171,7 +171,13 @@ class aCTATLASStatus(aCTATLASProcess):
             else:
                 # Update APFmon (done by wrapper for truepilot)
                 self.apfmon.updateJob(aj['pandaid'], 'running')
-            self.dbpanda.updateJobsLazy(select, desc)
+
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
+
         self.dbpanda.Commit()
 
         
@@ -214,7 +220,12 @@ class aCTATLASStatus(aCTATLASProcess):
             if not self.sites[aj['siteName']]['truepilot']:
                 # Update APFmon (done by wrapper for truepilot)
                 self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=0)
-            self.dbpanda.updateJobsLazy(select, desc)
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
 
@@ -471,7 +482,12 @@ class aCTATLASStatus(aCTATLASProcess):
             if not self.sites[aj['siteName']]['truepilot']:
                 # Update APFmon (done by wrapper for truepilot)
                 self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=aj['ExitCode'])
-            self.dbpanda.updateJobsLazy(select, desc)
+            try:
+                self.dbpanda.updateJobsLazy(select, desc)
+            except:
+                desc['startTime'] = datetime.datetime.utcnow()
+                desc['endTime'] = datetime.datetime.utcnow()
+                self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
             # There is no cleaning to do for lost jobs so just resubmit them

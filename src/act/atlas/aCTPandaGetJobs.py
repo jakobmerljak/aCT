@@ -172,7 +172,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             stopflag=False
 
             #getEventRanges = not attrs['truepilot']
-            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES']
+            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES','IN2P3-CC_HPC_IDRIS_MCORE']
             apfmonjobs = []
 
             for nc in range(0, max(int(num/nthreads), 1)):
@@ -183,9 +183,12 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
                 for i in range(0, nthreads):
                     r = random.Random()
-                    if r.randint(0,100) <= 2:
+                    if site in ['BOINC-TEST', 'DESY-HH_UCORE']: # for Paul's tests
+                        t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
+                    elif r.randint(0,100) <= 2:
                         if (not self.getjob) and site in self.activated and self.activated[site]['rc_test'] == 0:
                             self.log.debug('%s: No rc_test activated jobs' % site)
+                            #t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
                             continue
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='rc_test', getEventRanges=getEventRanges, push=attrs['push'])
@@ -229,6 +232,13 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     n['siteName'] = site
                     n['proxyid'] = self.proxymap[attrs['type']]
                     n['eventranges'] = eventranges
+                    if pandaid != 0:
+                        try:
+                            n['corecount'] = int(re.search(r'coreCount=(\d+)', pandajob).group(1))
+                            if re.match('BOINC', site):
+                                n['corecount'] = 1
+                        except:
+                            self.log.warning('%s: no corecount in job description' % pandaid)
                     n['sendhb'] = attrs['push']
                     if pandaid == 0:
                         # Pull mode: set dummy arcjobid to avoid job getting picked

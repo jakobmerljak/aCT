@@ -138,7 +138,7 @@ class aCTValidator(aCTATLASProcess):
         arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
         if not os.path.exists(arcjoblog):
             try:
-                shutil.copy(gmlogerrors, arcjoblog)
+                shutil.move(gmlogerrors, arcjoblog)
             except:
                 self.log.error("Failed to copy %s" % gmlogerrors) 
 
@@ -149,7 +149,7 @@ class aCTValidator(aCTATLASProcess):
                 pilotlog = pilotlogs[0]
         if pilotlog:
             try:
-                shutil.copy(os.path.join(localdir, pilotlog),
+                shutil.move(os.path.join(localdir, pilotlog),
                             os.path.join(outd, '%s.out' % aj['appjobid']))
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
@@ -327,7 +327,7 @@ class aCTValidator(aCTATLASProcess):
         # As yet there is no bulk remove in ARC
         for surl in surls:
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
-            if not dp.h:
+            if not dp.h or surl['surl'].startswith('root://'):
                 self.log.info("Removed %s for %s" % (surl['surl'], surl['arcjobid']))
                 result[surl['arcjobid']] = self.ok
                 continue
