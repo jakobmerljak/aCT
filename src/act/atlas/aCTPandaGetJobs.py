@@ -179,7 +179,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
                 for i in range(0, nthreads):
                     r = random.Random()
-                    if r.randint(0,100) <= 2:
+                    if site in ['BOINC-TEST', 'DESY-HH_UCORE']: # for Paul's tests
+                        t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
+                    elif r.randint(0,100) <= 2:
                         if (not self.getjob) and site in self.activated and self.activated[site]['rc_test'] == 0:
                             self.log.debug('%s: No rc_test activated jobs' % site)
                             #t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
