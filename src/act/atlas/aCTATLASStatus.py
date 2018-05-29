@@ -3,6 +3,7 @@
 
 import time
 import datetime
+import json
 import re
 import os
 import shutil
@@ -11,18 +12,13 @@ import arc
 from act.common import aCTSignal
 from act.common import aCTUtils
 
-from aCTATLASProcess import aCTATLASProcess
-from aCTPandaJob import aCTPandaJob
-from aCTAGISParser import aCTAGISParser
+from act.atlas.aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTPandaJob import aCTPandaJob
 
 class aCTATLASStatus(aCTATLASProcess):
     
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-                 
-    def setSites(self):
-        self.sites = self.agisparser.getSites()
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
 
     def checkJobstoKill(self):
         """
@@ -33,16 +29,16 @@ class aCTATLASStatus(aCTATLASProcess):
           and report failed back to panda
         """
 
-        sites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
+        offlinesites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
         
-        if sites:
+        if offlinesites:
             
-            sites = "'"+"','".join(sites)+"'"
-            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in (" + sites + ")",
+            offlinesitesselect = "('%s')" % "','".join(offlinesites)
+            jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % offlinesitesselect,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
 
             for job in jobs:
-                self.log.info("Cancelling starting job for %d for offline site %s", (job['pandaid'], job['siteName']))
+                self.log.info("Cancelling starting job for %d for offline site %s" % (job['pandaid'], job['siteName']))
                 select = 'id=%s' % job['id']
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
                 if job['arcjobid']:
@@ -51,7 +47,8 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled'", ['pandaid', 'arcjobid', 'pandastatus', 'id'])
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s" % self.sitesselect,
+                                    ['pandaid', 'arcjobid', 'pandastatus', 'id', 'siteName'])
         if not jobs:
             return
         
@@ -65,8 +62,10 @@ class aCTATLASStatus(aCTATLASProcess):
                 continue
             
             # Put timings in the DB
-            arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid" % job['arcjobid']
-            arcjobs = self.dbarc.getArcJobsInfo(arcselect, tables='arcjobs,pandajobs')
+            arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
+            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName',
+                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb', 'pandajobs.created']
+            arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
                 desc['endTime'] = datetime.datetime.utcnow()
@@ -79,6 +78,8 @@ class aCTATLASStatus(aCTATLASProcess):
                 # Skip validator since there is no metadata.xml
                 desc['actpandastatus'] = 'failed'
                 desc['pandastatus'] = 'failed'
+                if self.sites[job['siteName']]['truepilot']:
+                    desc['sendhb'] = 0
             else:
                 desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
@@ -107,7 +108,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
         select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.JobID"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
@@ -139,7 +140,8 @@ class aCTATLASStatus(aCTATLASProcess):
         # todo: pandajobs.starttime will not be updated if a job is resubmitted 
         # internally by the ARC part.
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus in ('starting', 'sent')"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
+
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
                    "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
@@ -166,11 +168,16 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot']:
                 self.log.info("%s: Job is running so stop sending heartbeats", aj['pandaid'])
                 desc['sendhb'] = 0
+            else:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['pandaid'], 'running')
+
             try:
                 self.dbpanda.updateJobsLazy(select, desc)
             except:
                 desc['startTime'] = datetime.datetime.utcnow()
                 self.dbpanda.updateJobsLazy(select, desc)
+
         self.dbpanda.Commit()
 
         
@@ -189,7 +196,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.actpandastatus != 'toresubmit'"
         select += " and pandajobs.actpandastatus != 'toclean'"
         select += " and pandajobs.actpandastatus != 'finished'"
-        select += " limit 100000"
+        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime", "arcjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
         
@@ -210,6 +217,9 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
+            if not self.sites[aj['siteName']]['truepilot']:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=0)
             try:
                 self.dbpanda.updateJobsLazy(select, desc)
             except:
@@ -314,32 +324,48 @@ class aCTATLASStatus(aCTATLASProcess):
             
             cluster = arc.URL(str(jobid)).Host()
             sessionid=jobid[jobid.rfind('/')+1:]
-            date = time.strftime('%Y%m%d')
-            outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
-            # Make sure the path up to outd exists
+            date = aj['created'].strftime('%Y-%m-%d')
+            outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
+            # Make sure the path to outd exists
             try:
-                os.makedirs(os.path.dirname(outd), 0755)
-            except:
-                pass
-            try:
-                shutil.rmtree(outd)
+                os.makedirs(outd, 0755)
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
             localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
-            try:
-                shutil.copytree(localdir, outd)
-            except (OSError, shutil.Error) as e:
-                self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
-                # Sometimes fetcher fails to get output, so just make empty dir
+            gmlogerrors = os.path.join(localdir, "gmlog", "errors")
+            arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
+            if not os.path.exists(arcjoblog):
                 try:
-                    os.makedirs(outd, 0755)
-                except OSError, e:
-                    self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
+                    shutil.copy(gmlogerrors, arcjoblog)
+                except:
+                    self.log.error("Failed to copy %s" % gmlogerrors) 
+
+            pilotlog = aj['stdout']
+            if not pilotlog:
+                pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
+                if pilotlogs:
+                    pilotlog = pilotlogs[0]
+            if pilotlog:
+                try:
+                    shutil.copy(os.path.join(localdir, pilotlog),
+                                os.path.join(outd, '%s.out' % aj['appjobid']))
+                except Exception, e:
+                    self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
+                    # Sometimes fetcher fails to get output, so just make empty dir
+                    try:
+                        os.makedirs(outd, 0755)
+                    except OSError, e:
+                        self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
                 
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
+            try:
+                smeta = json.loads(aj['metadata'])
+            except:
+                smeta = None
+            
             # set update, pickle from pilot is not available
             # some values might not be properly set
             # TODO synchronize error codes with the rest of production
@@ -348,8 +374,11 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.state = 'failed'
             pupdate.siteName = aj['siteName']
             pupdate.computingElement = cluster
-            pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
-            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+cluster+'/'+sessionid+"|Unknown|Unknown|Unknown|Unknown"
+            try:
+                pupdate.schedulerID = smeta['schedulerid']
+            except:
+                pupdate.schedulerID = self.conf.get(['panda','schedulerid'])
+            pupdate.pilotID = self.conf.get(["joblog","urlprefix"])+"/"+date+"/"+aj['siteName']+'/'+aj['appjobid']+".out|Unknown|Unknown|Unknown|Unknown"
             if len(aj["ExecutionNode"]) > 255:
                 pupdate.node = aj["ExecutionNode"][:254]
                 self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['pandaid'], aj['ExecutionNode'], pupdate.node))
@@ -379,12 +408,16 @@ class aCTATLASStatus(aCTATLASProcess):
                 pupdate.pilotErrorCode = 1212
             pupdate.pilotErrorDiag = aj['Error']
             # set start/endtime
-            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
-            pupdate.endTime = aj['EndTime']
+            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
+            pupdate.endTime = aj['EndTime'].isoformat()
             # save the pickle file to be used by aCTAutopilot panda update
             try:
-                picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
-                pupdate.writeToFile(picklefile)
+                if smeta and smeta.get('harvesteraccesspoint'):
+                    picklefile = os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json')
+                    pupdate.writeToJsonFile(picklefile)
+                else:
+                    picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
+                    pupdate.writeToFile(picklefile)
             except Exception as e:
                 self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))
 
@@ -411,10 +444,10 @@ class aCTATLASStatus(aCTATLASProcess):
         # Look for failed final states in ARC which are still starting or running in panda
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus in ('starting', 'running')"
-        select += " and pandajobs.arcjobid = arcjobs.id limit 100000"
+        select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
-                   'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime',
-                   'UsedTotalWallTime', 'ExitCode', 'sendhb']
+                   'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
@@ -446,6 +479,9 @@ class aCTATLASStatus(aCTATLASProcess):
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
                 desc['sendhb'] = 0
+            if not self.sites[aj['siteName']]['truepilot']:
+                # Update APFmon (done by wrapper for truepilot)
+                self.apfmon.updateJob(aj['appjobid'], 'exiting', exitcode=aj['ExitCode'])
             try:
                 self.dbpanda.updateJobsLazy(select, desc)
             except:
@@ -524,7 +560,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.Commit()
             
         select = "arcstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
-                 "and pandajobs.arcjobid = arcjobs.id"
+                 "and pandajobs.arcjobid = arcjobs.id and siteName in %s" % self.sitesselect
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'arcjobs.appjobid', 'arcjobs.JobID'], tables='arcjobs, pandajobs')
         for job in jobs:

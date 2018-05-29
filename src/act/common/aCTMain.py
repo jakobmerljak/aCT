@@ -133,6 +133,9 @@ class aCTMain:
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
+        # change to aCT working dir
+        os.chdir(self.conf.get(['actlocation', 'dir']))
+
         # write pidfile
         with open(pidfile,'w+') as f:
             f.write(str(os.getpid()))
@@ -229,7 +232,8 @@ class aCTMain:
                 self.logrotate()
                 # (re)start new processes as necessary
                 if self.shouldrun:
-                    self.procmanager.checkClusters()
+                    self.procmanager.checkARCClusters()
+                    self.procmanager.checkCondorClusters()
                 # sleep
                 aCTUtils.sleep(10)
 

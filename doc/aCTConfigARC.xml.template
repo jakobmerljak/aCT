@@ -55,6 +55,8 @@
 </clustersreject>
 
 <jobs>
+  <queuefraction>0.15</queuefraction>
+  <queueoffset>200</queueoffset>
   <checkinterval>30</checkinterval>
   <checkmintime>20</checkmintime>
   <maxtimerunning>259200</maxtimerunning>

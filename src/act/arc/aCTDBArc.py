@@ -304,17 +304,6 @@ class aCTDBArc(aCTDB):
             row=dict(zip([col[0] for col in c.description], row))
         return row
 
-    def getArcJob(self, id):
-        '''
-        Return a dictionary of {proxyid: {id: arc.Job, id: arc.Job}}.
-        '''
-        c=self.getCursor()
-        c.execute("SELECT "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE id="+str(id))
-        row = c.fetchone()
-        if not isinstance(row,dict):
-            row=dict(zip([col[0] for col in c.description], row))
-        return {id: self._db2job(row)}
-        
     def getArcJobsInfo(self, select, columns=[], tables="arcjobs", lock=False):
         '''
         Return a list of column: value dictionaries for jobs matching select.

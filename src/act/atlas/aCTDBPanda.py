@@ -41,6 +41,7 @@ class aCTDBPanda(aCTDB):
            - sendhb: Flag to say whether or not to send heartbeat
            - eventranges: event ranges for event service jobs
            - corecount: Number of cores used by job
+           - metadata: Generic json metadata sent by the client
            
         pandaarchive:
           - Selected fields from above list:
@@ -68,7 +69,8 @@ class aCTDBPanda(aCTDB):
         proxyid integer,
         sendhb TINYINT(1) DEFAULT 1,
         eventranges mediumtext,
-        corecount integer
+        corecount integer,
+        metadata BLOB
     )
 """
         c=self.getCursor()
@@ -115,7 +117,6 @@ class aCTDBPanda(aCTDB):
         desc['created']=self.getTimeStamp()
         desc['pandaid']=pandaid
         desc['pandajob']=pandajob
-        desc['sendhb']=1
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.getCursor()
         c.execute(s,desc.values())

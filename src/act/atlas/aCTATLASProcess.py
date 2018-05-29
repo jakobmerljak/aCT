@@ -8,7 +8,10 @@ from act.common import aCTConfig
 from act.common import aCTUtils
 from act.common import aCTSignal
 from act.arc import aCTDBArc
-import aCTDBPanda
+from act.condor import aCTDBCondor
+from act.atlas import aCTAGISParser
+from act.atlas import aCTAPFMon
+from act.atlas import aCTDBPanda
 
 
 class aCTATLASProcess:
@@ -17,7 +20,7 @@ class aCTATLASProcess:
     provides basic start and stop functionality.
     '''
     
-    def __init__(self):
+    def __init__(self, ceflavour=['ARC-CE']):
         
         # Get agent name from /path/to/aCTAgent.py
         self.name = os.path.basename(sys.argv[0])[:-3]
@@ -33,12 +36,28 @@ class aCTATLASProcess:
         self.arcconf=aCTConfig.aCTConfigARC()
         # database
         self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.dbcondor=aCTDBCondor.aCTDBCondor(self.log,self.conf.get(["db","file"]))
         self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
-        
+
+        # APFMon
+        self.apfmon = aCTAPFMon.aCTAPFMon(self.conf)
+
+        # AGIS info    
+        self.flavour = ceflavour    
+        self.agisparser = aCTAGISParser.aCTAGISParser(self.log)
+        self.sites = {}
+        self.osmap = {}
+        self.sitesselect = ''
+
         # start time for periodic restart
         self.starttime=time.time()
         self.log.info("Started %s", self.name)
 
+    def setSites(self):
+        self.sites = self.agisparser.getSites(flavour=self.flavour)
+        self.osmap = self.agisparser.getOSMap()
+        # For DB queries
+        self.sitesselect =  "('%s')" % "','".join(self.sites.keys())
 
     def process(self):
         '''

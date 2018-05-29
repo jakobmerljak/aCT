@@ -4,7 +4,6 @@ import json
 
 from aCTATLASProcess import aCTATLASProcess
 from aCTPanda2Xrsl import aCTPanda2Xrsl
-from aCTAGISParser import aCTAGISParser
 
 
 class aCTPanda2Arc(aCTATLASProcess):
@@ -13,18 +12,11 @@ class aCTPanda2Arc(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self)
-        self.agisparser = aCTAGISParser(self.log)
-        self.sites = {}
-        self.setSites()
-
-    def setSites(self):
-        self.sites = self.agisparser.getSites()                        
-        self.osmap = self.agisparser.getOSMap()                        
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
 
     def createArcJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL limit 10000")
+        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:
@@ -32,8 +24,8 @@ class aCTPanda2Arc(aCTATLASProcess):
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
-            parser = aCTPanda2Xrsl(job['pandajob'], job['siteName'], self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), self.conf, job['eventranges'], self.log)
+            parser = aCTPanda2Xrsl(job, self.sites[job['siteName']], self.osmap,
+                                   self.arcconf.get(["tmp", "dir"]), self.conf, self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 

@@ -30,6 +30,10 @@ class aCTAGISParser:
             if configendpoints:
                 sites[sitename]['endpoints'] = configendpoints
             try:
+                sites[sitename]['flavour'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["flavour"])[0]
+            except:
+                pass
+            try:
                 sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
             except:
                 pass
@@ -50,6 +54,10 @@ class aCTAGISParser:
                 sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["truepilot"])[0])
             except:
                 pass
+            try:
+                sites[sitename]['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["push"])[0])
+            except:
+                pass
             sites[sitename]['status'] = 'online'
             sites[sitename]['enabled'] = True
         self.log.info("Parsed sites from config: %s"%str(sites.keys()))
@@ -62,9 +70,10 @@ class aCTAGISParser:
             agisjson=json.load(f)
         sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
         for sitename in sites:
+            sites[sitename]['push'] = True # TODO configure in AGIS 
             if not sites[sitename].has_key('schedconfig'):
                 sites[sitename]['schedconfig'] = sitename
-            if sites[sitename]['pilot_manager'] == pilotmgr and sites[sitename]['state'] == 'ACTIVE':
+            if (pilotmgr == 'all' or sites[sitename]['pilot_manager'] == pilotmgr) and sites[sitename]['state'] == 'ACTIVE':
                 sites[sitename]['enabled'] = True
                 sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
                 self._dumpSchedConfig(sitename, sites[sitename])
@@ -73,9 +82,27 @@ class aCTAGISParser:
                 sites[sitename]['maxjobs'] = 0
             if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
                 sites[sitename]['corecount'] = 1
+            if not sites[sitename].has_key('flavour') and sites[sitename]['queues']:
+                sites[sitename]['flavour'] = sites[sitename]['queues'][0]['ce_flavour']
             # pull out endpoints
             if not sites[sitename].has_key('endpoints'):
-                sites[sitename]['endpoints'] = ['%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']) for queue in sites[sitename]['queues']]
+                endpoints = []
+                for queue in sites[sitename]['queues']:
+                    if queue['ce_flavour'] == 'CREAM-CE':
+                        endpoints.append('cream %s/ce-cream/services/CREAM2 %s %s' % (queue['ce_endpoint'], queue['ce_jobmanager'], queue['ce_queue_name']))
+                    elif queue['ce_flavour'] == 'HTCONDOR-CE':
+                        endpoints.append('condor %s %s %s' % (queue['ce_endpoint'].split(':')[0], queue['ce_endpoint'], queue['ce_queue_name']))
+                    elif queue['ce_flavour'] == 'ARC-CE':
+                        endpoints.append('%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']))
+                    else:
+                        if sites[sitename]['enabled']:
+                            self.log.warning('Cannot use CE flavour %s for queue %s' % (queue['ce_flavour'], sitename))
+                # Ignore endpoints with "default" queue unless that is the only queue
+                nondefaultendpoints = [e for e in endpoints if not e.endswith(' default')]
+                if not nondefaultendpoints:
+                    sites[sitename]['endpoints'] = endpoints
+                else:
+                    sites[sitename]['endpoints'] = nondefaultendpoints
             if not sites[sitename].has_key('maxtime') or sites[sitename]['maxtime'] == 0:
                 try:
                     maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
@@ -103,6 +130,9 @@ class aCTAGISParser:
                 sites[sitename]['maxcputime'] = maxcputime
             else:
                 sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
+
+            if sites[sitename]['type'] == 'special':
+                sites[sitename]['type'] = 'production'
             # true pilot or not, based on whether mv copytool is used
             truepilot = True
             if 'mv' in sites[sitename]['copytools']:
@@ -171,7 +201,9 @@ class aCTAGISParser:
         with open(os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', '%s.all.json' % sitename), 'w') as f:
             json.dump(schedconf, f)
 
-    def getSites(self):
+    def getSites(self, flavour=None):
+        '''Get site info, filtered by CE flavour(s) if given'''
+
         self.conf.parse()
         agisfile = self.conf.get(['agis','jsonfilename'])
         if not agisfile:
@@ -210,8 +242,10 @@ class aCTAGISParser:
                     self.log.warning("%s: No CE endpoints defined, this site cannot be used" % site)
                     del self.sites[site]
                 else:
-                    self.log.info("%s: %s, maxjobs %d" % (site, 'True pilot' if info['truepilot'] else 'ARC pilot', info['maxjobs']))
+                    self.log.info("%s (%s): %s (%s), maxjobs %d" % (site, info['status'], 'True pilot' if info['truepilot'] else 'ARC pilot', info['flavour'], info['maxjobs']))
 
+        if flavour:
+            return dict((k,v) for (k,v) in self.sites.iteritems() if v.get('flavour') in flavour)
         return self.sites
     
     def getOSMap(self):
@@ -230,7 +264,7 @@ if __name__ == '__main__':
     while 1:
         sites = agisparser.getSites()
         sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
-        #pprint.pprint(sites)
+        pprint.pprint(sites)
         for s,i in sites.items():
             try:
                 print s, i['ddmoses'], i['ddmoslogs']

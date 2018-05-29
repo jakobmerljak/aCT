@@ -20,7 +20,7 @@ class aCTValidator(aCTATLASProcess):
     '''
 
     def __init__(self):
-        aCTATLASProcess.__init__(self)
+        aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
         
         # Use production role proxy for checking and removing files
         # Get DN from configured proxy file
@@ -54,23 +54,27 @@ class aCTValidator(aCTATLASProcess):
         return smallfiles.extractfile(filename)
         
     
-    def copyFinishedFiles(self, arcjobid, extractmetadata):
+    def copyFinishedFiles(self, arcjobid, extractmetadata, schedulermetadata):
         """
         - if extractmetadata: (normal arc jobs, not true pilot jobs) 
            - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
+             or under harvester access point if specified
            - extract metadata-surl.xml and update pickle. store xml under tmp/xml
-        - copy .job.log file to jobs/date/cluster/jobid
-        - copy gmlog dir to jobs/date/cluster/jobid
+        - copy .job.log file to jobs/date/pandaqueue/pandaid.out
+        - copy gmlog errors to jobs/date/pandaqueue/pandaid.log
         """
         
-        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'EndTime', 'ExecutionNode', 'stdout']
-        aj = self.dbarc.getArcJobInfo(arcjobid, columns=columns)
-        if not aj.has_key('JobID') or not aj['JobID']:
+        columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'arcjobs.EndTime',
+                   'ExecutionNode', 'stdout', 'fairshare', 'pandajobs.created']
+        select = "arcjobs.id=%d AND arcjobs.id=pandajobs.arcjobid" % arcjobid
+        aj = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
+        if not aj or not aj[0].has_key('JobID') or not aj[0]['JobID']:
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
+        aj = aj[0]
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
-        date = time.strftime('%Y%m%d')
+        date = aj['created'].strftime('%Y-%m-%d')
         cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
@@ -95,10 +99,10 @@ class aCTValidator(aCTATLASProcess):
             if metadata:
                 jobinfo.xml = str(metadata.read())
             jobinfo.computingElement = cluster
-            jobinfo.schedulerID = self.conf.get(['panda','schedulerid'])
             if aj['EndTime']:
-                jobinfo.startTime = aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])
-                jobinfo.endTime = aj['EndTime']
+                # datetime cannot be serialised to json so use string (for harvester)
+                jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).isoformat(' ')
+                jobinfo.endTime = aj['EndTime'].isoformat(' ')
             else:
                 self.log.warning('%s: no endtime found' % aj['appjobid'])
             if len(aj["ExecutionNode"]) > 255:
@@ -107,33 +111,36 @@ class aCTValidator(aCTATLASProcess):
             else:
                 jobinfo.node = aj["ExecutionNode"]
 
-            # Add url of logs
-            if 'pilotID' in jobinfo.dictionary().keys() and jobinfo.pilotID:
-                t = jobinfo.pilotID.split("|")
-            else:
-                t = ['Unknown'] * 5
-            logurl = os.path.join(self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid)
-            try: # TODO catch and handle non-ascii
-                jobinfo.pilotID = '|'.join([logurl] + t[1:])
+            try:
+                smeta = json.loads(schedulermetadata)
             except:
-                pass
-            jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
+                smeta = None
+
+            if smeta and smeta.get('harvesteraccesspoint'):
+                # de-serialise the metadata to json
+                try:
+                    jobinfo.metaData = json.loads(jobinfo.metaData)
+                except:
+                    self.log.warning("%s: no metaData in pilot pickle" % aj['appjobid'])
+                jobinfo.writeToJsonFile(os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json'))
+            else:
+                jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
             
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
-        outd = os.path.join(self.conf.get(['joblog','dir']), date, cluster, sessionid)
+        outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['fairshare'])
         try:
             os.makedirs(outd, 0755)
         except:
             pass
 
         localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
-        gmlogerrors = os.path.join(localdir,"gmlog","errors")
-        
-        if not os.path.exists(os.path.join(outd,"arc-ce.log")):
+        gmlogerrors = os.path.join(localdir, "gmlog", "errors")
+        arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
+        if not os.path.exists(arcjoblog):
             try:
-                shutil.move(gmlogerrors, os.path.join(outd,"arc-ce.log"))
+                shutil.move(gmlogerrors, arcjoblog)
             except:
-                self.log.error("Failed to copy %s" % os.path.join(outd,"arc-ce.log") ) 
+                self.log.error("Failed to copy %s" % gmlogerrors) 
 
         pilotlog = aj['stdout']
         if not pilotlog:
@@ -142,8 +149,8 @@ class aCTValidator(aCTATLASProcess):
                 pilotlog = pilotlogs[0]
         if pilotlog:
             try:
-                shutil.move(os.path.join(localdir,pilotlog),
-                            os.path.join(outd,re.sub('.log.*$', '.out', pilotlog)))
+                shutil.move(os.path.join(localdir, pilotlog),
+                            os.path.join(outd, '%s.out' % aj['appjobid']))
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False
@@ -450,8 +457,8 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='transferring' and actpandastatus='tovalidate') limit 1000"
-        columns = ["arcjobid", "pandaid", "sendhb"]
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 100000" % self.sitesselect
+        columns = ["arcjobid", "pandaid", "siteName", "metadata"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -460,9 +467,9 @@ class aCTValidator(aCTATLASProcess):
         
         # Skip validation for the true pilot jobs, just copy logs, set to done and clean arc job
         for job in jobstoupdate[:]:
-            if not job['sendhb']:
+            if self.sites[job['siteName']]['truepilot']:
                 self.log.info('%s: Skip validation' % job['pandaid'])
-                if not self.copyFinishedFiles(job["arcjobid"], False):
+                if not self.copyFinishedFiles(job["arcjobid"], False, job['metadata']):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
@@ -509,7 +516,7 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc) 
-                    if not self.copyFinishedFiles(id, True):
+                    if not self.copyFinishedFiles(id, True, job['metadata']):
                         # id was gone already
                         continue
                     # set arcjobs state toclean
@@ -536,8 +543,8 @@ class aCTValidator(aCTATLASProcess):
         Move actpandastatus to failed. 
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
-        select = "(pandastatus='transferring' and actpandastatus='toclean') limit 100000"
-        columns = ["arcjobid", "pandaid", "sendhb"]
+        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 100000" % self.sitesselect
+        columns = ["arcjobid", "pandaid", "siteName"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
         if len(jobstoupdate)==0:
@@ -551,7 +558,7 @@ class aCTValidator(aCTATLASProcess):
         
         # For truepilot jobs, don't try to clean outputs (too dangerous), just clean arc job
         for job in jobstoupdate[:]:
-            if not job['sendhb']:
+            if self.sites[job['siteName']]['truepilot']:
                 self.log.info("%s: Skip cleanup of output files" % job['pandaid'])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
@@ -606,7 +613,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # First check for resubmitting jobs with no arcjob id defined
-        select = "(actpandastatus='toresubmit' and arcjobid=NULL) limit 100000"
+        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 100000" % self.sitesselect
         columns = ["pandaid", "id"]
         
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
@@ -711,6 +718,7 @@ class aCTValidator(aCTATLASProcess):
     def process(self):
         self.logger.arclogfile.setReopen(True)
         self.logger.arclogfile.setReopen(False)
+        self.setSites()
         self.validateFinishedJobs()
         self.cleanFailedJobs()
         self.cleanResubmittingJobs()

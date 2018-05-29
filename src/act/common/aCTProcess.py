@@ -11,6 +11,7 @@ import aCTConfig
 import aCTUtils
 import aCTSignal
 from act.arc import aCTDBArc
+from act.condor.aCTDBCondor import aCTDBCondor
 
 
 class aCTProcess:
@@ -40,7 +41,9 @@ class aCTProcess:
         # config
         self.conf=aCTConfig.aCTConfigARC()
         # database
+        # TODO: subclasses for arc and condor with respective DBs defined there
         self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
+        self.dbcondor=aCTDBCondor(self.log, self.conf.get(["db", "file"]))
         
         # ARC Configuration
         # Credentials will be set by ARC agents for each job or set of jobs
