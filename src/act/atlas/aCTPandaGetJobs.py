@@ -182,6 +182,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     if r.randint(0,100) <= 2:
                         if (not self.getjob) and site in self.activated and self.activated[site]['rc_test'] == 0:
                             self.log.debug('%s: No rc_test activated jobs' % site)
+                            #t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='ptest', getEventRanges=getEventRanges)
                             continue
                         else:
                             t = PandaGetThr(self.getPanda(site).getJob, site, prodSourceLabel='rc_test', getEventRanges=getEventRanges)
@@ -225,6 +226,12 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     n['siteName'] = site
                     n['proxyid'] = self.proxymap[attrs['type']]
                     n['eventranges'] = eventranges
+                    try:
+                        n['corecount'] = int(re.search(r'coreCount=(\d+)', pandajob).group(1))
+                        if re.match('BOINC', site):
+                            n['corecount'] = 1
+                    except:
+                        self.log.warning('%s: no corecount in job description' % pandaid)
                     self.dbpanda.insertJob(pandaid, pandajob, n)
                     count += 1
 
