@@ -342,7 +342,7 @@ class aCTSubmitter(aCTProcess):
                 elif job.JobID in notcancelled:
                     if job.State == arc.JobState.UNDEFINED:
                         # If longer than one hour since submission assume job never made it
-                        if job.StartTime + arc.Period(3600) < arc.Time():
+                        if arc.Time(int(created.strftime("%s"))) + arc.Period(3600) < arc.Time():
                             self.log.warning("%s: Assuming job %s is lost and marking as cancelled" % (appjobid, job.JobID))
                             self.db.updateArcJob(id, {"arcstate": "cancelled",
                                                       "tarcstate": self.db.getTimeStamp()})
