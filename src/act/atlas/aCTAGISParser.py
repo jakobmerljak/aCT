@@ -134,8 +134,12 @@ class aCTAGISParser:
             if sites[sitename]['type'] == 'special':
                 sites[sitename]['type'] = 'production'
             # true pilot or not, based on whether mv copytool is used
-            # TODO remove copytool once deprecated
-            sites[sitename]['truepilot'] = (sites[sitename]['copytool'] != 'mv' and ('mv' not in sites[sitename]['copytools'] or len(sites[sitename]['copytools']) > 1))
+            truepilot = True
+            if 'mv' in sites[sitename]['copytools']:
+                # Check in acopytools if there is more than one copytool
+                if len(sites[sitename]['copytools']) == 1 or 'mv' in sites[sitename]['acopytools'].get('pr', []):
+                    truepilot = False
+            sites[sitename]['truepilot'] = truepilot
             # set OS bucket IDs
             try:
                 objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
@@ -165,7 +169,7 @@ class aCTAGISParser:
             if ep['state'] != 'ACTIVE':
                 continue
             try:
-                bucket_id = ep['resource']['bucket_id']
+                bucket_id = ep['id']
             except:
                 self.log.info('No bucket_id info for %s', ep['name'])
                 continue
