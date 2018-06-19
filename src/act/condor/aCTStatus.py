@@ -56,11 +56,14 @@ class aCTStatus(aCTProcess):
         self.log.info("%d jobs to check" % len(jobstocheck))
 
         # Query condor for all jobs with this cluster
-        attrs = ['ClusterId', 'JobStatus', 'ExitCode', 'GlobalJobId', 'GridJobId', 'JobCurrentStartDate', 'CompletionDate']
+        # Add here attributes we eventually want in the DB
+        attrs = ['JobStatus', 'ExitCode', 'GlobalJobId', 'GridJobId', 'JobCurrentStartDate', 'CompletionDate']
+        # Here with attributes we want to query but not store
+        qattrs = attrs + ['ClusterId', 'GridResourceUnavailableTime']
         t1 = time.time()
         try:
             status = self.schedd.xquery(requirements='ACTCluster=?="%s"' % self.cluster,
-                                        projection=attrs)
+                                        projection=qattrs)
         except IOError as e:
             self.log.error('Failed querying schedd: %s' % str(e))
             return
@@ -89,7 +92,7 @@ class aCTStatus(aCTProcess):
             except KeyError:
                 # If not in the queue, look in history for finished jobs
                 self.log.debug('%s: Job not in condor queue, checking history' % appjobid)
-                history = self.schedd.history('ClusterID=?=%d' % clusterid, attrs, 1)
+                history = self.schedd.history('ClusterID=?=%d' % clusterid, qattrs, 1)
                 try:
                     hist = history.next()
                 except StopIteration:
@@ -102,6 +105,17 @@ class aCTStatus(aCTProcess):
                 jobstatus = updatedjob['JobStatus']
 
             self.log.debug('%s: Status %d (%s)' % (appjobid, jobstatus, self.condorjobstatemap[jobstatus]))
+            
+            if jobstatus == 1 and 'GridResourceUnavailableTime' in updatedjob:
+                # Job could not be submitted due to remote CE being down
+                self.log.warning('%s: Could not submit to remote CE, will retry' % appjobid)
+                jobdesc = {}
+                jobdesc['condorstate'] = 'toresubmit'
+                jobdesc['JobStatus'] = 0
+                jobdesc['tcondorstate'] = self.dbcondor.getTimeStamp()
+                jobdesc['tstate'] = self.dbcondor.getTimeStamp()
+                self.dbcondor.updateCondorJob(job['id'], jobdesc)
+                continue
 
             if oldstatus == jobstatus:
                 # just update timestamp
