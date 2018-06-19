@@ -262,7 +262,7 @@ class aCTSubmitter(aCTProcess):
             # Clean up jobs which were submitted
             if job['ClusterId']:
                 try:
-                    self.schedd.act(htcondor.JobAction.Remove, [str(job['ClusterId'])])
+                    self.schedd.act(htcondor.JobAction.Remove, ['%d.0' % job['ClusterId']])
                 except RuntimeError as e:
                     self.log.error("%s: Failed to cancel in condor: %s" % (job['appjobid'], str(e)))
                 # TODO handle failed clean
