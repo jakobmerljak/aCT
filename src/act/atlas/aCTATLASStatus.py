@@ -341,12 +341,7 @@ class aCTATLASStatus(aCTATLASProcess):
                                 os.path.join(outd, '%s.out' % aj['appjobid']))
                 except Exception, e:
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
-                    # Sometimes fetcher fails to get output, so just make empty dir
-                    try:
-                        os.makedirs(outd, 0755)
-                    except OSError, e:
-                        self.log.warning("%s: Failed to create %s: %s. Job logs will be missing" % (aj['appjobid'], outd, str(e)))
-                
+
             # set right permissions
             aCTUtils.setFilePermissionsRecursive(outd)
 
@@ -397,8 +392,9 @@ class aCTATLASStatus(aCTATLASProcess):
                 pupdate.pilotErrorCode = 1212
             pupdate.pilotErrorDiag = aj['Error']
             # set start/endtime
-            pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
-            pupdate.endTime = aj['EndTime'].isoformat()
+            if aj['EndTime']:
+                pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
+                pupdate.endTime = aj['EndTime'].isoformat(' ')
             # save the pickle file to be used by aCTAutopilot panda update
             try:
                 if smeta and smeta.get('harvesteraccesspoint'):
