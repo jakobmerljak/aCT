@@ -54,30 +54,45 @@ class aCTStatus(aCTProcess):
         if not jobstocheck:
             return
         self.log.info("%d jobs to check" % len(jobstocheck))
-        
+
+        # Query condor for all jobs with this cluster
+        # Add here attributes we eventually want in the DB
+        attrs = ['JobStatus', 'ExitCode', 'GlobalJobId', 'GridJobId', 'JobCurrentStartDate', 'CompletionDate']
+        # Here with attributes we want to query but not store
+        qattrs = attrs + ['ClusterId', 'GridResourceUnavailableTime']
+        t1 = time.time()
+        try:
+            status = self.schedd.xquery(requirements='ACTCluster=?="%s"' % self.cluster,
+                                        projection=qattrs)
+        except IOError as e:
+            self.log.error('Failed querying schedd: %s' % str(e))
+            return
+        condorstatuses = {}
+        while True:
+            try:
+                stat = status.next()
+                condorstatuses[stat['ClusterId']] = stat
+            except StopIteration:
+                break
+            except RuntimeError as e: # Usually a timeout connecting to remote host, try again
+                self.log.error('Problem querying schedd: %s' % str(e))
+                break
+        t2 = time.time()
+        self.log.debug('took %f to query schedd (returning %d results)' % ((t2-t1), len(condorstatuses)))
         # Loop over jobs
         for job in jobstocheck:
-            
+
             appjobid = job['appjobid']
             oldstatus = job['JobStatus']
             clusterid = job['ClusterId']
-            
-            # First check if job is in the condor queue (queued or running)
-            # Add here attributes we eventually want in the DB
-            attrs = ['JobStatus', 'ExitCode', 'GlobalJobId', 'GridJobId', 'JobCurrentStartDate', 'CompletionDate']
-            self.log.debug('%s: Checking for job id %d in Condor queue' % (appjobid, clusterid))
+
             try:
-                status = self.schedd.query('ClusterID=?=%d' % clusterid, attrs)
-            except IOError as e:
-                self.log.error('%s: Failed querying schedd: %s', appjobid, str(e))
-                status = None
-            if status:
-                updatedjob = status[0]
+                updatedjob = condorstatuses[clusterid]
                 jobstatus = updatedjob['JobStatus']
-            else:
+            except KeyError:
                 # If not in the queue, look in history for finished jobs
                 self.log.debug('%s: Job not in condor queue, checking history' % appjobid)
-                history = self.schedd.history('ClusterID=?=%d' % clusterid, attrs, 1)
+                history = self.schedd.history('ClusterID=?=%d' % clusterid, qattrs, 1)
                 try:
                     hist = history.next()
                 except StopIteration:
@@ -91,11 +106,22 @@ class aCTStatus(aCTProcess):
 
             self.log.debug('%s: Status %d (%s)' % (appjobid, jobstatus, self.condorjobstatemap[jobstatus]))
             
+            if jobstatus == 1 and 'GridResourceUnavailableTime' in updatedjob:
+                # Job could not be submitted due to remote CE being down
+                self.log.warning('%s: Could not submit to remote CE, will retry' % appjobid)
+                jobdesc = {}
+                jobdesc['condorstate'] = 'toresubmit'
+                jobdesc['JobStatus'] = 0
+                jobdesc['tcondorstate'] = self.dbcondor.getTimeStamp()
+                jobdesc['tstate'] = self.dbcondor.getTimeStamp()
+                self.dbcondor.updateCondorJob(job['id'], jobdesc)
+                continue
+
             if oldstatus == jobstatus:
                 # just update timestamp
                 self.dbcondor.updateCondorJob(job['id'], {'tcondorstate': self.dbcondor.getTimeStamp()})
                 continue
-            
+
             self.log.info("%s: Job %d: %s -> %s" % (appjobid, clusterid,
                                                     self.condorjobstatemap[oldstatus],
                                                     self.condorjobstatemap[jobstatus]))

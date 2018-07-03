@@ -16,6 +16,7 @@ class aCTPanda2Xrsl:
         self.xrsl = {}
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
+        self.prodSourceLabel = self.jobdesc['prodSourceLabel'][0]
 
         self.defaults = {}
         self.defaults['memory'] = 2000
@@ -72,8 +73,9 @@ class aCTPanda2Xrsl:
         # force single-node jobs for now
         if self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-            if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0 and self.sitename.find('IFIC') < 0 and self.sitename.find('pic') < 0:
-                self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
+	    # try if it works without mcore
+            #if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0:
+            #    self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
 
@@ -125,7 +127,7 @@ class aCTPanda2Xrsl:
 
         # shorten installation jobs
         try:
-            if self.jobdesc['prodSourceLabel'][0] == 'install':
+            if self.prodSourceLabel == 'install':
                 cpucount = 12*3600
         except:
             pass
@@ -194,7 +196,8 @@ class aCTPanda2Xrsl:
 
         # Non-RTE setup only requires ATLAS-SITE and possibly ENV/PROXY
         if self.truepilot and 'BOINC' not in self.sitename:
-            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
+            #self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
+            self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)"
             return
         if self.siteinfo['type'] == 'analysis' and 'BOINC' not in self.sitename:
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
@@ -258,11 +261,14 @@ class aCTPanda2Xrsl:
 
     def setArguments(self):
 
-        pargs = '"-h" "%s" "-s" "%s" "-f" "false"' % (self.schedconfig, self.sitename)
-        if self.truepilot:
-            pargs += ' "-p" "25443" "-w" "https://pandaserver.cern.ch"'
+        if self.prodSourceLabel == 'ptest': # pilot2
+            pargs = '"-z" "false" "-q" "%s" "-r" "%s" "-s" "%s" "-x" "-d -j ptest --pilot-user ATLAS -w generic --url https://pandaserver.cern.ch -p 25443"' % (self.schedconfig, self.sitename, self.sitename)
         else:
-            pargs += ' "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-z" "true" "-b" "2" "-t" "false"'
+            pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-u" "%s"' % (self.schedconfig, self.sitename, self.prodSourceLabel)
+            if self.truepilot:
+                pargs += ' "-p" "25443" "-w" "https://pandaserver.cern.ch"'
+            else:
+                pargs += ' "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-z" "true" "-b" "2" "-t" "false"'
 
         self.xrsl['arguments'] = '(arguments = %s)' % pargs
 
@@ -320,7 +326,10 @@ class aCTPanda2Xrsl:
         x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if self.truepilot:
-            x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
+            if self.prodSourceLabel == 'ptest':
+                x += '(runpilot3-wrapper.sh "%s")' % '/data/user/atlact1/act-prod/runpilot2-wrapper.sh'
+            else:
+                x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
             self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
             return
         
@@ -331,11 +340,10 @@ class aCTPanda2Xrsl:
         else:
             x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
-        if self.jobdesc['prodSourceLabel'][0] == 'rc_test':
+        if self.prodSourceLabel == 'rc_test':
             x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-        elif self.jobdesc['prodSourceLabel'][0] == 'ptest':
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
-            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch/project-atlas-gmsb/pilot2.tar.gz")'
+        elif self.prodSourceLabel == 'ptest':
+            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
         elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1', 'IN2P3-CC_HPC_IDRIS_MCORE']:
             x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
         elif self.sitename in self.rtesites:
@@ -392,9 +400,8 @@ class aCTPanda2Xrsl:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
                 inf[filename] = lfn
                 dn = self.jobdesc.get('prodUserID', [])
-                prodSourceLabel = self.jobdesc.get('prodSourceLabel', [''])[0]
                 eventType = 'get_sm'
-                if re.match('user', prodSourceLabel):
+                if re.match('user', self.prodSourceLabel):
                     eventType = 'get_sm_a'
                 self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
 

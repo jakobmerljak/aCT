@@ -208,10 +208,11 @@ class aCTPanda2ClassAd:
 
     def setAttrs(self):
         
+        # Set CREAM attributes. Times are in minutes.
         if len([e for e in self.siteinfo['endpoints'] if e.startswith('cream')]) > 0:
             creamattrs = 'CpuNumber=%d;WholeNodes=false;SMPGranularity=%d;' % (self.ncores, self.ncores)
-            creamattrs += 'CERequirements = "other.GlueCEPolicyMaxCPUTime == %d' % (self.walltime * self.ncores)
-            creamattrs += ' && other.GlueCEPolicyMaxWallClockTime == %d' % (self.walltime)
+            creamattrs += 'CERequirements = "other.GlueCEPolicyMaxCPUTime == %d' % ((self.walltime/60) * self.ncores)
+            creamattrs += ' && other.GlueCEPolicyMaxWallClockTime == %d' % (self.walltime/60)
             creamattrs += ' && other.GlueHostMainMemoryRAMSize == %d' % (self.memory)
             creamattrs += ' && other.GlueHostMainMemoryVirtualSize == %d";' % (self.memory * 3)
             self.classad['CreamAttributes'] = creamattrs

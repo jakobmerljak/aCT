@@ -54,7 +54,7 @@ class aCTValidator(aCTATLASProcess):
         return smallfiles.extractfile(filename)
         
     
-    def copyFinishedFiles(self, arcjobid, extractmetadata, schedulermetadata):
+    def copyFinishedFiles(self, arcjobid, extractmetadata):
         """
         - if extractmetadata: (normal arc jobs, not true pilot jobs) 
            - extract panda_node_struct.pickle from jobSmallFiles.tgz and store it under tmp/pickle
@@ -65,7 +65,7 @@ class aCTValidator(aCTATLASProcess):
         """
         
         columns = ['JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'arcjobs.EndTime',
-                   'ExecutionNode', 'stdout', 'fairshare', 'pandajobs.created']
+                   'ExecutionNode', 'stdout', 'fairshare', 'pandajobs.created', 'metadata']
         select = "arcjobs.id=%d AND arcjobs.id=pandajobs.arcjobid" % arcjobid
         aj = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
         if not aj or not aj[0].has_key('JobID') or not aj[0]['JobID']:
@@ -112,7 +112,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.node = aj["ExecutionNode"]
 
             try:
-                smeta = json.loads(schedulermetadata)
+                smeta = json.loads(aj['metadata'])
             except:
                 smeta = None
 
@@ -120,8 +120,8 @@ class aCTValidator(aCTATLASProcess):
                 # de-serialise the metadata to json
                 try:
                     jobinfo.metaData = json.loads(jobinfo.metaData)
-                except:
-                    self.log.warning("%s: no metaData in pilot pickle" % aj['appjobid'])
+                except Exception as e:
+                    self.log.warning("%s: no metaData in pilot pickle: %s" % (aj['appjobid'], str(e)))
                 jobinfo.writeToJsonFile(os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json'))
             else:
                 jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/pickle/"+aj['appjobid']+".pickle")
@@ -469,7 +469,7 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate[:]:
             if self.sites[job['siteName']]['truepilot']:
                 self.log.info('%s: Skip validation' % job['pandaid'])
-                if not self.copyFinishedFiles(job["arcjobid"], False, job['metadata']):
+                if not self.copyFinishedFiles(job["arcjobid"], False):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
@@ -516,7 +516,7 @@ class aCTValidator(aCTATLASProcess):
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"pandastatus": "finished", "actpandastatus": "finished"}
                     self.dbpanda.updateJobsLazy(select, desc) 
-                    if not self.copyFinishedFiles(id, True, job['metadata']):
+                    if not self.copyFinishedFiles(id, True):
                         # id was gone already
                         continue
                     # set arcjobs state toclean
