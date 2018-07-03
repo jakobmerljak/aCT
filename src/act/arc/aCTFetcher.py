@@ -99,7 +99,9 @@ class aCTFetcher(aCTProcess):
                         notfetched.append(jobid)
                         break
                 remotefile = arc.URL(str(jobid + '/' + f))
-                dp.SetURL(remotefile)
+                if not dp.SetURL(remotefile):
+                    datapoint = aCTUtils.DataPoint(remotefile.str(), self.uc)
+                    dp = datapoint.h
                 localdp = aCTUtils.DataPoint(localfile, self.uc)
                 # do the copy
                 status = dm.Transfer(dp, localdp.h, arc.FileCache(), arc.URLMap())
