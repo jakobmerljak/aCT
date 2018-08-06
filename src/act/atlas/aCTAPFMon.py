@@ -4,10 +4,13 @@ from act.common.aCTLogger import aCTLogger
 
 class aCTAPFMon:
 
-    def __init__(self, conf):
+    def __init__(self, conf, log=None):
         
-        self.logger = aCTLogger(self.__class__.__name__, arclog=False)
-        self.log = self.logger()
+        if log:
+            self.log = log
+        else:
+            self.logger = aCTLogger(self.__class__.__name__, arclog=False)
+            self.log = self.logger()
 
         self.apfmonurl = conf.get(["monitor", "apfmon"])
         self.acturl = conf.get(["joblog", "urlprefix"])
