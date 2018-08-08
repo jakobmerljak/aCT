@@ -275,7 +275,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbcondor.deleteCondorJob(job['id'])
 
         select = "(condorstate='done' or condorstate='lost' or condorstate='cancelled' or condorstate='donefailed') \
-                  and condorjobs.id not in (select arcjobid from pandajobs)"
+                  and condorjobs.id not in (select arcjobid from pandajobs where arcjobid is not NULL)"
         jobs = self.dbcondor.getCondorJobsInfo(select, ['id', 'appjobid', 'condorstate'])
         cleandesc = {"condorstate":"toclean", "tcondorstate": self.dbcondor.getTimeStamp()}
         for job in jobs:

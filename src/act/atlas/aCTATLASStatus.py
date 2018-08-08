@@ -538,7 +538,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.deleteArcJob(job['id'])
 
         select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
-                  and arcjobs.id not in (select arcjobid from pandajobs)"
+                  and arcjobs.id not in (select arcjobid from pandajobs where arcjobid is not NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate', 'JobID'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:
