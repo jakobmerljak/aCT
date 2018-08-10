@@ -31,13 +31,19 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
+        self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
+        self.pilot2wrapper = atlasconf.get(["executable", "p2wrapperurl"])
+        self.pilot2url = atlasconf.get(["executable", "p2tarurl"])
+        self.pilot2urldev = atlasconf.get(["executable", "p2tarurldev"])
+
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
         self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
         self.atlasconf = atlasconf
         self.eventranges = pandadbjob['eventranges']
         self.traces = []
-            
+
         try:
             self.schedulerid = json.loads(pandadbjob['metadata'])['schedulerid']
         except:
@@ -262,7 +268,11 @@ class aCTPanda2Xrsl:
     def setArguments(self):
 
         if self.prodSourceLabel == 'ptest': # pilot2
-            pargs = '"-z" "false" "-q" "%s" "-r" "%s" "-s" "%s" "-x" "-d -j ptest --pilot-user ATLAS -w generic --url https://pandaserver.cern.ch -p 25443"' % (self.schedconfig, self.sitename, self.sitename)
+            pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
+            if self.truepilot:
+                pargs += '"--url" "https://pandaserver.cern.ch" "-p" "25443"'
+            else:
+                pargs += '"-z" "-t"'
         else:
             pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-u" "%s"' % (self.schedconfig, self.sitename, self.prodSourceLabel)
             if self.truepilot:
@@ -283,18 +293,11 @@ class aCTPanda2Xrsl:
             # Set maxCPUCount to one week to avoid pilot killing suspended jobs
             self.pandajob = re.sub(r'&maxCpuCount=\d+&', '&maxCpuCount=604800&', self.pandajob)
             self.log.debug(self.pandajob)
-        # Hack to tell job to start from checkpoint
-        if self.sitename == 'BOINC_CHECKPOINT':
-            # Filter by task ID, one task using checkpoint and the other not
-            if int(self.jobdesc['taskID'][0]) == 12522345:
-                self.log.debug('%s: setting checkpoint restart arg for task %s' % (self.pandaid, self.jobdesc['taskID'][0]))
-                pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
-            # use newest DB release
-            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+
         # Commented on request of Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
         if self.sitename in ['IN2P3-CC_HPC_IDRIS_MCORE']:
-            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+            self.pandajob = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', self.pandajob)
 
     def setInputsES(self, inf):
         
@@ -327,21 +330,19 @@ class aCTPanda2Xrsl:
 
         if self.truepilot:
             if self.prodSourceLabel == 'ptest':
-                x += '(runpilot3-wrapper.sh "%s")' % '/data/user/atlact1/act-prod/runpilot2-wrapper.sh'
+                x += '(runpilot3-wrapper.sh "%s")' % self.pilot2wrapper
             else:
                 x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
             self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
             return
-        
+
         if self.eventranges:
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
-        elif self.sitename == 'BOINC_CHECKPOINT':
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-nolimit")'
+            x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'
         else:
             x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
         if self.prodSourceLabel == 'rc_test':
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
+            x += '(pilotcode.tar.gz "%s")' % self.piloturlrc
         elif self.prodSourceLabel == 'ptest':
             x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
         elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1', 'IN2P3-CC_HPC_IDRIS_MCORE']:
@@ -354,9 +355,7 @@ class aCTPanda2Xrsl:
             #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
         else:
             # Use no kill pilot to avoid pilot killing too much at end of job
-            # Paul's version using PILOT_NOKILL
-            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-72.12-NORDUGRID.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
             #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
             #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-AF.tar.gz")'
             #x += '(pilotcode.tar.gz "http://dcameron.web.cern.ch;cache=check/dcameron/dev/pilotcode-DC.tar.gz")'
