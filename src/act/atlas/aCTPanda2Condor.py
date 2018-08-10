@@ -12,7 +12,7 @@ class aCTPanda2Condor(aCTATLASProcess):
 
     def createCondorJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
+        jobs = self.dbpanda.getJobs("condorjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:
@@ -45,7 +45,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                     continue
 
                 jd = {}
-                jd['arcjobid'] = aid['LAST_INSERT_ID()']
+                jd['condorjobid'] = aid['LAST_INSERT_ID()']
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting
                 jd['actpandastatus'] = 'sent'

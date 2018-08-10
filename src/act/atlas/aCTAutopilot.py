@@ -204,6 +204,7 @@ class aCTAutopilot(aCTATLASProcess):
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     if not os.path.exists(fname):
                         # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
+                        # Assume only ARC sites (not condor) run NG-mode ES
                         if j['arcjobid'] == -1 or j['arcjobid'] is None:
                             substatus = 'pilot_noevents'
                             self.log.info('%s: Job did not run and has no eventranges to update, marking pilot_noevents' % j['pandaid'])
