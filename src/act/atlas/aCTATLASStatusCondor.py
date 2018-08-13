@@ -91,13 +91,13 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         select = "condorjobs.id=pandajobs.condorjobid and (condorjobs.condorstate='submitted' or condorjobs.condorstate='holding')"
         select += " and pandajobs.actpandastatus='sent' and siteName in %s" % self.sitesselect
         select += " limit 100000"
-        columns = ["condorjobs.id", "condorjobs.cluster"]
+        columns = ["condorjobs.id", "condorjobs.cluster", "condorjobs.appjobid"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables="condorjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d submitted jobs", len(jobstoupdate))
+            self.log.debug("Found %d submitted jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for job in jobstoupdate:
             select = "condorjobid='"+str(job["id"])+"'"
@@ -122,13 +122,13 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         select = "condorjobs.id=pandajobs.condorjobid and condorjobs.condorstate='running' and pandajobs.actpandastatus='starting'"
         select += " and siteName in %s limit 100000" % self.sitesselect
         columns = ["condorjobs.id", "condorjobs.JobCurrentStartDate",
-                   "condorjobs.cluster", "pandajobs.pandaid", "pandajobs.siteName"]
+                   "condorjobs.cluster", "pandajobs.pandaid", "pandajobs.siteName", "condorjobs.appjobid"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, columns=columns, tables="condorjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d running jobs", len(jobstoupdate))
+            self.log.debug("Found %d running jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for cj in jobstoupdate:
             select = "condorjobid='"+str(cj["id"])+"'"
@@ -152,7 +152,6 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         - startTime
         - endTime
         """
-        self.log.info(self.sitesselect)
         # don't get jobs already having actpandastatus states treated by
         # validator to avoid race conditions
         select = "condorjobs.id=pandajobs.condorjobid and condorjobs.condorstate='done'"
@@ -168,8 +167,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d finished jobs", len(jobstoupdate))
-
+            self.log.debug("Found %d finished jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for cj in jobstoupdate:
             select = "condorjobid='"+str(cj["id"])+"'"
@@ -216,14 +214,14 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         
         failedjobs = [job for job in jobstoupdate if job['condorstate']=='donefailed']
         if len(failedjobs) != 0:
-            self.log.debug("Found %d failed jobs", len(failedjobs))
+            self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         lostjobs = [job for job in jobstoupdate if job['condorstate']=='lost']
         if len(lostjobs) != 0:
-            self.log.debug("Found %d lost jobs", len(lostjobs))
+            self.log.debug("Found %d lost jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         # Cancelled jobs already in terminal state will be cleaned up in cleanupLeftovers()
         cancelledjobs = [job for job in jobstoupdate if job['condorstate']=='cancelled' and job['actpandastatus'] not in ('cancelled', 'donecancelled', 'failed', 'donefailed')]
         if len(cancelledjobs) != 0:
-            self.log.debug("Found %d cancelled jobs", len(cancelledjobs))
+            self.log.debug("Found %d cancelled jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for cj in failedjobs:
             self.log.info("%s: Job failed so stop sending heartbeats", cj['appjobid'])

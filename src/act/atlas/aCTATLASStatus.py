@@ -109,13 +109,13 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
-        columns = ["arcjobs.id", "arcjobs.JobID"]
+        columns = ["arcjobs.id", "arcjobs.JobID", "arcjobs.appjobid"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d submitted jobs", len(jobstoupdate))
+            self.log.debug("Found %d submitted jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
@@ -143,13 +143,13 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
 
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
-                   "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
+                   "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName", "arcjobs.appjobid"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d running jobs", len(jobstoupdate))
+            self.log.debug("Found %d running jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
@@ -203,7 +203,7 @@ class aCTATLASStatus(aCTATLASProcess):
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d finished jobs", len(jobstoupdate))
+            self.log.debug("Found %d finished jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
 
         for aj in jobstoupdate:
@@ -452,13 +452,13 @@ class aCTATLASStatus(aCTATLASProcess):
         
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
         if len(failedjobs) != 0:
-            self.log.debug("Found %d failed jobs", len(failedjobs))
+            self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         lostjobs = [job for job in jobstoupdate if job['arcstate']=='lost']
         if len(lostjobs) != 0:
-            self.log.debug("Found %d lost jobs", len(lostjobs))
+            self.log.debug("Found %d lost jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
         if len(cancelledjobs) != 0:
-            self.log.debug("Found %d cancelled jobs", len(cancelledjobs))
+            self.log.debug("Found %d cancelled jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
                 
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
