@@ -211,7 +211,7 @@ class aCTAGISParser:
             self.log.debug("Time to parse site info: %g s"%(self.tparse-start_parsing))
 
             self.log.info("Queues served:")
-            for site, info in dict(self.sites).items():
+            for site, info in sorted(self.sites.items()):
                 if not info['enabled']:
                     continue
                 if 'endpoints' not in info or not info['endpoints']:
