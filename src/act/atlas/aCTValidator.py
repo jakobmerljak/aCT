@@ -97,7 +97,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
                 jobinfo.xml = str(metadata.read())
-            jobinfo.computingElement = arc.URL(aj['cluster']).Host()
+            jobinfo.computingElement = arc.URL(str(aj['cluster'])).Host()
             if aj['EndTime']:
                 # datetime cannot be serialised to json so use string (for harvester)
                 jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).isoformat(' ')
