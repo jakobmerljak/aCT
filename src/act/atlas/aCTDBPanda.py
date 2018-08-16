@@ -72,7 +72,8 @@ class aCTDBPanda(aCTDB):
         sendhb TINYINT(1) DEFAULT 1,
         eventranges mediumtext,
         corecount integer,
-        metadata BLOB
+        metadata BLOB,
+        UNIQUE (pandaid)
     )
 """
         c=self.getCursor()
