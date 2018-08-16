@@ -82,9 +82,6 @@ class aCTAutopilot(aCTATLASProcess):
 
         self.sites={}
 
-    def getEndTime(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime())
-
 
     def setSites(self):
         self.sites = self.agisparser.getSites()
@@ -128,14 +125,10 @@ class aCTAutopilot(aCTATLASProcess):
             jd['siteName'] = j['siteName']
             # For starting truepilot jobs send pilotID with expected log
             # location so logs are available in case of lost heartbeat
-            if pstatus == 'starting' and not changed_pstatus and j['computingElement'] and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
-                jobid = j['computingElement']
-                date = time.strftime('%Y%m%d')
-                cluster = arc.URL(str(jobid)).Host()
-                sessionid = jobid[jobid.rfind('/')+1:]
-                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid])
+            if pstatus == 'starting' and not changed_pstatus and self.sites[j['siteName']]['truepilot']:
+                date = time.strftime('%Y-%m-%d', time.gmtime())
+                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, j['siteName'], '%s.out' % j['pandaid']])
                 jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
-
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
             except:
