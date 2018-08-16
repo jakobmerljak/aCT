@@ -6,7 +6,6 @@ import arc
 import aCTPanda
 from act.common import aCTProxy
 from aCTATLASProcess import aCTATLASProcess
-from aCTAGISParser import aCTAGISParser
 
 
 class PandaGetThr(Thread):
@@ -75,10 +74,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
         self.activated = {}
         # Flag for calling getJob no matter what to have a constant stream
         self.getjob = False
-
-
-    def getEndTime(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
     def setSites(self):

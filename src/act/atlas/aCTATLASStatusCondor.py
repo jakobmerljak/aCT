@@ -104,7 +104,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
-            desc["computingElement"] = job['cluster']
+            desc["computingElement"] = job['cluster'].split(':')[0]
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -135,7 +135,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "running"
             desc["actpandastatus"] = "running"
-            desc["computingElement"] = cj['cluster']
+            desc["computingElement"] = cj['cluster'].split(':')[0]
             desc["startTime"] = cj['JobCurrentStartDate']
             # When true pilot job has started running, turn of aCT heartbeats
             if self.sites[cj['siteName']]['truepilot']:
