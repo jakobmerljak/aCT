@@ -7,7 +7,7 @@ import json
 import re
 import os
 import shutil
-import arc
+from urlparse import urlparse
 
 from act.common import aCTSignal
 from act.common import aCTUtils
@@ -109,20 +109,20 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
         select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
-        columns = ["arcjobs.id", "arcjobs.JobID"]
+        columns = ["arcjobs.id", "arcjobs.cluster", "arcjobs.appjobid"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d submitted jobs", len(jobstoupdate))
+            self.log.debug("Found %d submitted jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
-            desc["computingElement"] = aj['JobID']
+            desc["computingElement"] = urlparse(aj['cluster']).hostname
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -143,13 +143,13 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
 
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
-                   "arcjobs.JobID", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName"]
+                   "arcjobs.cluster", "arcjobs.RequestedSlots", "pandajobs.pandaid", "pandajobs.siteName", "arcjobs.appjobid"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d running jobs", len(jobstoupdate))
+            self.log.debug("Found %d running jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
         for aj in jobstoupdate:
             select = "arcjobid='"+str(aj["id"])+"'"
@@ -161,7 +161,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['pandaid'], aj['ExecutionNode'], desc['node']))
             else:
                 desc["node"] = aj["ExecutionNode"]
-            desc["computingElement"] = aj['JobID']
+            desc["computingElement"] = urlparse(aj['cluster']).hostname
             desc["startTime"] = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalWalltime'])
             desc["corecount"] = aj['RequestedSlots']
             # When true pilot job has started running, turn of aCT heartbeats
@@ -203,7 +203,7 @@ class aCTATLASStatus(aCTATLASProcess):
         if len(jobstoupdate) == 0:
             return
         else:
-            self.log.debug("Found %d finished jobs", len(jobstoupdate))
+            self.log.debug("Found %d finished jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
 
 
         for aj in jobstoupdate:
@@ -321,8 +321,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 # Job was not even submitted, there is no more information
                 self.log.warning("%s: Job has not been submitted yet so no information to report", aj['appjobid'])
                 continue
-            
-            cluster = arc.URL(str(jobid)).Host()
+
             sessionid=jobid[jobid.rfind('/')+1:]
             date = aj['created'].strftime('%Y-%m-%d')
             outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
@@ -368,7 +367,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.jobId = aj['appjobid']
             pupdate.state = 'failed'
             pupdate.siteName = aj['siteName']
-            pupdate.computingElement = cluster
+            pupdate.computingElement = urlparse(aj['cluster']).hostname
             try:
                 pupdate.schedulerID = smeta['schedulerid']
             except:
@@ -443,7 +442,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
-                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata']
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata', 'cluster']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 
@@ -452,13 +451,13 @@ class aCTATLASStatus(aCTATLASProcess):
         
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
         if len(failedjobs) != 0:
-            self.log.debug("Found %d failed jobs", len(failedjobs))
+            self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         lostjobs = [job for job in jobstoupdate if job['arcstate']=='lost']
         if len(lostjobs) != 0:
-            self.log.debug("Found %d lost jobs", len(lostjobs))
+            self.log.debug("Found %d lost jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
         if len(cancelledjobs) != 0:
-            self.log.debug("Found %d cancelled jobs", len(cancelledjobs))
+            self.log.debug("Found %d cancelled jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
                 
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
@@ -538,7 +537,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.deleteArcJob(job['id'])
 
         select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
-                  and arcjobs.id not in (select arcjobid from pandajobs)"
+                  and arcjobs.id not in (select arcjobid from pandajobs where arcjobid is not NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate', 'JobID'])
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for job in jobs:

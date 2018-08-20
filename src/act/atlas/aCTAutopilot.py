@@ -82,9 +82,6 @@ class aCTAutopilot(aCTATLASProcess):
 
         self.sites={}
 
-    def getEndTime(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime())
-
 
     def setSites(self):
         self.sites = self.agisparser.getSites()
@@ -128,14 +125,10 @@ class aCTAutopilot(aCTATLASProcess):
             jd['siteName'] = j['siteName']
             # For starting truepilot jobs send pilotID with expected log
             # location so logs are available in case of lost heartbeat
-            if pstatus == 'starting' and not changed_pstatus and j['computingElement'] and j['computingElement'].find('://') != -1 and self.sites[j['siteName']]['truepilot']:
-                jobid = j['computingElement']
-                date = time.strftime('%Y%m%d')
-                cluster = arc.URL(str(jobid)).Host()
-                sessionid = jobid[jobid.rfind('/')+1:]
-                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, cluster, sessionid])
+            if pstatus == 'starting' and not changed_pstatus and self.sites[j['siteName']]['truepilot']:
+                date = time.strftime('%Y-%m-%d', time.gmtime())
+                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, j['siteName'], '%s.out' % j['pandaid']])
                 jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
-
             try:
                 jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
             except:
@@ -204,6 +197,7 @@ class aCTAutopilot(aCTATLASProcess):
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     if not os.path.exists(fname):
                         # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
+                        # Assume only ARC sites (not condor) run NG-mode ES
                         if j['arcjobid'] == -1 or j['arcjobid'] is None:
                             substatus = 'pilot_noevents'
                             self.log.info('%s: Job did not run and has no eventranges to update, marking pilot_noevents' % j['pandaid'])

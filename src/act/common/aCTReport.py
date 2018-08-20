@@ -70,11 +70,11 @@ class aCTStatus:
         
     def PandaReport(self):
         c=self.db.conn.cursor()
-        c.execute("select sitename, actpandastatus from pandajobs")
+        c.execute("select sitename, actpandastatus, corecount from pandajobs")
         rows=c.fetchall()
         rep={}
         rtot={}
-        states = ["sent", "starting", "running", "tovalidate", "toresubmit",
+        states = ["sent", "starting", "running", "slots", "tovalidate", "toresubmit",
                   "toclean", "finished", "done", "failed", "donefailed",
                   "tobekilled", "cancelled", "donecancelled"]
 
@@ -83,19 +83,33 @@ class aCTStatus:
         for r in rows:
 
             site, state = (str(r[0]), str(r[1]))
+            if r[2] is None:
+                corecount=1
+            else:
+                corecount=int(r[2])
 
             try:
                 rep[site][state]+=1
+                if state == "running":
+                    rep[site]["slots"]+=1*corecount 
             except:
                 try:
                     rep[site][state]=1
+                    if state == "running":
+                        rep[site]["slots"]+=1*corecount 
                 except:
                     rep[site]={}
                     rep[site][state]=1
+                    if state == "running":
+                        rep[site]["slots"]=corecount 
             try:
                 rtot[state]+=1
+                if state == "running":
+                    rtot["slots"]+=1*corecount 
             except:
                 rtot[state]=1
+                if state == "running":
+                    rtot["slots"]=corecount 
 
         for k in sorted(rep.keys()):
             log="%28s:" % k[:28]

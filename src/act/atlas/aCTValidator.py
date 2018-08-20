@@ -72,20 +72,19 @@ class aCTValidator(aCTATLASProcess):
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         aj = aj[0]
-        jobid=aj['JobID']
-        sessionid=jobid[jobid.rfind('/')+1:]
+        jobid = aj['JobID']
+        sessionid = jobid[jobid.rfind('/')+1:]
         date = aj['created'].strftime('%Y-%m-%d')
-        cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             except Exception,x:
-                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 pandapickle = None
             try:
                 metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
             except Exception,x:
-                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 metadata = None
 
             # update pickle and dump to tmp/pickle
@@ -98,7 +97,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
                 jobinfo.xml = str(metadata.read())
-            jobinfo.computingElement = cluster
+            jobinfo.computingElement = arc.URL(str(aj['cluster'])).Host()
             if aj['EndTime']:
                 # datetime cannot be serialised to json so use string (for harvester)
                 jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).isoformat(' ')

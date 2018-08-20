@@ -217,10 +217,6 @@ class aCTPanda2ClassAd:
             creamattrs += ' && other.GlueHostMainMemoryVirtualSize == %d";' % (self.memory * 3)
             self.classad['CreamAttributes'] = creamattrs
 
-        # For special cern queue
-        if 'CERN' in self.sitename:
-            self.classad['+queue'] = '"AtlasWithReq"'
-
     def parse(self):
         self.setTime()
         #self.setDisk()

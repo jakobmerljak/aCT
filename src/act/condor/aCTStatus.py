@@ -133,7 +133,8 @@ class aCTStatus(aCTProcess):
             elif jobstatus == 3: # removed
                 condorstate = 'cancelled'
             elif jobstatus == 4: # finished
-                if updatedjob['ExitCode'] == 0:
+                # If job is killed by signal ExitCode can be missing from the classad
+                if 'ExitCode' in updatedjob and updatedjob['ExitCode'] == 0:
                     condorstate = 'finished'
                 else:
                     condorstate = 'failed'

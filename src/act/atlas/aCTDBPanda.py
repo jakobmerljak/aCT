@@ -13,6 +13,7 @@ class aCTDBPanda(aCTDB):
            - siteName: Panda Resource
            - prodSourceLabel: Type of job (managed, test, etc)
            - arcjobid: Row ID of job in arcjobs table
+           - condorjobid: Row ID of job in condorjobs table
            - pandastatus: Panda job status corresponding to state on the panda server
                  sent: job is retrieved from panda
                  starting: job is in aCT but not yet running
@@ -58,6 +59,7 @@ class aCTDBPanda(aCTDB):
         siteName VARCHAR(255),
         prodSourceLabel VARCHAR(255),
         arcjobid integer,
+        condorjobid integer,
         pandastatus VARCHAR(255),
         actpandastatus VARCHAR(255),
         theartbeat timestamp,
@@ -70,7 +72,8 @@ class aCTDBPanda(aCTDB):
         sendhb TINYINT(1) DEFAULT 1,
         eventranges mediumtext,
         corecount integer,
-        metadata BLOB
+        metadata BLOB,
+        UNIQUE (pandaid)
     )
 """
         c=self.getCursor()
@@ -83,6 +86,7 @@ class aCTDBPanda(aCTDB):
             c.execute(str)
             # add indexes
             c.execute("ALTER TABLE pandajobs ADD INDEX (arcjobid)")
+            c.execute("ALTER TABLE pandajobs ADD INDEX (condorjobid)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (pandaid)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (pandastatus)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")

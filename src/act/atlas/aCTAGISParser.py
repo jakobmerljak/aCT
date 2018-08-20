@@ -1,12 +1,3 @@
-# load agis.json
-# if file changed since last load, reload
-# getSites()
-## returns dict with site info
-## always check config first
-## schedconfig=sitename?
-## maxjobs defaults to 1M
-## endpoints should be pulled out of "queues" (ce_endpoints)
-## corecount defaults to 1
 import logging
 import time
 import os, re, sys
@@ -14,80 +5,82 @@ import json
 from act.common import aCTConfig
 
 class aCTAGISParser:
-    
+    '''
+    Load agis jsons. If file changes since last load, reload. Then load site
+    info from config and overwrite agis values.
+    '''
+
     def __init__(self, logger):
-        self.log=logger
-        self.conf=aCTConfig.aCTConfigATLAS()
-        self.arcconf=aCTConfig.aCTConfigARC()
+        self.log = logger
+        self.conf = aCTConfig.aCTConfigATLAS()
+        self.arcconf = aCTConfig.aCTConfigARC()
         self.tparse = 0
         self.getSites()
-                
+
     def _parseConfigSites(self):
         sites = {}
         for sitename in self.conf.getList(["sites","site","name"]):
-            sites[sitename] = {}
-            configendpoints = self.conf.getListCond(["sites","site"],"name=" + sitename ,["endpoints","item"])
+            siteinfo = {}
+            configendpoints = self.conf.getListCond(["sites","site"],"name=" + sitename, ["endpoints","item"])
             if configendpoints:
-                sites[sitename]['endpoints'] = configendpoints
+                siteinfo['endpoints'] = configendpoints
             try:
-                sites[sitename]['flavour'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["flavour"])[0]
+                siteinfo['flavour'] = self.conf.getListCond(["sites","site"],"name=" + sitename, ["flavour"])[0]
             except:
                 pass
             try:
-                sites[sitename]['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["schedconfig"])[0]
+                siteinfo['schedconfig'] = self.conf.getListCond(["sites","site"],"name=" + sitename, ["schedconfig"])[0]
             except:
                 pass
             try:
-                sites[sitename]['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename ,["type"])[0]
+                siteinfo['type'] = self.conf.getListCond(["sites","site"],"name=" + sitename, ["type"])[0]
             except:
                 # ignore missing type and hope agis has the info
                 pass
             try:
-                sites[sitename]['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["corecount"])[0])
+                siteinfo['corecount'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["corecount"])[0])
             except:
                 pass
             try:
-                sites[sitename]['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["maxjobs"])[0])
+                siteinfo['maxjobs'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["maxjobs"])[0])
             except:
                 pass
             try:
-                sites[sitename]['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["truepilot"])[0])
+                siteinfo['truepilot'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["truepilot"])[0])
             except:
                 pass
             try:
-                sites[sitename]['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename ,["push"])[0])
+                siteinfo['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["push"])[0])
             except:
                 pass
-            sites[sitename]['status'] = 'online'
-            sites[sitename]['enabled'] = True
-        self.log.info("Parsed sites from config: %s"%str(sites.keys()))
+            siteinfo['status'] = 'online'
+            siteinfo['enabled'] = True
+            sites[sitename] = siteinfo
+        self.log.info("Parsed sites from config: %s" % str(sites.keys()))
         return sites 
 
-  
     def _parseAgisJson(self, agisfilename, pilotmgr):
-        # todo: first read from config, then read from agis and update if not already in sites list
         with open(agisfilename) as f:
-            agisjson=json.load(f)
-        sites=dict([(agisjson[entry]['panda_resource'],dict(agisjson[entry].items()+[('schedconfig',entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
-        for sitename in sites:
-            sites[sitename]['push'] = True # TODO configure in AGIS 
-            if not sites[sitename].has_key('schedconfig'):
-                sites[sitename]['schedconfig'] = sitename
-            if (pilotmgr == 'all' or sites[sitename]['pilot_manager'] == pilotmgr) and sites[sitename]['state'] == 'ACTIVE':
-                sites[sitename]['enabled'] = True
-                sites[sitename]['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
-                self._dumpSchedConfig(sitename, sites[sitename])
+            agisjson = json.load(f)
+        sites = dict([(agisjson[entry]['panda_resource'], dict(agisjson[entry].items()+[('schedconfig', entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
+        for sitename, siteinfo in sites.items():
+            siteinfo['push'] = True # TODO configure in AGIS 
+            if not siteinfo.has_key('schedconfig'):
+                siteinfo['schedconfig'] = sitename
+            if (pilotmgr == 'all' or siteinfo['pilot_manager'] == pilotmgr) and siteinfo['state'] == 'ACTIVE':
+                siteinfo['enabled'] = True
+                siteinfo['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
             else:
-                sites[sitename]['enabled'] = False
-                sites[sitename]['maxjobs'] = 0
-            if (not sites[sitename].has_key('corecount')) or (not sites[sitename]['corecount']):
-                sites[sitename]['corecount'] = 1
-            if not sites[sitename].has_key('flavour') and sites[sitename]['queues']:
-                sites[sitename]['flavour'] = sites[sitename]['queues'][0]['ce_flavour']
+                siteinfo['enabled'] = False
+                siteinfo['maxjobs'] = 0
+            if (not siteinfo.has_key('corecount')) or (not siteinfo['corecount']):
+                siteinfo['corecount'] = 1
+            if not siteinfo.has_key('flavour') and siteinfo['queues']:
+                siteinfo['flavour'] = siteinfo['queues'][0]['ce_flavour']
             # pull out endpoints
-            if not sites[sitename].has_key('endpoints'):
+            if not siteinfo.has_key('endpoints'):
                 endpoints = []
-                for queue in sites[sitename]['queues']:
+                for queue in siteinfo['queues']:
                     if queue['ce_flavour'] == 'CREAM-CE':
                         endpoints.append('cream %s/ce-cream/services/CREAM2 %s %s' % (queue['ce_endpoint'], queue['ce_jobmanager'], queue['ce_queue_name']))
                     elif queue['ce_flavour'] == 'HTCONDOR-CE':
@@ -95,17 +88,17 @@ class aCTAGISParser:
                     elif queue['ce_flavour'] == 'ARC-CE':
                         endpoints.append('%s/%s' % (queue['ce_endpoint'], queue['ce_queue_name']))
                     else:
-                        if sites[sitename]['enabled']:
+                        if siteinfo['enabled']:
                             self.log.warning('Cannot use CE flavour %s for queue %s' % (queue['ce_flavour'], sitename))
                 # Ignore endpoints with "default" queue unless that is the only queue
                 nondefaultendpoints = [e for e in endpoints if not e.endswith(' default')]
                 if not nondefaultendpoints:
-                    sites[sitename]['endpoints'] = endpoints
+                    siteinfo['endpoints'] = endpoints
                 else:
-                    sites[sitename]['endpoints'] = nondefaultendpoints
-            if not sites[sitename].has_key('maxtime') or sites[sitename]['maxtime'] == 0:
+                    siteinfo['endpoints'] = nondefaultendpoints
+            if not siteinfo.has_key('maxtime') or siteinfo['maxtime'] == 0:
                 try:
-                    maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in sites[sitename]['queues']])
+                    maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in siteinfo['queues']])
                 except:
                     maxwalltime = 0
                 # if maxwalltime is not set or is larger than a week, then set to 1 week
@@ -113,13 +106,12 @@ class aCTAGISParser:
                     maxwalltime = 60*24*7
                 else:
                     maxwalltime = min(maxwalltime, 60*24*7) 
-                sites[sitename]['maxwalltime'] = maxwalltime
+                siteinfo['maxwalltime'] = maxwalltime
             else:
-                #sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxwalltime']), 60*24*7)
-                sites[sitename]['maxwalltime'] = min(int(sites[sitename]['maxtime'])/60, 60*24*7)
-            if not sites[sitename].has_key('maxcputime'):
+                siteinfo['maxwalltime'] = min(int(siteinfo['maxtime'])/60, 60*24*7)
+            if not siteinfo.has_key('maxcputime'):
                 try:
-                    maxcputime = max([int(queue['ce_queue_maxcputime']) for queue in sites[sitename]['queues']])
+                    maxcputime = max([int(queue['ce_queue_maxcputime']) for queue in siteinfo['queues']])
                 except:
                     maxcputime = 0
                 # if maxcputime is not set or is larger than a week, then set to 1 week
@@ -127,32 +119,27 @@ class aCTAGISParser:
                     maxcputime = 60*24*7
                 else:
                     maxcputime = min(maxcputime, 60*24*7) 
-                sites[sitename]['maxcputime'] = maxcputime
+                siteinfo['maxcputime'] = maxcputime
             else:
-                sites[sitename]['maxcputime'] = min(int(sites[sitename]['maxcputime']), 60*24*7)
+                siteinfo['maxcputime'] = min(int(siteinfo['maxcputime']), 60*24*7)
 
-            if sites[sitename]['type'] == 'special':
-                sites[sitename]['type'] = 'production'
+            if siteinfo['type'] == 'special':
+                siteinfo['type'] = 'production'
             # true pilot or not, based on whether mv copytool is used
             truepilot = True
-            if 'mv' in sites[sitename]['copytools']:
+            if 'mv' in siteinfo['copytools']:
                 # Check in acopytools if there is more than one copytool
-                if len(sites[sitename]['copytools']) == 1 or 'mv' in sites[sitename]['acopytools'].get('pr', []):
+                if len(siteinfo['copytools']) == 1 or 'mv' in siteinfo['acopytools'].get('pr', []):
                     truepilot = False
-            sites[sitename]['truepilot'] = truepilot
+            siteinfo['truepilot'] = truepilot
             # set OS bucket IDs
             try:
-                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
-                sites[sitename]['ddmoses'] = objstore
+                objstore = [self.bucketmap[e]['bucket_id'] for e in siteinfo['astorages']['es_events'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_ES'][0]
+                siteinfo['ddmoses'] = objstore
             except:
-                if sites[sitename]['enabled']:
-                    self.log.debug('No ES object store for %s', sitename)
-            try:
-                objstore = [self.bucketmap[e]['bucket_id'] for e in sites[sitename]['ddmendpoints'] if e in self.bucketmap and self.bucketmap[e]['type'] == 'OS_LOGS'][0]
-                sites[sitename]['ddmoslogs'] = objstore
-            except:
-                if sites[sitename]['enabled']:
-                    self.log.debug('No LOGS object store for %s', sitename)
+                if siteinfo['enabled'] and siteinfo['jobseed'] in ('es', 'all'):
+                    self.log.debug('No ES object store for %s but jobseed is %s' % (sitename, siteinfo['jobseed']))
+
         if len(sites) < 100:
             self.log.info("Parsed sites from AGIS: %s" % str(sites.keys()))
         else:
@@ -190,17 +177,6 @@ class aCTAGISParser:
             else:
                 dict1[d]=dict2[d]
 
-    def _dumpSchedConfig(self, sitename, sitedict):
-        # copy dict and turn bools to strings since pilot expects strings
-        schedconf = sitedict.copy()
-        for k,v in schedconf.items():
-            if type(v) == bool:
-                schedconf[k] = str(v)
-
-        # Dump to file
-        with open(os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', '%s.all.json' % sitename), 'w') as f:
-            json.dump(schedconf, f)
-
     def getSites(self, flavour=None):
         '''Get site info, filtered by CE flavour(s) if given'''
 
@@ -209,7 +185,7 @@ class aCTAGISParser:
         if not agisfile:
             # No AGIS, only manually configured sites
             return self._parseConfigSites()
-        
+
         # wait for AGIS json to be produced
         i = 0
         while True:
@@ -222,9 +198,9 @@ class aCTAGISParser:
                     self.log.critical("Couldn't get AGIS json")
                     return {}
                 time.sleep(10)
-        
+
         # check if json file or config file changed before parsing
-        if (self.tparse<agismtime) or (self.tparse<os.stat(self.conf.configfile).st_mtime):
+        if (self.tparse < agismtime) or (self.tparse < os.stat(self.conf.configfile).st_mtime):
             self.log.info("AGIS file and/or config modified, reparsing site info")
             pilotmgr = self.conf.get(['agis','pilotmanager'])
             start_parsing = time.time()
@@ -233,9 +209,9 @@ class aCTAGISParser:
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
             self.tparse = time.time()
             self.log.debug("Time to parse site info: %g s"%(self.tparse-start_parsing))
-            
+
             self.log.info("Queues served:")
-            for site, info in dict(self.sites).items():
+            for site, info in sorted(self.sites.items()):
                 if not info['enabled']:
                     continue
                 if 'endpoints' not in info or not info['endpoints']:
@@ -247,12 +223,12 @@ class aCTAGISParser:
         if flavour:
             return dict((k,v) for (k,v) in self.sites.iteritems() if v.get('flavour') in flavour)
         return self.sites
-    
+
     def getOSMap(self):
         ''' Return dictionary of OS ID to OS endpoint'''
-        
+
         return self.osmap
-    
+
 if __name__ == '__main__':
 
     import pprint
@@ -267,7 +243,7 @@ if __name__ == '__main__':
         pprint.pprint(sites)
         for s,i in sites.items():
             try:
-                print s, i['ddmoses'], i['ddmoslogs']
+                print s, i['ddmoses']
             except:
                 pass
         print len(sites)
