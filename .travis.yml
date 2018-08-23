@@ -1,0 +1,13 @@
+language: python
+python:
+  - 2.7
+# arc bindings are not available in pip so have to install via apt and
+# force the virtualenv to use system packages
+virtualenv:
+  system_site_packages: true
+before_install:
+  - sudo apt-get install -y nordugrid-arc-python
+install:
+  - pip install -r requirements.txt
+script:
+  - pylint --errors-only src/act
