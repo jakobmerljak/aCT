@@ -1,5 +1,7 @@
 language: python
 python:
   - "2.7"
-install: "pip install pylint"
-script: "pylint src/act"
+before_install:
+  - sudo apt-get install -y nordugrid-arc-python
+install: "pip install pylint mysql-connector htcondor"
+script: "pylint --errors-only src/act"
