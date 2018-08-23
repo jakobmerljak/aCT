@@ -1,7 +1,10 @@
 language: python
 python:
-  - "2.7"
+  - 2.7
+# arc bindings are not available in pip
 before_install:
   - sudo apt-get install -y nordugrid-arc-python
-install: "pip install pylint mysql-connector htcondor"
-script: "pylint --errors-only src/act"
+install:
+  - pip install -r requirements.txt
+script:
+  - pylint --errors-only src/act
