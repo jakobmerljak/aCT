@@ -35,9 +35,9 @@ class aCTATLASProcess:
         self.conf=aCTConfig.aCTConfigATLAS()
         self.arcconf=aCTConfig.aCTConfigARC()
         # database
-        self.dbarc=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        self.dbcondor=aCTDBCondor.aCTDBCondor(self.log,self.conf.get(["db","file"]))
-        self.dbpanda=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.dbarc=aCTDBArc.aCTDBArc(self.log)
+        self.dbcondor=aCTDBCondor.aCTDBCondor(self.log)
+        self.dbpanda=aCTDBPanda.aCTDBPanda(self.log)
 
         # APFMon
         self.apfmon = aCTAPFMon.aCTAPFMon(self.conf)

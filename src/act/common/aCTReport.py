@@ -4,7 +4,6 @@ import os
 import re
 import signal
 import subprocess
-from act.common import aCTConfig
 from act.common import aCTLogger
 from act.arc import aCTDBArc
 from act.atlas import aCTDBPanda
@@ -12,15 +11,13 @@ from act.atlas import aCTDBPanda
 class aCTStatus:
     
     def __init__(self):
-        self.conf=aCTConfig.aCTConfigARC()
         self.logger=aCTLogger.aCTLogger("aCTReport")
         self.log=self.logger()
         self.criticallogger = aCTLogger.aCTLogger('aCTCritical', arclog=False)
         self.criticallog = self.criticallogger()
 
-        #self.db=aCTDB.aCTDB(None,self.conf.get(["db","file"]))
-        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        self.pandadb=aCTDBPanda.aCTDBPanda(self.log,self.conf.get(["db","file"]))
+        self.db=aCTDBArc.aCTDBArc(self.log)
+        self.pandadb=aCTDBPanda.aCTDBPanda(self.log)
 
     def ProcessReport(self):
         actprocscmd = 'ps ax -ww -o pid,etime,args'
@@ -69,7 +66,7 @@ class aCTStatus:
         print
         
     def PandaReport(self):
-        c=self.db.conn.cursor()
+        c=self.db.db.conn.cursor()
         c.execute("select sitename, actpandastatus, corecount from pandajobs")
         rows=c.fetchall()
         rep={}
@@ -128,7 +125,7 @@ class aCTStatus:
         print log+'\n\n'
 
     def ArcJobReport(self):
-        c=self.db.conn.cursor()
+        c=self.db.db.conn.cursor()
         c.execute("select jobid,state from arcjobs")
         rows=c.fetchall()
         rep={}
@@ -192,7 +189,7 @@ class aCTStatus:
                              'Transferring',
                              'Suspended']
         
-        c = self.db.conn.cursor()
+        c = self.db.db.conn.cursor()
         c.execute("select cluster, JobStatus from condorjobs")
         rows = c.fetchall()
         rep = {}

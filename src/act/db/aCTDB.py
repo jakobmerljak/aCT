@@ -1,12 +1,16 @@
 import datetime
-from aCTDBMS import aCTDBMS
+from act.db import aCTDBMS
+from act.common.aCTConfig import aCTConfigARC
 
-class aCTDB(aCTDBMS):
+class aCTDB(object):
+    '''Superclass representing a general table in the DB'''
 
-    def __init__(self,logger,dbname="aCTjobs.db"):
-        # inherit DB Mgmt System from aCTDBMS
-        aCTDBMS.__init__(self, logger, dbname)
-    
+    def __init__(self, logger, tablename):
+        self.log = logger
+        self.table = tablename
+        self.conf = aCTConfigARC()
+        self.db = aCTDBMS.getDB(self.log, self.conf)
+
     def _column_list2str(self,columns):
         s=""
         if columns:
@@ -18,14 +22,20 @@ class aCTDB(aCTDBMS):
         return s
     
     def getTimeStamp(self, seconds=None):
-        # todo: move to aCTDBMS and use internal dbms mechanisms for converting
         if seconds:
             return datetime.datetime.utcfromtimestamp(seconds).isoformat()
         else:
             return datetime.datetime.utcnow().isoformat()
 
+    def timeStampLessThan(self, column, timediff):
+        return self.db.timeStampLessThan(column, timediff)
+
     def Commit(self, lock=False):
-        self.conn.commit()
         if lock:
-            c=self.getCursor()
+            res = self.db.releaseMutexLock(self.table)
+            if not res:
+                self.log.warning("Could not release lock: %s" % str(res))
+        self.db.conn.commit()
+        if lock:
+            c = self.db.getCursor()
             c.execute("UNLOCK TABLES")
