@@ -288,13 +288,13 @@ class aCTPanda2Xrsl:
             # Filter by task ID, one task using checkpoint and the other not
             if int(self.jobdesc['taskID'][0]) == 12522345:
                 self.log.debug('%s: setting checkpoint restart arg for task %s' % (self.pandaid, self.jobdesc['taskID'][0]))
-                pandajobarg = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', pandajobarg)
+                self.pandajob = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', self.pandajob)
             # use newest DB release
-            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+            self.pandajob = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', self.pandajob)
         # Commented on request of Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
         if self.sitename in ['IN2P3-CC_HPC_IDRIS_MCORE']:
-            pandajobarg = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', pandajobarg)
+            self.pandajob = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', self.pandajob)
 
     def setInputsES(self, inf):
         
