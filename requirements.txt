@@ -2,6 +2,6 @@
 # Note that arc is not in pip and must be installed from system packages,
 # e.g. yum install nordugrid-arc-python
 #
-mysql-connector  # connection to MySQL database
-htcondor         # bindings to use HTCondor to submit jobs
-pylint           # for travis automatic tests
+mysql-connector==1.1.6  # connection to MySQL database. Force to 1.1.6 which is in EPEL7
+htcondor                # bindings to use HTCondor to submit jobs
+pylint                  # for travis automatic tests
