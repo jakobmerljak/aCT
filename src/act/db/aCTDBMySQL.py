@@ -1,29 +1,28 @@
 import mysql.connector as mysql
+from act.db.aCTDBMS import aCTDBMS
 
-class MySQLCursorDict(mysql.cursor.MySQLCursor):
-    def _row_to_python(self, rowdata, desc=None):
-        row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
-        if row:
-            return dict(zip(self.column_names, row))
-        return None
-
-class aCTDBMySQL(object):
+class aCTDBMySQL(aCTDBMS):
     """Class for MySQL specific db operations."""
 
-    def __init__(self,logger):
+    def __init__(self, log, config):
+        aCTDBMS.__init__(self, log, config)
+        # mysql.connector must be 2.1.x
+        if mysql.__version_info__[:2] != (2, 1):
+            raise Exception("mysql-connector must be version 2.1.x")
         try:
             self._connect(self.dbname)
-        except Exception, x:
-            print Exception, x
+        except mysql.Error as err:
             # if db doesnt exist, create it
-            if x.errno!=1049:
-                raise x
+            if err.errno != 1049:
+                raise err
+            self.log.warning("Database doesn't exist, will try to create it")
             self._connect()
-            c=self.conn.cursor()
+            c = self.conn.cursor()
             c.execute("CREATE DATABASE "+self.dbname)
+            self._connect(self.dbname)
 
         self.log.debug("initialized aCTDBMySQL")
-    
+
     def _connect(self, dbname=None):
         if self.socket != 'None':
             self.conn=mysql.connect(unix_socket=self.socket,db=dbname)
@@ -32,21 +31,18 @@ class aCTDBMySQL(object):
                 self.conn=mysql.connect(user=self.user, password=self.passwd, host=self.host, port=self.port, db=dbname)
             else:
                 self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)
-        
+
     def getCursor(self):
         # make sure cursor reads newest db state
         self.conn.commit()
-        try:
-            return self.conn.cursor(dictionary=True)
-        except:
-            return self.conn.cursor(cursor_class=MySQLCursorDict)
+        return self.conn.cursor(dictionary=True)
 
     def timeStampLessThan(self,column,timediff):
         return "UNIX_TIMESTAMP("+column+") < UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
-    
+
     def timeStampGreaterThan(self,column,timediff):
         return "UNIX_TIMESTAMP("+column+") > UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
-    
+
     def addLock(self):
         return " FOR UPDATE"
 

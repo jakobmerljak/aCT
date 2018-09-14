@@ -4,7 +4,8 @@ from xml.dom import minidom
 
 class aCTConfig:
 
-    def __init__(self):
+    def __init__(self, configfile):
+        self.configfile = configfile
         self.top=[]
         self.tparse=0
         self.parse()
@@ -17,7 +18,7 @@ class aCTConfig:
         self.top=xml.getElementsByTagName('config')
         self.tparse=mtime
 
-        
+
     def getList(self,nodes):
         n0=self.top
         for name in nodes:
@@ -61,7 +62,7 @@ class aCTConfig:
             l.append(nn.firstChild.data)
         return l
 
-        
+
     def get(self,nodes):
         l = self.getList(nodes)
         if l:
@@ -71,27 +72,25 @@ class aCTConfig:
 class aCTConfigARC(aCTConfig):
 
     def __init__(self):
-        self.log="aCTConfigARC.log"
         if 'ACTCONFIGARC' in os.environ:
-            self.configfile = os.environ['ACTCONFIGARC']
+            configfile = os.environ['ACTCONFIGARC']
         else:
-            self.configfile="aCTConfigARC.xml"
-        aCTConfig.__init__(self)
+            configfile="aCTConfigARC.xml"
+        aCTConfig.__init__(self, configfile)
 
 class aCTConfigATLAS(aCTConfig):
-    
+
     def __init__(self):
-        self.log="aCTConfigATLAS.log"
         if 'ACTCONFIGATLAS' in os.environ:
-            self.configfile = os.environ['ACTCONFIGATLAS']
+            configfile = os.environ['ACTCONFIGATLAS']
         else:
-            self.configfile="aCTConfigATLAS.xml"
-        aCTConfig.__init__(self)
+            configfile="aCTConfigATLAS.xml"
+        aCTConfig.__init__(self, configfile)
 
 
 if __name__ == '__main__':
 
-    actconf=aCTConfig()
+    actconf=aCTConfig("aCTConfigARC.xml")
     #actconf.printConfig()
     while 1:
         actconf.parse()

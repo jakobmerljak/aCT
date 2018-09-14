@@ -42,8 +42,8 @@ class aCTProcess:
         self.conf=aCTConfig.aCTConfigARC()
         # database
         # TODO: subclasses for arc and condor with respective DBs defined there
-        self.db=aCTDBArc.aCTDBArc(self.log,self.conf.get(["db","file"]))
-        self.dbcondor=aCTDBCondor(self.log, self.conf.get(["db", "file"]))
+        self.db=aCTDBArc.aCTDBArc(self.log)
+        self.dbcondor=aCTDBCondor(self.log)
         
         # ARC Configuration
         # Credentials will be set by ARC agents for each job or set of jobs

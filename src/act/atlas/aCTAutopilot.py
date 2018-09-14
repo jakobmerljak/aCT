@@ -217,7 +217,7 @@ class aCTAutopilot(aCTATLASProcess):
                         # Load pickled information from pilot
                         fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                         jobinfo = aCTPandaJob(filename=fname)
-                        jobmetrics = {'jobMetrics': jobinfo.jobMetrics}
+                        jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
                         self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
                     except Exception,x:
                         self.log.error('%s: No pickle info found: %s' % (j['pandaid'], x))
@@ -346,7 +346,8 @@ class aCTAutopilot(aCTATLASProcess):
         """
         
         # Does it matter which proxy is used? Assume no
-        pjobs=self.pandas.values()[0].queryJobInfo()
+        panda = self.pandas.values()[0]
+        pjobs = panda.queryJobInfo()
 
         # panda error if [] possible
         if len(pjobs) == 0:
@@ -382,7 +383,7 @@ class aCTAutopilot(aCTATLASProcess):
             if job is None and ( j['pandastatus'] == 'running' or j['pandastatus'] == 'transferring' or j['pandastatus'] == 'starting') :
                 self.log.info("Missing: %d" % j['PandaID'])
                 count+=1
-                self.getPanda().updateStatus(j['PandaID'],'failed')
+                panda.updateStatus(j['PandaID'],'failed')
         self.log.info("missing jobs: %d removed" % count)
             
             
