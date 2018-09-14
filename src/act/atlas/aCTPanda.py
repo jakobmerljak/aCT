@@ -1,19 +1,9 @@
 import cgi
 import urllib2, urllib, socket, httplib
-from threading import Thread
 import os
 import pickle
 import re
 from act.common import aCTConfig
-
-class PThr(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.arg = None
-        self.func = None
-    def run(self):
-        self.func(self.arg)
-
 
 class aCTPanda:
 
@@ -207,7 +197,6 @@ class aCTPanda:
         node={}
         node['cloud']=cloud
         node['schedulerID']=self.conf.get(['panda','schedulerid'])
-        urldesc=None
         try:
             urldata=self.__HTTPConnect__('queryJobInfoPerCloud',node)
         except:
@@ -217,19 +206,7 @@ class aCTPanda:
         except:
             return []
 
-    def getst(self,jids):
-        thrs=[]
-        i=0
-        for j in jids:
-            thrs.append(PThr())
-            thrs[i].arg=j
-            thrs[i].func=self.getStatus
-            i=i+1
-        for thr in thrs:
-            thr.start()
-        for thr in thrs:
-            thr.join()
-        
+
 if __name__ == '__main__':
     
     from act.common.aCTLogger import aCTLogger

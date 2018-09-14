@@ -14,12 +14,11 @@ class aCTProcessManager:
         
         # logger
         self.log = log
-        self.conf = conf
         self.actlocation = conf.get(["actlocation","dir"])
-        self.logdir = self.conf.get(["logger", "logdir"])
+        self.logdir = conf.get(["logger", "logdir"])
         # DB connection
-        self.dbarc = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db","file"]))
-        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log, self.conf.get(["db","file"]))
+        self.dbarc = aCTDBArc.aCTDBArc(self.log)
+        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log)
         # list of processes to run per cluster
         self.arcprocesses = ['act/arc/aCTStatus', 'act/arc/aCTFetcher', 'act/arc/aCTCleaner']
         self.condorprocesses = ['act/condor/aCTStatus', 'act/condor/aCTFetcher', 'act/condor/aCTCleaner']
@@ -78,8 +77,8 @@ class aCTProcessManager:
             del self.dbcondor
         except AttributeError: # Already deleted
             pass
-        self.dbarc = aCTDBArc.aCTDBArc(self.log, self.conf.get(["db", "file"]))
-        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log, self.conf.get(["db","file"]))
+        self.dbarc = aCTDBArc.aCTDBArc(self.log)
+        self.dbcondor = aCTDBCondor.aCTDBCondor(self.log)
  
 
     def checkARCClusters(self):
@@ -232,7 +231,7 @@ class aCTProcessManager:
         def __del__(self):
             self.kill()
         def start(self):
-            self.child = subprocess.Popen(['/usr/bin/python2', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
+            self.child = subprocess.Popen(['/usr/bin/env', 'python2', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
         def check(self):
             return self.child.poll()
         def restart(self):

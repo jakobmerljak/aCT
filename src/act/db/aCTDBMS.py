@@ -1,63 +1,60 @@
-from act.common import aCTConfig
+def getDB(log, config):
+    '''Factory method for getting specific DB implementation'''
 
-supported_dbms={}
+    supported_dbms = {}
 
-try:
-    from aCTDBSqlite import aCTDBSqlite
-    supported_dbms['sqlite']=aCTDBSqlite
-except:
-    pass
-try:
-    from aCTDBMySQL import aCTDBMySQL
-    supported_dbms['mysql']=aCTDBMySQL
-except:
-    pass
-try:
-    from aCTDBOracle import aCTDBOracle
-    supported_dbms['oracle']=aCTDBOracle
-except:
-    pass
+    try:
+        from aCTDBSqlite import aCTDBSqlite
+        supported_dbms['sqlite'] = aCTDBSqlite
+    except:
+        pass
+    try:
+        from aCTDBMySQL import aCTDBMySQL
+        supported_dbms['mysql'] = aCTDBMySQL
+    except:
+        pass
+    try:
+        from aCTDBOracle import aCTDBOracle
+        supported_dbms['oracle'] = aCTDBOracle
+    except:
+        pass
 
-config=aCTConfig.aCTConfigARC()
-dbtype=config.get(('db', 'type')).lower()
+    dbtype = config.get(('db', 'type')).lower()
+    if dbtype not in supported_dbms:
+        raise Exception, "DB type %s is not implemented." % dbtype
+    return supported_dbms[dbtype](log, config)
 
-class aCTDBMS(supported_dbms[dbtype]):
-    """Class for generic DB Mgmt System db operations. Inherit specifics from its speciallized superclass depending on configured dbtype."""
-    
-    def __init__(self,logger,dbname="act"):
-        self.log=logger
-        self.dbname=dbname
-        # TODO: Find more generic way to get db config vars
-        self.dbtype=dbtype
-        if self.dbtype=='sqlite':
-            aCTDBSqlite.__init__(self, logger)
-        elif self.dbtype=='mysql':
-            self.socket=str(config.get(('db', 'socket')))
-            self.dbname=str(config.get(('db', 'name')))
-            self.user=str(config.get(('db', 'user')))
-            self.passwd=str(config.get(('db', 'password')))
-            self.host=str(config.get(('db', 'host')))
-            self.port=str(config.get(('db', 'port')))
-            aCTDBMySQL.__init__(self, logger)
-        elif self.dbtype=='oracle':
-            aCTDBOracle.__init__(self, logger)
-        else:
-            raise Exception, "DB type %s is not implemented."%self.dbtype
 
+class aCTDBMS(object):
+    '''
+    Class for generic DB Mgmt System db operations. Specific subclasses
+    implement methods for their own database implementation.
+    '''
+
+    def __init__(self, log, config):
+        self.log = log
+        self.socket = str(config.get(('db', 'socket')))
+        self.dbname = str(config.get(('db', 'name')))
+        self.user =   str(config.get(('db', 'user')))
+        self.passwd = str(config.get(('db', 'password')))
+        self.host =   str(config.get(('db', 'host')))
+        self.port =   str(config.get(('db', 'port')))
+
+    # Each subclass must implement the 6 methods below
     def getCursor(self):
-        return super(aCTDBMS, self).getCursor()
+        raise Exception, "Method not implemented"
 
     def timeStampLessThan(self,column,timediff):
-        return super(aCTDBMS, self).timeStampLessThan(column,timediff)
-    
+        raise Exception, "Method not implemented"
+
     def timeStampGreaterThan(self,column,timediff):
-        return super(aCTDBMS, self).timeStampGreaterThan(column,timediff)
+        raise Exception, "Method not implemented"
 
     def addLock(self):
-        return super(aCTDBMS, self).addLock()
+        raise Exception, "Method not implemented"
 
     def getMutexLock(self, lock_name, timeout=2):
-        return super(aCTDBMS, self).getMutexLock(lock_name, timeout)
+        raise Exception, "Method not implemented"
 
     def releaseMutexLock(self, lock_name):
-        return super(aCTDBMS, self).releaseMutexLock(lock_name)
+        raise Exception, "Method not implemented"

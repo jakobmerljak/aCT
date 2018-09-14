@@ -1,7 +1,10 @@
 from act.db.aCTDB import aCTDB
 
 class aCTDBPanda(aCTDB):
-    
+
+    def __init__(self, log):
+        aCTDB.__init__(self, log, 'pandajobs')
+
     def createTables(self):
         '''
          pandajobs:
@@ -76,12 +79,11 @@ class aCTDBPanda(aCTDB):
         UNIQUE (pandaid)
     )
 """
-        c=self.getCursor()
+        c=self.db.getCursor()
         try:
             c.execute("drop table pandajobs")
         except:
             self.log.warning("no pandajobs table")
-            pass
         try:
             c.execute(str)
             # add indexes
@@ -92,7 +94,6 @@ class aCTDBPanda(aCTDB):
             c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            pass
         
         str="""
         create table pandaarchive (
@@ -108,13 +109,11 @@ class aCTDBPanda(aCTDB):
             c.execute("drop table pandaarchive")
         except:
             self.log.warning("no pandaarchive table")
-            pass
         try:
             c.execute(str)
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            pass
-        self.conn.commit()
+        self.Commit()
         
 
     def insertJob(self,pandaid,pandajob,desc={}):
@@ -122,74 +121,71 @@ class aCTDBPanda(aCTDB):
         desc['pandaid']=pandaid
         desc['pandajob']=pandajob
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s,desc.values())
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         return row
         
     def insertJobArchiveLazy(self,desc={}):
         s="insert into pandaarchive (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s,desc.values())
 
     def deleteJob(self,pandaid):
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("delete from pandajobs where pandaid="+str(pandaid))
-        self.conn.commit()
+        self.Commit()
 
     def updateJob(self,pandaid,desc):
         self.updateJobLazy(pandaid,desc)
-        self.conn.commit()
+        self.Commit()
 
     def updateJobLazy(self,pandaid,desc):
         desc['modified']=self.getTimeStamp()
         s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE pandaid="+str(pandaid)
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s,desc.values())
 
     def updateJobs(self, select, desc):
         self.updateJobsLazy(select, desc)
-        self.conn.commit()
+        self.Commit()
 
     def updateJobsLazy(self, select, desc):
         desc['modified']=self.getTimeStamp()
         s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE "+select
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s,desc.values())
         
     def getJob(self,pandaid,columns=[]):
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE pandaid="+str(pandaid))
         row=c.fetchone()
         return row
 
     def getJobs(self,select,columns=[]):
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE "+select)
         rows=c.fetchall()
         return rows
 
     def getNJobs(self,select):
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("select count(*) from pandajobs where " + select)
         njobs=c.fetchone()['count(*)']
         return int(njobs)
 
     def getJobReport(self):
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("select arcjobid,arcstatus from pandajobs")
         rows=c.fetchall()
         return rows
 
 if __name__ == '__main__':
     import logging
-    from act.common import aCTConfig
     logging.basicConfig(level=logging.DEBUG)
-
-    conf = aCTConfig.aCTConfigATLAS()
-    adb = aCTDBPanda(logging.getLogger(),dbname=conf.get(["db","file"]))
+    adb = aCTDBPanda(logging.getLogger())
     adb.createTables()
