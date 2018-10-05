@@ -383,11 +383,12 @@ class aCTPanda2Xrsl:
             if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
                 self.setInputsES(inf)
 
-            for filename, scope, dsn, guid, token in zip(self.jobdesc['inFiles'][0].split(","),
-                                                         self.jobdesc['scopeIn'][0].split(","),
-                                                         self.jobdesc['realDatasetsIn'][0].split(","),
-                                                         self.jobdesc['GUID'][0].split(","),
-                                                         self.jobdesc['prodDBlockToken'][0].split(",")):
+            for filename, scope, dsn, guid, token, ddmin in zip(self.jobdesc['inFiles'][0].split(","),
+                                                                self.jobdesc['scopeIn'][0].split(","),
+                                                                self.jobdesc['realDatasetsIn'][0].split(","),
+                                                                self.jobdesc['GUID'][0].split(","),
+                                                                self.jobdesc['prodDBlockToken'][0].split(","),
+                                                                self.jobdesc['ddmEndPointIn'][0].split(",")):
 
                 # Skip files which use direct I/O: site has it enabled, token is
                 # not 'local', file is root file and --useLocalIO is not used
@@ -408,7 +409,17 @@ class aCTPanda2Xrsl:
                 eventType = 'get_sm'
                 if re.match('user', self.prodSourceLabel):
                     eventType = 'get_sm_a'
-                self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
+                self.traces.append({'uuid': str(uuid.uuid4()),
+                                    'scope': scope,
+                                    'filename': filename,
+                                    'dataset': dsn,
+                                    'guid': guid,
+                                    'eventVersion': 'aCT',
+                                    'timeStart': time.time(),
+                                    'usrdn': dn[0],
+                                    'localSite': ddmin,
+                                    'remoteSite': ddmin,
+                                    'eventType': eventType})
 
             # some files are double:
             for k, v in inf.items():
