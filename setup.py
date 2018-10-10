@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(name='aCT',
       version='0.1',
@@ -8,7 +8,7 @@ setup(name='aCT',
       author='aCT team',
       author_email='act-dev@cern.ch',
       license='MIT',
-      packages=find_packages(),
+      packages=['src/act'],
       install_requires=[
           'mysql-connector == 2.1.*',  # connection to MySQL database
           'htcondor',                 # bindings to use HTCondor to submit jobs
