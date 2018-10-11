@@ -32,7 +32,7 @@ class aCTStatus:
         cluster_procs = {}
         longprocesses = []
         for line in out.split('\n'):
-            reg = re.match(r'\s*(\d*)\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            reg = re.match(r'\s*(\d*)\s*(.*) .*python.* .*(aCT\w*)\.py\s?(\S*)', line)
             if reg:
                 pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
