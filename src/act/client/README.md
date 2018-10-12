@@ -19,6 +19,19 @@ Installation
 
 Install dependencies.
 
+aCT archive has to be created first from the source repository.
+Clone or download aCT repository, change directory to the root
+of the repository and switch to `client` branch.
+Navigate to the `src/act/client` directory. Run package script
+that will prepare the aCT archive in given location:
+
+```bash
+./package.sh <path of repository> <path of archive>
+```
+
+Note that package script will add `.zip` suffix to the given path
+of the archive.
+
 Unpack aCT archive wherever you want. Location of unpacked archive is from
 now on refered to as **_aCT-root_**.
 
