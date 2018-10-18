@@ -7,7 +7,7 @@ setup(name='aCT',
       python_requires='>=2.7',
       author='aCT team',
       author_email='act-dev@cern.ch',
-      license='MIT',
+      license='Apache 2.0',
       package_dir = {'': 'src'},
       packages=find_packages('src'),
       install_requires=[
@@ -15,6 +15,10 @@ setup(name='aCT',
           'htcondor',                 # bindings to use HTCondor to submit jobs
           'pylint',                   # for travis automatic tests
           'requests'                  # for APF mon calls
+          ],
+      data_files=[
+          ('etc/act', ['doc/aCTConfigARC.xml.template',
+                       'doc/aCTConfigATLAS.xml.template'])
           ]
 )
  
