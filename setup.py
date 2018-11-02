@@ -18,11 +18,12 @@ setup(name='aCT',
       ],
       entry_points={
         'console_scripts': [
+            'actmain = act.common.aCTMain:main',
             'actreport = act.common.aCTReport:main'
         ]
       },
       data_files=[
           ('etc/act', ['doc/aCTConfigARC.xml.template',
                        'doc/aCTConfigATLAS.xml.template'])
-          ]
+      ]
 )
