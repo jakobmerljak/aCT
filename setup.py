@@ -11,14 +11,18 @@ setup(name='aCT',
       package_dir = {'': 'src'},
       packages=find_packages('src'),
       install_requires=[
-          'mysql-connector == 2.1.*',  # connection to MySQL database
-          'htcondor',                 # bindings to use HTCondor to submit jobs
-          'pylint',                   # for travis automatic tests
-          'requests'                  # for APF mon calls
-          ],
+        'mysql-connector==2.1.*',   # connection to MySQL database
+        'htcondor',                 # bindings to use HTCondor to submit jobs
+        'pylint',                   # for travis automatic tests
+        'requests'                  # for APF mon calls
+      ],
+      entry_points={
+        'console_scripts': [
+            'actreport = act.common.aCTReport:main'
+        ]
+      },
       data_files=[
           ('etc/act', ['doc/aCTConfigARC.xml.template',
                        'doc/aCTConfigATLAS.xml.template'])
           ]
 )
- 
