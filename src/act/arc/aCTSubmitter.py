@@ -199,7 +199,7 @@ class aCTSubmitter(aCTProcess):
     
             # Set UserConfig credential for each proxy. Assumes that any proxy
             # in the fairshare can query the CE infosys
-            self.uc.CredentialString(self.db.getProxy(jobs[0]['proxyid']))
+            self.uc.CredentialString(str(self.db.getProxy(jobs[0]['proxyid'])))
             # retriever contains a list of CE endpoints
             retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
             retriever.wait()
@@ -290,7 +290,7 @@ class aCTSubmitter(aCTProcess):
                     continue
                 # TODO: might not work if proxies are different within a share
                 # since same uc object is shared among threads
-                self.uc.CredentialString(self.db.getProxy(j['proxyid']))
+                self.uc.CredentialString(str(self.db.getProxy(j['proxyid'])))
                 t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
                 self.RunThreadsSplit([t],1)
                 count=count+1
@@ -327,7 +327,7 @@ class aCTSubmitter(aCTProcess):
         
         self.log.info("Cancelling %i jobs" % sum(len(v) for v in jobstocancel.values()))
         for proxyid, jobs in jobstocancel.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
                 
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
@@ -367,7 +367,7 @@ class aCTSubmitter(aCTProcess):
         jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
  
         for proxyid, jobs in jobstoresubmit.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
             
             # Clean up jobs which were submitted
             jobstoclean = [job[2] for job in jobs if job[2].JobID]
@@ -421,7 +421,7 @@ class aCTSubmitter(aCTProcess):
 
         self.log.info("Resuming %i jobs" % sum(len(v) for v in jobstorerun.values()))
         for proxyid, jobs in jobstorerun.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
     
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()

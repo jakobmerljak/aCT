@@ -32,7 +32,7 @@ class aCTStatus:
         cluster_procs = {}
         longprocesses = []
         for line in out.split('\n'):
-            reg = re.match(r'\s*(\d*)\s*(.*) /.*python.* .*(aCT\w*)\.py\s?(\S*)', line)
+            reg = re.match(r'\s*(\d*)\s*(.*) .*python.* .*(aCT\w*)\.py\s?(\S*)', line)
             if reg:
                 pid, runningtime, process, cluster = reg.groups()
                 # ignore Main and this process
@@ -93,7 +93,10 @@ class aCTStatus:
                 try:
                     rep[site][state]=1
                     if state == "running":
-                        rep[site]["slots"]+=1*corecount 
+                        try:
+                            rep[site]["slots"]+=1*corecount
+                        except:
+                            rep[site]["slots"]=corecount
                 except:
                     rep[site]={}
                     rep[site][state]=1
@@ -263,10 +266,13 @@ class aCTStatus:
                 print count, cluster
             print
 
-acts=aCTStatus()
-acts.PandaReport()
-acts.ArcJobReport()
-acts.CondorJobReport()
-acts.StuckReport()
-acts.ProcessReport()
+def main():
+    acts=aCTStatus()
+    acts.PandaReport()
+    acts.ArcJobReport()
+    acts.CondorJobReport()
+    acts.StuckReport()
+    acts.ProcessReport()
 
+if __name__ == '__main__':
+    main()
