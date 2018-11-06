@@ -94,7 +94,8 @@ class aCTDBPanda(aCTDB):
             c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")
         except Exception,x:
             self.log.error("failed create table %s" %x)
-        
+            return False
+
         str="""
         create table pandaarchive (
         pandaid bigint, 
@@ -113,8 +114,11 @@ class aCTDBPanda(aCTDB):
             c.execute(str)
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            return False
+
         self.Commit()
-        
+        return True
+
 
     def insertJob(self,pandaid,pandajob,desc={}):
         desc['created']=self.getTimeStamp()
