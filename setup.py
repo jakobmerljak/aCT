@@ -18,6 +18,7 @@ setup(name='aCT',
       ],
       entry_points={
         'console_scripts': [
+            'actbootstrap = act.common.aCTBootstrap:main',
             'actmain = act.common.aCTMain:main',
             'actreport = act.common.aCTReport:main'
         ]
