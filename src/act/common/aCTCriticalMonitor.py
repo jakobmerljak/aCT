@@ -8,22 +8,27 @@ from act.common.aCTConfig import aCTConfigARC
 from datetime import datetime, timedelta
 import re
 
-conf = aCTConfigARC()
-criticallog = '%s/aCTCritical.log' % conf.get(["logger", "logdir"])
-criticalerrors = 0
-lastcritical = ''
-now = datetime.now()
+def main():
 
-with open(criticallog) as f:
-    for line in f:
-        t = re.match('\[(\d\d\d\d\-\d\d\-\d\d\s\d\d:\d\d:\d\d,\d\d\d)\].*\[CRITICAL\]', line)
-        if t:
-            if abs(now-datetime.strptime(t.group(1), '%Y-%m-%d %H:%M:%S,%f')) < timedelta(hours=1):
-                criticalerrors += 1
-                lastcritical = line
-        else:
-            lastcritical += line
+    conf = aCTConfigARC()
+    criticallog = '%s/aCTCritical.log' % conf.get(["logger", "logdir"])
+    criticalerrors = 0
+    lastcritical = ''
+    now = datetime.now()
 
-if criticalerrors:
-    print '%d critical errors in the last hour\n' % criticalerrors
-    print 'Last critical error:\n%s' % lastcritical
+    with open(criticallog) as f:
+        for line in f:
+            t = re.match('\[(\d\d\d\d\-\d\d\-\d\d\s\d\d:\d\d:\d\d,\d\d\d)\].*\[CRITICAL\]', line)
+            if t:
+                if abs(now-datetime.strptime(t.group(1), '%Y-%m-%d %H:%M:%S,%f')) < timedelta(hours=1):
+                    criticalerrors += 1
+                    lastcritical = line
+            else:
+                lastcritical += line
+
+    if criticalerrors:
+        print '%d critical errors in the last hour\n' % criticalerrors
+        print 'Last critical error:\n%s' % lastcritical
+
+if __name__ == '__main__':
+    main()
