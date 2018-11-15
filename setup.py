@@ -19,7 +19,9 @@ setup(name='aCT',
       entry_points={
         'console_scripts': [
             'actmain = act.common.aCTMain:main',
-            'actreport = act.common.aCTReport:main'
+            'actreport = act.common.aCTReport:main',
+            'actcriticalmonitor = act.common.aCTCriticalMonitor:main',
+            'actheartbeatwatchdog = act.atlas.aCTHeartbeatWatchdog:main'
         ]
       },
       data_files=[
