@@ -109,7 +109,7 @@ class aCTDBArc(aCTDB):
         if row:
             answer = raw_input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
-                return
+                return True
             c.execute("drop table arcjobs")
 
         # Create arcjobs
@@ -118,7 +118,8 @@ class aCTDBArc(aCTDB):
             self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            
+            return False
+
         # Create job description table
         create="""CREATE TABLE jobdescriptions (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -135,7 +136,8 @@ class aCTDBArc(aCTDB):
             self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            
+            return False
+
         # Create proxies table (can be dropped without asking)
         self.log.info("creating proxies table")
         create="""CREATE TABLE proxies (
@@ -156,6 +158,9 @@ class aCTDBArc(aCTDB):
             self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            return False
+
+        return True
 
     def insertArcJob(self, job):
         '''
