@@ -278,7 +278,7 @@ class aCTReport:
                     clustercount[host] = 1
 
             for cluster, count in clustercount.items():
-                self.log(count, cluster)
+                self.log('%s %s' % (count, cluster))
             self.log()
 
     def end(self):
