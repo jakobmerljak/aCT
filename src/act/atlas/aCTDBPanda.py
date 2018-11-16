@@ -79,11 +79,18 @@ class aCTDBPanda(aCTDB):
         UNIQUE (pandaid)
     )
 """
-        c=self.db.getCursor()
-        try:
+
+        # First check if table already exists
+        c = self.db.getCursor()
+        c.execute("show tables like 'pandajobs'")
+        row = c.fetchone()
+        self.Commit()
+        if row:
+            answer = raw_input("Table pandajobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            if answer != 'y':
+                return True
             c.execute("drop table pandajobs")
-        except:
-            self.log.warning("no pandajobs table")
+
         try:
             c.execute(str)
             # add indexes
