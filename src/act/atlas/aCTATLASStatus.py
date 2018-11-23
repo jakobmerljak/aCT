@@ -47,7 +47,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s" % self.sitesselect,
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s limit 100" % self.sitesselect,
                                     ['pandaid', 'arcjobid', 'pandastatus', 'id', 'siteName'])
         if not jobs:
             return
