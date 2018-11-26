@@ -39,7 +39,7 @@ class aCTValidator(aCTATLASProcess):
             
         self.uc = arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(proxyfile))
-        self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
+        self.uc.UtilsDirPath(str(arc.UserConfig.ARCUSERDIRECTORY))
         
         # Possible file status
         self.ok = 0
