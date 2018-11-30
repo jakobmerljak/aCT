@@ -75,8 +75,10 @@ class aCTAGISParser:
                 siteinfo['maxjobs'] = 0
             if (not siteinfo.has_key('corecount')) or (not siteinfo['corecount']):
                 siteinfo['corecount'] = 1
-            if not siteinfo.has_key('flavour') and siteinfo['queues']:
+            if siteinfo.get['queues']:
                 siteinfo['flavour'] = siteinfo['queues'][0]['ce_flavour']
+            else:
+                siteinfo['flavour'] = 'UNKNOWN'
             # pull out endpoints
             if not siteinfo.has_key('endpoints'):
                 endpoints = []
