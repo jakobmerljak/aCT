@@ -138,11 +138,12 @@ class aCTValidator(aCTATLASProcess):
         if not os.path.exists(arcjoblog):
             try:
                 shutil.move(gmlogerrors, arcjoblog)
+                os.chmod(arcjoblog, 0644)
             except:
                 self.log.error("Failed to copy %s" % gmlogerrors) 
 
         pilotlog = aj['stdout']
-        if not pilotlog:
+        if not pilotlog and os.path.exists(localdir):
             pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
             if pilotlogs:
                 pilotlog = pilotlogs[0]
@@ -150,11 +151,11 @@ class aCTValidator(aCTATLASProcess):
             try:
                 shutil.move(os.path.join(localdir, pilotlog),
                             os.path.join(outd, '%s.out' % aj['appjobid']))
+                os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False
-        # set right permissions
-        aCTUtils.setFilePermissionsRecursive(outd)
+
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
