@@ -9,9 +9,23 @@ import errno
 import arc
 import shutil
 import fnmatch, re
+from threading import Thread
 
 from act.common.aCTProcess import aCTProcess
 from act.common import aCTUtils
+
+class fetchSomeThr(Thread):
+    """
+    Helper function for threading
+    """
+    def __init__ (self, func, jobs, downloadfiles):
+        Thread.__init__(self)
+        self.func = func
+        self.jobs = jobs
+        self.downloadfiles = downloadfiles
+        self.result = (None, None, None)
+    def run(self):
+        self.result = self.func(self.jobs, self.downloadfiles)
 
 class aCTFetcher(aCTProcess):
     '''
@@ -40,6 +54,7 @@ class aCTFetcher(aCTProcess):
             elif f.GetType()==f.file_type_dir:
                 filelist = self.listUrlRecursive(url, (fname+'/'+str(f.GetName())).strip('/'), filelist)
         return filelist
+
   
   
     def fetchSome(self, jobs, downloadfiles):
@@ -99,9 +114,7 @@ class aCTFetcher(aCTProcess):
                         notfetched.append(jobid)
                         break
                 remotefile = arc.URL(str(jobid + '/' + f))
-                if not dp.SetURL(remotefile):
-                    datapoint = aCTUtils.DataPoint(remotefile.str(), self.uc)
-                    dp = datapoint.h
+                dp.SetURL(remotefile)
                 localdp = aCTUtils.DataPoint(localfile, self.uc)
                 # do the copy
                 status = dm.Transfer(dp, localdp.h, arc.FileCache(), arc.URLMap())
@@ -151,10 +164,26 @@ class aCTFetcher(aCTProcess):
             fetched.extend(f)
             notfetchedretry.extend(r)
 
-            (f, n, r) = self.fetchSome(jobs_downloadsome, downloadfiles)
-            fetched.extend(f)
-            notfetched.extend(n)
-            notfetchedretry.extend(r)
+            nthreads=10
+            jobkeys=jobs_downloadsome.keys()
+            # split job list in nthreads sublists
+            jl=[jobkeys[i:i + nthreads] for i in range(0, len(jobkeys), nthreads)]
+
+            for l in jl:
+                tlist = []
+                # loop over sublist
+                for j in l:
+                    # one job per thread
+                    onejob=dict((k,jobs_downloadsome[k]) for k in [j])
+                    t = fetchSomeThr(self.fetchSome, onejob ,downloadfiles)
+                    tlist.append(t)
+                    t.start()
+                for t in tlist:
+                    t.join()
+                    (f,n,r) = t.result
+                    fetched.extend(f)
+                    notfetched.extend(n)
+                    notfetchedretry.extend(r)
 
         # Check for massive failure, and back off before trying again
         # TODO: downtime awareness
