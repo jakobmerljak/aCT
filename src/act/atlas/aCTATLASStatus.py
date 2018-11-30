@@ -47,7 +47,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.Commit()
         
         # Get jobs killed by panda
-        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s" % self.sitesselect,
+        jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s limit 100" % self.sitesselect,
                                     ['pandaid', 'arcjobid', 'pandastatus', 'id', 'siteName'])
         if not jobs:
             return
@@ -63,7 +63,7 @@ class aCTATLASStatus(aCTATLASProcess):
             
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
-            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName',
+            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster',
                        'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb', 'pandajobs.created']
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
@@ -341,8 +341,8 @@ class aCTATLASStatus(aCTATLASProcess):
                     self.log.error("Failed to copy %s" % gmlogerrors) 
 
             pilotlog = aj['stdout']
-            if not pilotlog:
-                pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
+            if not pilotlog and os.path.exists(localdir):
+                pilotlogs = [f for f in os.listdir(localdir) and f.find('.log') != -1]
                 if pilotlogs:
                     pilotlog = pilotlogs[0]
             if pilotlog:
