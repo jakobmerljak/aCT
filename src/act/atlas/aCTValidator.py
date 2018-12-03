@@ -382,11 +382,14 @@ class aCTValidator(aCTATLASProcess):
         Remove directory to which job was downloaded.
         '''
 
-        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID','appjobid'])
         if job and job['JobID']:
             sessionid = job['JobID'][job['JobID'].rfind('/'):]
             localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
             shutil.rmtree(localdir, ignore_errors=True)
+            pandaid=job['appjobid']
+            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
     def validateEvents(self, arcjobid):
