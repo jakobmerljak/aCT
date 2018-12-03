@@ -670,6 +670,7 @@ class aCTValidator(aCTATLASProcess):
                 else:
                     # Can't clean outputs so mark as failed (see more detail below)
                     self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                    self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid='"+str(job["arcjobid"])+"'"
                     desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
                     self.dbpanda.updateJobs(select, desc)
