@@ -138,23 +138,25 @@ class aCTValidator(aCTATLASProcess):
         if not os.path.exists(arcjoblog):
             try:
                 shutil.move(gmlogerrors, arcjoblog)
+                os.chmod(arcjoblog, 0644)
             except:
                 self.log.error("Failed to copy %s" % gmlogerrors) 
 
         pilotlog = aj['stdout']
-        if not pilotlog:
-            pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
-            if pilotlogs:
-                pilotlog = pilotlogs[0]
+        if not pilotlog and os.path.exists(localdir):
+            pilotlogs = [f for f in os.listdir(localdir)]
+            for f in pilotlogs:
+                if f.find('.log'):
+                    pilotlog = f
         if pilotlog:
             try:
                 shutil.move(os.path.join(localdir, pilotlog),
                             os.path.join(outd, '%s.out' % aj['appjobid']))
+                os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False
-        # set right permissions
-        aCTUtils.setFilePermissionsRecursive(outd)
+
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
@@ -381,11 +383,14 @@ class aCTValidator(aCTATLASProcess):
         Remove directory to which job was downloaded.
         '''
 
-        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID','appjobid'])
         if job and job['JobID']:
             sessionid = job['JobID'][job['JobID'].rfind('/'):]
             localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
             shutil.rmtree(localdir, ignore_errors=True)
+            pandaid=job['appjobid']
+            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
     def validateEvents(self, arcjobid):
