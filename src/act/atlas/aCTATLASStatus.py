@@ -342,9 +342,10 @@ class aCTATLASStatus(aCTATLASProcess):
 
             pilotlog = aj['stdout']
             if not pilotlog and os.path.exists(localdir):
-                pilotlogs = [f for f in os.listdir(localdir) and f.find('.log') != -1]
-                if pilotlogs:
-                    pilotlog = pilotlogs[0]
+                pilotlogs = [f for f in os.listdir(localdir)]
+                for f in pilotlogs:
+                    if f.find('.log'):	
+                        pilotlog = f
             if pilotlog:
                 try:
                     shutil.copy(os.path.join(localdir, pilotlog),
