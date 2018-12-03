@@ -39,7 +39,7 @@ class aCTValidator(aCTATLASProcess):
             
         self.uc = arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(proxyfile))
-        self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
+        self.uc.UtilsDirPath(str(arc.UserConfig.ARCUSERDIRECTORY))
         
         # Possible file status
         self.ok = 0
@@ -670,6 +670,7 @@ class aCTValidator(aCTATLASProcess):
                 else:
                     # Can't clean outputs so mark as failed (see more detail below)
                     self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                    self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid='"+str(job["arcjobid"])+"'"
                     desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
                     self.dbpanda.updateJobs(select, desc)
