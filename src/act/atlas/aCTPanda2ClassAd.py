@@ -5,12 +5,13 @@ import time
 
 class aCTPanda2ClassAd:
 
-    def __init__(self, pandajob, sitename, siteinfo, proxypath, tmpdir, atlasconf, metadata, log):
+    def __init__(self, pandajob, pandajobid, sitename, siteinfo, proxypath, tmpdir, atlasconf, metadata, log):
         # To work with htcondor.Submit() a plain dict is used instead of a
         # ClassAd object. All values must be strings.
         self.classad = {'Universe': '9'} # Always use grid universe
         self.log = log
         self.pandajob = pandajob
+        self.pandajobid = pandajobid
         self.jobdesc = cgi.parse_qs(pandajob)
         self.pandaid = self.jobdesc['PandaID'][0]
         self.prodsourcelabel = self.jobdesc.get('prodSourceLabel', ['None'])[0]
@@ -194,8 +195,9 @@ class aCTPanda2ClassAd:
         environment.append('GTAG=%s/%s.out' % (self.logurl, self.pandaid))
         
         # Vars for APFMon
-        environment.append('APFCID=%s' % self.pandaid)
-        environment.append('APFFID=%s' % self.schedulerid)
+        environment.append('APFCID=%s' % self.pandajobid)
+        # harvester prepends "harvester-" to the schedulerid but APFMon uses the original one
+        environment.append('APFFID=%s' % self.schedulerid.replace("harvester-",""))
         if self.monitorurl:
             environment.append('APFMON=%s' % self.monitorurl)
         environment.append('FACTORYQUEUE=%s' % self.sitename)
