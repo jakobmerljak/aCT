@@ -357,7 +357,7 @@ class aCTATLASStatus(aCTATLASProcess):
             aCTUtils.setFilePermissionsRecursive(outd)
 
             try:
-                smeta = json.loads(aj['metadata'])
+                smeta = json.loads(str(aj['metadata']))
             except:
                 smeta = None
             
