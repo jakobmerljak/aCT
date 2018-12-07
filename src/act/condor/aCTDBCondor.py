@@ -84,7 +84,7 @@ class aCTDBCondor(aCTDB):
         if row:
             answer = raw_input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
-                return
+                return False
             c.execute("drop table condorjobs")
 
         # Create condorjobs
@@ -93,6 +93,9 @@ class aCTDBCondor(aCTDB):
             self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            return False
+
+        return True
 
     def insertCondorJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', fairshare=''):
         '''
