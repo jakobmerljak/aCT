@@ -2,6 +2,7 @@ import sys
 from act.common.aCTLogger import aCTLogger
 from act.common.aCTConfig import aCTConfigARC, aCTConfigATLAS
 from act.arc.aCTDBArc import aCTDBArc
+from act.condor.aCTDBCondor import aCTDBCondor
 from act.atlas.aCTDBPanda import aCTDBPanda
 
 
@@ -25,9 +26,12 @@ def bootstrap_db():
     logger = aCTLogger('aCTBootstrap')
     log = logger()
     dbarc = aCTDBArc(log)
+    dbcondor = aCTDBCondor(log)
     dbpanda = aCTDBPanda(log)
     if not dbarc.createTables():
         print('Error creating arc tables, see aCTBootstrap.log for details')
+    if not dbcondor.createTables():
+        print('Error creating condor tables, see aCTBootstrap.log for details')
     if not dbpanda.createTables():
         print('Error creating panda tables, see aCTBootstrap.log for details')
 
