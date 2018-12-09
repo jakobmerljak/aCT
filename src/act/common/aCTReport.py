@@ -1,38 +1,38 @@
-import logging
 import os
 import re
 import signal
 import subprocess
 import sys
 import time
+import logging
 from act.common import aCTLogger
 from act.arc import aCTDBArc
 from act.atlas import aCTDBPanda
+
 
 class aCTReport:
     '''Print summary info on jobs in DB. Use --web to print html that is
     automatically refreshed'''
 
     def __init__(self):
+        self.output = ""
+        self.harvester = False
+        self.outfile = None
         self.logger=aCTLogger.aCTLogger("aCTReport")
         self.actlog=self.logger()
         self.actlog.logger.setLevel(logging.ERROR)
         self.criticallogger = aCTLogger.aCTLogger('aCTCritical', arclog=False)
         self.criticallog = self.criticallogger()
 
-        self.printlog = logging.getLogger()
-        self.printlog.setLevel(logging.INFO)
-        handler = logging.StreamHandler(sys.stdout)
-        self.printlog.addHandler(handler)
-        if len(sys.argv) == 2 and sys.argv[1] == '--web':
+        if len(sys.argv) >= 2 and sys.argv[1] == '--web':
             self.log('<META HTTP-EQUIV="refresh" CONTENT="60"><pre>')
             self.log(time.asctime() + '\n')
 
         self.db=aCTDBArc.aCTDBArc(self.actlog)
         self.pandadb=aCTDBPanda.aCTDBPanda(self.actlog)
 
-    def log(self, message='\n'):
-        self.printlog.info(message)
+    def log(self, message=''):
+        self.output += message + '\n'
 
     def ProcessReport(self):
         actprocscmd = 'ps ax -ww -o pid,etime,args'
@@ -153,7 +153,7 @@ class aCTReport:
                  "Failed", "Deleted", "Other"]
 
         self.log("All ARC jobs: %d" % len(rows))
-        self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
+        self.log("%39s %s" % (' ', ' '.join(['%9s' % s for s in states])))
         for r in rows:
 
             reg=re.search('.+//([^:]+)',str(r[0]))
@@ -180,15 +180,17 @@ class aCTReport:
             except:
                 rtot[jid]=1
 
-        for k in sorted(rep.keys()):
-            log="%28s:" % k[:28]
+        #for k in sorted(rep.keys()):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
+	    k='.'.join(list(reversed(y)))
+            log="%38s:" % k[:38]
             for s in states:
                 try:
                     log += '%10s' % str(rep[k][s])
                 except KeyError:
                     log += '%10s' % '-'
             self.log(log)
-        log = "%28s:" % "Totals"
+        log = "%38s:" % "Totals"
         for s in states:
             try:
                 log += '%10s' % str(rtot[s])
@@ -235,8 +237,9 @@ class aCTReport:
                 rtot[jid]+=1
             except:
                 rtot[jid]=1
-
-        for k in sorted(rep.keys()):
+        #for k in sorted(rep.keys()):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
+	    k='.'.join(list(reversed(y)))
             log="%28s:" % k[:28]
             for s in range(8):
                 try:
@@ -280,20 +283,75 @@ class aCTReport:
             for cluster, count in clustercount.items():
                 self.log('%s %s' % (count, cluster))
             self.log()
+    def HarvesterReport(self):
+
+        from distutils.sysconfig import get_python_lib
+        sys.path.append(get_python_lib()+'/pandacommon')
+
+        os.environ['PANDA_HOME']=os.environ['VIRTUAL_ENV']
+
+        from collections import defaultdict
+        from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy
+
+        self.dbProxy = DBProxy()
+
+        workers = self.dbProxy.get_worker_stats_bulk(None)
+        rep = {}
+
+        states = ["to_submit","submitted", "running"]
+        rtot = defaultdict(int)
+
+        self.log("All Harvester jobs")
+        self.log( "%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
+        for site, resources in workers.items():
+            for resource, jobs in resources.items():
+                rep['%s-%s' % (site, resource)] = jobs
+                for state, count in jobs.items():
+                    rtot[state] += count
+
+        for k in sorted(rep.keys()):
+            log="%28s:" % k[:28]
+            for s in states:
+                try:
+                    log += '%10s' % str(rep[k][s])
+                except KeyError:
+                    log += '%10s' % '-'
+            self.log(log)
+        log = "%28s:" % "Totals"
+        for s in states:
+            try:
+                log += '%10s' % str(rtot[s])
+            except:
+                log += '%10s' % '-'
+        self.log(log+'\n\n')
 
     def end(self):
-        if len(sys.argv) == 2 and sys.argv[1] == '--web':
+        if len(sys.argv) >= 2 and sys.argv[1] == '--web':
             self.log('</pre>')
 
 
 def main():
     acts=aCTReport()
+    args=iter(sys.argv)
+    for i in args:
+        if i == "--web":
+            acts.outfile = args.next()
+        if i == "--harvester":
+            acts.harvester = True
     acts.PandaReport()
+    if acts.harvester:
+        acts.HarvesterReport()
     acts.ArcJobReport()
     acts.CondorJobReport()
     acts.StuckReport()
     acts.ProcessReport()
     acts.end()
+    if acts.outfile is None:
+        sys.stdout.write(acts.output)
+    else:
+        f=open(acts.outfile,"w")
+        f.write(acts.output)
+        f.close()
 
 if __name__ == '__main__':
     main()
