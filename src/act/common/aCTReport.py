@@ -284,7 +284,7 @@ class aCTReport:
                 self.log('%s %s' % (count, cluster))
             self.log()
     def HarvesterReport(self):
-
+      try:
         from distutils.sysconfig import get_python_lib
         sys.path.append(get_python_lib()+'/pandacommon')
 
@@ -324,6 +324,8 @@ class aCTReport:
             except:
                 log += '%10s' % '-'
         self.log(log+'\n\n')
+      except:
+        pass
 
     def end(self):
         if len(sys.argv) >= 2 and sys.argv[1] == '--web':
