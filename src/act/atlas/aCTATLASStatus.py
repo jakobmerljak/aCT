@@ -341,10 +341,11 @@ class aCTATLASStatus(aCTATLASProcess):
                     self.log.error("Failed to copy %s" % gmlogerrors) 
 
             pilotlog = aj['stdout']
-            if not pilotlog:
-                pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
-                if pilotlogs:
-                    pilotlog = pilotlogs[0]
+            if not pilotlog and os.path.exists(localdir):
+                pilotlogs = [f for f in os.listdir(localdir)]
+                for f in pilotlogs:
+                    if f.find('.log'):	
+                        pilotlog = f
             if pilotlog:
                 try:
                     shutil.copy(os.path.join(localdir, pilotlog),
@@ -356,7 +357,7 @@ class aCTATLASStatus(aCTATLASProcess):
             aCTUtils.setFilePermissionsRecursive(outd)
 
             try:
-                smeta = json.loads(aj['metadata'])
+                smeta = json.loads(str(aj['metadata']))
             except:
                 smeta = None
             

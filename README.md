@@ -16,12 +16,12 @@ However, ARC python bindings are not available in pip so must be installed as a 
 
 Then one of two workarounds must be done to use ARC modules in the virtualenv, either create symlinks inside the virtualenv, eg
 ```
-$ ln -s /usr/lib64/python2.7/site-packages/_arc.so lib64/python2.7/site-packages/_arc.so
-$ ln -s /usr/lib64/python2.7/site-packages/arc lib64/python2.7/site-packages/arc
+$ ln -s /usr/lib64/python2.7/site-packages/_arc.so aCT/lib64/python2.7/site-packages/_arc.so
+$ ln -s /usr/lib64/python2.7/site-packages/arc aCT/lib64/python2.7/site-packages/arc
 ```
 or add the system packages to your python path
 ```
-export PYTHONPATH=/usr/lib64/python2.7/site-packages/arc lib64/python2.7/site-packages/arc
+export PYTHONPATH=/usr/lib64/python2.7/site-packages/arc
 ```
 aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite.
 

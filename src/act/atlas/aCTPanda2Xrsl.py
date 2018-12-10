@@ -12,6 +12,7 @@ class aCTPanda2Xrsl:
         self.log = log
         self.pandajob = pandadbjob['pandajob']
         self.jobdesc = cgi.parse_qs(self.pandajob)
+        self.pandajobid = pandadbjob['id']
         self.pandaid = self.jobdesc['PandaID'][0]
         self.xrsl = {}
         self.siteinfo = siteinfo
@@ -510,8 +511,9 @@ class aCTPanda2Xrsl:
 
         # Vars for APFMon (truepilot only)
         if self.truepilot and self.monitorurl:
-            environment['APFCID'] = self.pandaid
-            environment['APFFID'] = self.schedulerid
+            environment['APFCID'] = self.pandajobid
+            # harvester prepends "harvester-" to the schedulerid but APFMon uses the original one
+            environment['APFFID'] = self.schedulerid.replace("harvester-","")
             environment['APFMON'] = self.monitorurl
             environment['FACTORYQUEUE'] = self.sitename
 

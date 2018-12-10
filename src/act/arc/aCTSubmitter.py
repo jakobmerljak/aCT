@@ -139,12 +139,12 @@ class aCTSubmitter(aCTProcess):
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 100".format(self.cluster, fairshare),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 100".format(fairshare),
                                                 columns=["id", "jobdesc", "appjobid", "priority"])
                 # mark submitting in db
                 jobs_taken=[]
@@ -299,8 +299,11 @@ class aCTSubmitter(aCTProcess):
             # commit transaction to release row locks
             self.db.Commit()
 
-            # EMI-ES proxy problem - see bug 3685
+            # EMI-ES proxy problem - see bug 3685 (fixed in 5.4.3 but keep for issue below)
             if self.cluster and self.cluster.startswith('https://'):
+                raise ExceptInterrupt(15)
+            # Can't switch credentials when uploading files - bug 3772
+            if self.cluster and self.cluster.startswith('gsiftp://'):
                 raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
