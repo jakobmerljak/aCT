@@ -99,6 +99,7 @@ class aCTDBPanda(aCTDB):
             c.execute("ALTER TABLE pandajobs ADD INDEX (pandaid)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (pandastatus)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")
+            c.execute("ALTER TABLE pandajobs ADD INDEX (siteName)")
         except Exception,x:
             self.log.error("failed create table %s" %x)
             return False

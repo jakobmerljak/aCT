@@ -284,14 +284,14 @@ class aCTReport:
                 self.log('%s %s' % (count, cluster))
             self.log()
     def HarvesterReport(self):
-
-        from distutils.sysconfig import get_python_lib
+      try:
+        from distutils.sysconfig import get_python_lib # pylint: disable=import-error
         sys.path.append(get_python_lib()+'/pandacommon')
 
         os.environ['PANDA_HOME']=os.environ['VIRTUAL_ENV']
 
-        from collections import defaultdict
-        from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy
+        from collections import defaultdict # pylint: disable=import-error
+        from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy # pylint: disable=import-error
 
         self.dbProxy = DBProxy()
 
@@ -324,6 +324,8 @@ class aCTReport:
             except:
                 log += '%10s' % '-'
         self.log(log+'\n\n')
+      except:
+        pass
 
     def end(self):
         if len(sys.argv) >= 2 and sys.argv[1] == '--web':
