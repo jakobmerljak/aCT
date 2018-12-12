@@ -53,7 +53,12 @@ class aCTAGISParser:
                 siteinfo['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["push"])[0])
             except:
                 pass
-            siteinfo['status'] = 'online'
+            # If status is already defined in AGIS then only override if explicity specified here
+            try:
+                siteinfo['status'] = self.conf.getListCond(["sites","site"],"name=" + sitename, ["status"])[0]
+            except:
+                if not self.sites.get(sitename, {}).get('status'):
+                    siteinfo['status'] = 'online'
             siteinfo['enabled'] = True
             sites[sitename] = siteinfo
         self.log.info("Parsed sites from config: %s" % str(sites.keys()))
