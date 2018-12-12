@@ -339,9 +339,7 @@ class aCTPanda2Xrsl:
             return
         
         if self.eventranges:
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
-        elif self.sitename == 'BOINC_CHECKPOINT':
-            x += '(ARCpilot "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-nolimit")'
+            x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
         else:
             x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
