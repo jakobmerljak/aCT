@@ -41,7 +41,7 @@ class PandaEventsThr(Thread):
     def run(self):
         self.result = self.func(self.node)
 
-class aCTAutopilot(aCTATLASProcess):
+class aCTAutopilotSent(aCTATLASProcess):
 
     """
     Main class for Panda interaction. Three major functions: init, run, finish
@@ -426,24 +426,10 @@ class aCTAutopilot(aCTATLASProcess):
         """
         self.setSites()
 
-        # Getting new jobs is now done in aCTPandaGetJobs
-        
         # Update all jobs currently in the system
-        self.updatePandaHeartbeat('starting')
-        self.updatePandaHeartbeat('running')
-        self.updatePandaHeartbeat('transferring')
-        
-        # Update jobs which finished
-        self.updatePandaFinishedPilot()
-        
-        # Move old jobs to archive - every hour
-        if time.time()-self.starttime > 3600:
-            self.log.info("Checking for jobs to archive")
-            self.updateArchive()
-            self.starttime = time.time()
-
+        self.updatePandaHeartbeat('sent')
         
 if __name__ == '__main__':
-    am=aCTAutopilot()
+    am=aCTAutopilotSent()
     am.run()
     #am.finish()
