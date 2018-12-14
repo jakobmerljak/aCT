@@ -1,4 +1,5 @@
 from threading import Thread
+import cgi
 import datetime
 import os
 import json
@@ -26,6 +27,19 @@ class PandaThr(Thread):
         self.result = None
     def run(self):
         self.result=self.func(self.id,self.status,self.args)
+
+class PandaBulkThr(Thread):
+    """
+    Bulk update pandaStatus
+    """
+    def __init__ (self,func,ids,args):
+        Thread.__init__(self)
+        self.func=func
+        self.ids = ids
+        self.args = args
+        self.result = None
+    def run(self):
+        self.result=self.func(self.args)
 
 class PandaEventsThr(Thread):
     """
@@ -130,9 +144,11 @@ class aCTAutopilot(aCTATLASProcess):
                 logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, j['siteName'], '%s.out' % j['pandaid']])
                 jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
             try:
-                jd['jobMetrics']="coreCount=%s" % (j['corecount'] if j['corecount'] > 0 else self.sites[j['siteName']]['corecount'])
+                corecount = int(j['corecount']) if j['corecount'] > 0 else self.sites[j['siteName']]['corecount']
+                jd['jobMetrics'] = "coreCount=%d" % corecount
+                jd['coreCount'] = corecount
             except:
-                pass
+                self.log.warning('%s: no corecount available' % j['pandaid'])
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
@@ -166,6 +182,100 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
             self.dbpanda.updateJob(t.id,jd)
+
+        self.log.info("Threads finished")
+
+
+    def updatePandaHeartbeatBulk(self,pstatus):
+        """
+        Heartbeat status updates in bulk.
+        """
+        nthreads=int(self.conf.get(["panda","threads"]))
+        columns = ['pandaid', 'siteName', 'startTime', 'computingElement', 'node', 'corecount', 'eventranges']
+        jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
+        #jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", 60)+" or modified > theartbeat) limit 1000", columns)
+        if not jobs:
+            return
+
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
+
+        changed_pstatus = False
+        if pstatus == 'sent':
+            pstatus = 'starting'
+            changed_pstatus = True
+
+        tlist=[]
+        jobsbyproxy = {}
+        for j in jobs:
+            # Don't send transferring heartbeat for ES jobs, they must be in running while events are updated
+            if pstatus == 'transferring' and j['eventranges']:
+                pstatus = 'running'
+            jd = {'jobId': j['pandaid'], 'state': pstatus}
+            if pstatus != 'starting':
+                jd['startTime'] = j['startTime']
+            if j['computingElement']:
+                if j['computingElement'].find('://') != -1: # this if is only needed during transition period
+                    jd['computingElement'] = arc.URL(str(j['computingElement'])).Host()
+                else:
+                    jd['computingElement'] = j['computingElement']
+            jd['node'] = j['node']
+            jd['siteName'] = j['siteName']
+            # For starting truepilot jobs send pilotID with expected log
+            # location so logs are available in case of lost heartbeat
+            if pstatus == 'starting' and not changed_pstatus and self.sites[j['siteName']]['truepilot']:
+                date = time.strftime('%Y-%m-%d', time.gmtime())
+                logurl = '/'.join([self.conf.get(["joblog","urlprefix"]), date, j['siteName'], '%s.out' % j['pandaid']])
+                jd['pilotID'] = '%s|Unknown|Unknown|Unknown|Unknown' % logurl
+            try:
+                corecount = int(j['corecount']) if j['corecount'] > 0 else self.sites[j['siteName']]['corecount']
+                jd['jobMetrics'] = "coreCount=%d" % corecount
+                jd['coreCount'] = corecount
+            except:
+                self.log.warning('%s: no corecount available' % j['pandaid'])
+
+            try:
+                jobsbyproxy[self.sites[j['siteName']]['type']].append(jd)
+            except:
+                jobsbyproxy[self.sites[j['siteName']]['type']] = [jd]
+
+        for sitetype, jobs in jobsbyproxy.items():
+            t = PandaBulkThr(self.pandas[sitetype].updateStatuses, [j['jobId'] for j in jobs], jobs)
+            tlist.append(t)
+        aCTUtils.RunThreadsSplit(tlist,nthreads)
+
+        for t in tlist:
+            if not t or not t.result or not t.result[0]:
+                # Strange response from panda, try later
+                continue
+
+            for pandaid, response in zip(t.ids, t.result[1]):
+                try:
+                    result = cgi.parse_qs(response)
+                except Exception as e:
+                    self.log.error('Could not parse result from panda: %s' % response)
+                    continue
+
+                if not result.get('StatusCode'):
+                    # Strange response from panda, try later
+                    continue
+                if result['StatusCode'][0] == '60':
+                    self.log.error('Failed to contact Panda, proxy may have expired')
+                    continue
+                self.log.debug('%s: %s' % (pandaid, result))
+                if result.get('command', [''])[0] not in ['', "NULL"]:
+                    self.log.info("%s: response: %s" % (pandaid, result))
+                jd = {}
+                if changed_pstatus:
+                    jd['pandastatus'] = pstatus
+                # Make sure heartbeat is ahead of modified time so it is not picked up again
+                jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
+                # If panda tells us to kill the job, set actpandastatus to tobekilled
+                # and remove from heartbeats
+                if result.get('command', [''])[0] in ["tobekilled", "badattemptnr", "alreadydone"]:
+                    self.log.info('%s: cancelled by panda' % pandaid)
+                    jd['actpandastatus'] = "tobekilled"
+                    jd['pandastatus'] = None
+                self.dbpanda.updateJob(pandaid, jd)
 
         self.log.info("Threads finished")
 

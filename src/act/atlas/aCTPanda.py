@@ -1,4 +1,5 @@
 import cgi
+import json
 import urllib2, urllib, socket, httplib
 import os
 import pickle
@@ -192,6 +193,23 @@ class aCTPanda:
             self.log.error(x)
             return None
         return urldesc
+
+    def updateStatuses(self, jobs):
+        # Caller must make sure jobId and state are defined for each job
+        jobdata = []
+        for job in jobs:
+            node = job
+            node['schedulerID'] = self.conf.get(['panda','schedulerid'])
+            jobdata.append(node)
+        urldata=self.__HTTPConnect__('updateJobsInBulk', {'jobList': json.dumps(jobdata)})
+        self.log.debug('panda returned %s' % str(urldata))
+        try:
+            urldesc = json.loads(urldata)
+        except Exception,x:
+            self.log.error(x)
+            return {}
+        return urldesc
+
 
     def queryJobInfo(self, cloud='ND'):
         node={}
