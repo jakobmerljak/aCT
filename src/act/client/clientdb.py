@@ -39,7 +39,7 @@ class ClientDB(aCTDB):
         """
         aCTDB.__init__(self, logger, dbname)
 
-    def createTable(self):
+    def createTables(self):
         """Create clientjobs table."""
         # delete table if already exists
         try:
@@ -72,7 +72,7 @@ class ClientDB(aCTDB):
         else:
             self.conn.commit()
 
-    def deleteTable(self):
+    def deleteTables(self):
         """Delete clientjobs table."""
         c = self.getCursor()
         try:
