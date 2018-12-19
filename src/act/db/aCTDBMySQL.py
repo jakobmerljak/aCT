@@ -34,15 +34,17 @@ class aCTDBMySQL(aCTDBMS):
 
     def getCursor(self):
         # make sure cursor reads newest db state
-        self.conn.commit()
-        tries = 3
-        while tries:
+        try:
+            self.conn.commit()
+        except mysql.errors.InternalError:
+            self.conn.cursor.fetchall()
+            self.conn.commit()
+        for _ in range(3):
             try:
                 cur = self.conn.cursor(dictionary=True)
                 return cur
             except mysql.errors.OperationalError as err:
                 self.log.warning("Error getting cursor: %s" % str(err))
-            tries -= 1
         raise Exception("Could not get cursor")
 
     def timeStampLessThan(self,column,timediff):

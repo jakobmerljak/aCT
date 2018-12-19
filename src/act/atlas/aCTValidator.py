@@ -461,7 +461,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 100000" % self.sitesselect
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 1000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "siteName", "metadata"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -547,7 +547,7 @@ class aCTValidator(aCTATLASProcess):
         Move actpandastatus to failed. 
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
-        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 100000" % self.sitesselect
+        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 1000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "siteName"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -617,7 +617,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # First check for resubmitting jobs with no arcjob id defined
-        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 100000" % self.sitesselect
+        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 1000" % self.sitesselect
         columns = ["pandaid", "id"]
         
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)

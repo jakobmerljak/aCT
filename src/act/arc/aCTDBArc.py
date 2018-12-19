@@ -251,17 +251,18 @@ class aCTDBArc(aCTDB):
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified. Does not commit after executing update.
         '''
+        c = self.db.getCursor()
+        c.execute("select id from arcjobs where id=%d limit 1" % id)
+        row = c.fetchone()
+        if row is None:
+            self.log.warning("Arc job id %d no longer exists" % id)
+            return
+
         desc['modified']=self.getTimeStamp()
         s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
-        c=self.db.getCursor()
-        c.execute("select id from arcjobs where id="+str(id))
-        row=c.fetchone()
-        if row is None:
-            self.log.warning("Arc job id %d no longer exists" % id)
-            return
         if job:
             c.execute(s,desc.values() + self._job2db(job).values() )
         else:

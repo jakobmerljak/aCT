@@ -167,15 +167,16 @@ class aCTDBCondor(aCTDB):
         Update condor job fields specified in desc. Does not commit after
         executing update.
         '''
-        desc['modified'] = self.getTimeStamp()
-        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
-        s += " where id="+str(id)
         c = self.db.getCursor()
-        c.execute("select id from condorjobs where id="+str(id))
+        c.execute("select id from condorjobs where id=%d limit 1" % id)
         row = c.fetchone()
         if row is None:
             self.log.warning("Condor job id %d no longer exists" % id)
             return
+
+        desc['modified'] = self.getTimeStamp()
+        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s += " where id="+str(id)
         c.execute(s, desc.values())
 
     def updateCondorJobs(self, desc, select):
