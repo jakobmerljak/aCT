@@ -202,7 +202,6 @@ class aCTPanda:
             node['schedulerID'] = self.conf.get(['panda','schedulerid'])
             jobdata.append(node)
         urldata=self.__HTTPConnect__('updateJobsInBulk', {'jobList': json.dumps(jobdata)})
-        self.log.debug('panda returned %s' % str(urldata))
         try:
             urldesc = json.loads(urldata)
         except Exception,x:

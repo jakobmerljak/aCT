@@ -160,7 +160,6 @@ class aCTAutopilot(aCTATLASProcess):
             if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
-            #self.log.debug('%s: %s' % (t.id, t.result))
             if t.result.has_key('command')  and t.result['command'][0] != "NULL":
                 self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
@@ -261,7 +260,6 @@ class aCTAutopilot(aCTATLASProcess):
                 if result['StatusCode'][0] == '60':
                     self.log.error('Failed to contact Panda, proxy may have expired')
                     continue
-                self.log.debug('%s: %s' % (pandaid, result))
                 if result.get('command', [''])[0] not in ['', "NULL"]:
                     self.log.info("%s: response: %s" % (pandaid, result))
                 jd = {}
@@ -334,7 +332,6 @@ class aCTAutopilot(aCTATLASProcess):
                     else:
                         t = PandaThr(self.getPanda(j['siteName']).updateStatus, j['pandaid'], 'transferring', jobmetrics)
                         aCTUtils.RunThreadsSplit([t], nthreads)
-                        self.log.debug(t.result)
                         # If update fails panda won't see the zip and events
                         # will be rescheduled to another job
                         if t.result == None or not t.result.has_key('StatusCode'):
@@ -372,7 +369,6 @@ class aCTAutopilot(aCTATLASProcess):
 
         aCTUtils.RunThreadsSplit(tlist, nthreads)
         for t in tlist:
-            self.log.debug('%s: %s' % (t.id, t.result))
             # If update fails events will be rescheduled to another job
             if t.result == None or not t.result.has_key('StatusCode'):
                 # Strange response from panda
@@ -428,7 +424,6 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist,nthreads)
 
         for t in tlist:
-            self.log.debug('%s: %s' % (t.id, t.result))
             if t.result == None:
                 continue
             if 'StatusCode' in t.result and t.result['StatusCode'] and t.result['StatusCode'][0] != '0':
@@ -539,8 +534,8 @@ class aCTAutopilot(aCTATLASProcess):
         # Getting new jobs is now done in aCTPandaGetJobs
         
         # Update all jobs currently in the system
-        self.updatePandaHeartbeat('starting')
-        self.updatePandaHeartbeat('running')
+        self.updatePandaHeartbeatBulk('starting')
+        self.updatePandaHeartbeatBulk('running')
         self.updatePandaHeartbeat('transferring')
         
         # Update jobs which finished
