@@ -1,4 +1,5 @@
 import mysql.connector as mysql
+from act.common import aCTUtils
 from act.db.aCTDBMS import aCTDBMS
 
 class aCTDBMySQL(aCTDBMS):
@@ -36,15 +37,19 @@ class aCTDBMySQL(aCTDBMS):
         # make sure cursor reads newest db state
         try:
             self.conn.commit()
-        except mysql.errors.InternalError:
-            self.conn.cursor.fetchall()
-            self.conn.commit()
+        except mysql.errors.InternalError as e:
+            # Unread result, force reconnection
+            self.log.warning(str(e))
+            self.conn.close()
+            self._connect()
+
         for _ in range(3):
             try:
                 cur = self.conn.cursor(dictionary=True)
                 return cur
             except mysql.errors.OperationalError as err:
                 self.log.warning("Error getting cursor: %s" % str(err))
+                aCTUtils.sleep(1)
         raise Exception("Could not get cursor")
 
     def timeStampLessThan(self,column,timediff):
