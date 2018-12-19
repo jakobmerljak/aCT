@@ -535,7 +535,7 @@ class aCTAutopilot(aCTATLASProcess):
         
         # Update all jobs currently in the system
         self.updatePandaHeartbeatBulk('starting')
-        self.updatePandaHeartbeatBulk('running')
+        self.updatePandaHeartbeat('running')
         self.updatePandaHeartbeat('transferring')
         
         # Update jobs which finished
