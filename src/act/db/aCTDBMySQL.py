@@ -41,7 +41,7 @@ class aCTDBMySQL(aCTDBMS):
             # Unread result, force reconnection
             self.log.warning(str(e))
             self.conn.close()
-            self._connect()
+            self._connect(self.dbname)
 
         for _ in range(3):
             try:
