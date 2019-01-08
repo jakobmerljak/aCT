@@ -19,7 +19,7 @@ class aCTAGISFetcher(aCTATLASProcess):
 
     def fetchFromAgis(self, url, filename):
         try:
-            response = urllib2.urlopen(url)
+            response = urllib2.urlopen(url, timeout=60)
         except urllib2.URLError as e:
             self.log.warning("Failed to contact AGIS: %s" % str(e))
             # Check if the cached data is getting old, if so raise a critical error
