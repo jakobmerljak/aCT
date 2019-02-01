@@ -202,20 +202,20 @@ class aCTStatus(aCTProcess):
             
             for job in jobs:
                 if job['arcstate'] == 'toclean' or job['arcstate'] == 'cancelling':
-                   # delete jobs stuck in toclean/cancelling
-                   self.log.info("%s: Job stuck in toclean/cancelling for too long, deleting" % (job['appjobid']))
-                   self.db.deleteArcJob(job['id'])
-                   continue
+                    # delete jobs stuck in toclean/cancelling
+                    self.log.info("%s: Job stuck in toclean/cancelling for too long, deleting" % (job['appjobid']))
+                    self.db.deleteArcJob(job['id'])
+                    continue
 
                 self.log.warning("%s: Job %s too long in state %s, cancelling" % (job['appjobid'], job['JobID'], jobstate))
                 if job['JobID']:
                     # If jobid is defined, cancel
                     self.db.updateArcJob(job['id'], {'arcstate': 'tocancel', 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()})
                 else:
-                    # Otherwise delete it
-                    self.db.deleteArcJob(job['id'])
-        
-    
+                    # Otherwise mark cancelled
+                    self.db.updateArcJob(job['id'], {'arcstate': 'cancelled', 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()})
+
+
     def process(self):
         # check job status
         self.checkJobs()
