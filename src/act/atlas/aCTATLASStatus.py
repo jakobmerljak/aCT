@@ -337,6 +337,7 @@ class aCTATLASStatus(aCTATLASProcess):
             if not os.path.exists(arcjoblog):
                 try:
                     shutil.copy(gmlogerrors, arcjoblog)
+                    os.chmod(arcjoblog, 0644)
                 except:
                     self.log.error("Failed to copy %s" % gmlogerrors) 
 
@@ -350,11 +351,9 @@ class aCTATLASStatus(aCTATLASProcess):
                 try:
                     shutil.copy(os.path.join(localdir, pilotlog),
                                 os.path.join(outd, '%s.out' % aj['appjobid']))
+                    os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
                 except Exception, e:
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
-
-            # set right permissions
-            aCTUtils.setFilePermissionsRecursive(outd)
 
             try:
                 smeta = json.loads(str(aj['metadata']))
