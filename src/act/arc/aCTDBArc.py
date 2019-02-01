@@ -2,16 +2,14 @@ import re
 import os
 import arc
 from act.db.aCTDB import aCTDB
-from act.common import aCTConfig
 
 class aCTDBArc(aCTDB):
-    
-    def __init__(self,logger,dbname="aCTjobs.db"):
-        aCTDB.__init__(self, logger, dbname)
 
-        conf = aCTConfig.aCTConfigARC()
-        self.proxydir = conf.get(["voms","proxystoredir"])
-                
+    def __init__(self, log):
+        aCTDB.__init__(self, log, 'arcjobs')
+
+        self.proxydir = self.conf.get(["voms","proxystoredir"])
+
         # mapping from Job class attribute types to column types
         self.jobattrmap = {int: 'integer',
                       str: 'varchar(255)',
@@ -104,23 +102,24 @@ class aCTDBArc(aCTDB):
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
             
         # First check if table already exists
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("show tables like 'arcjobs'")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         if row:
             answer = raw_input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
-                return
+                return True
             c.execute("drop table arcjobs")
 
         # Create arcjobs
         try:
             c.execute(create)
-            self.conn.commit()
+            self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            
+            return False
+
         # Create job description table
         create="""CREATE TABLE jobdescriptions (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -134,10 +133,11 @@ class aCTDBArc(aCTDB):
             c.execute(create)
             # add indexes
             c.execute("ALTER TABLE arcjobs ADD INDEX (arcstate)")
-            self.conn.commit()
+            self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
-            
+            return False
+
         # Create proxies table (can be dropped without asking)
         self.log.info("creating proxies table")
         create="""CREATE TABLE proxies (
@@ -155,23 +155,18 @@ class aCTDBArc(aCTDB):
             pass
         try:
             c.execute(create)
-            self.conn.commit()
+            self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            return False
 
-    def Commit(self, lock=False):
-        if lock:
-            res = self.releaseMutexLock('arcjobs')
-            if not res:
-                self.log.warning("Could not release lock: %s"%str(res))
-        self.conn.commit()
+        return True
 
-       
     def insertArcJob(self, job):
         '''
         Add new arc Job object. Only used for testing and recreating db.
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         jobdesc = str(job.JobDescriptionDocument)
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdesc])
@@ -182,7 +177,7 @@ class aCTDBArc(aCTDB):
         c.execute("insert into arcjobs (created,tstate,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+str(jobdescid)+"','"+"','".join(j.values())+"')")
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         return row
 
 
@@ -201,7 +196,7 @@ class aCTDBArc(aCTDB):
             priority = 50
 
         # todo: find some useful default for proxyid
-        c=self.getCursor()
+        c=self.db.getCursor()
         
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdesc])
@@ -227,7 +222,7 @@ class aCTDBArc(aCTDB):
         c.execute(s,desc.values())
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         return row
         
 
@@ -235,13 +230,13 @@ class aCTDBArc(aCTDB):
         '''
         Delete job from ARC table.
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("select jobdesc from arcjobs where id="+str(id))
         row = c.fetchone()
         if row:
             c.execute("delete from jobdescriptions where id="+str(row['jobdesc']))
         c.execute("delete from arcjobs where id="+str(id))
-        self.conn.commit()
+        self.Commit()
 
     def updateArcJob(self, id, desc, job=None):
         '''
@@ -249,24 +244,25 @@ class aCTDBArc(aCTDB):
         Job if job is specified.
         '''
         self.updateArcJobLazy(id, desc, job)
-        self.conn.commit()
+        self.Commit()
 
     def updateArcJobLazy(self, id, desc, job=None):
         '''
         Update arc job fields specified in desc and fields represented by arc
         Job if job is specified. Does not commit after executing update.
         '''
+        c = self.db.getCursor()
+        c.execute("select id from arcjobs where id=%d limit 1" % id)
+        row = c.fetchone()
+        if row is None:
+            self.log.warning("Arc job id %d no longer exists" % id)
+            return
+
         desc['modified']=self.getTimeStamp()
         s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
-        c=self.getCursor()
-        c.execute("select id from arcjobs where id="+str(id))
-        row=c.fetchone()
-        if row is None:
-            self.log.warning("Arc job id %d no longer exists" % id)
-            return
         if job:
             c.execute(s,desc.values() + self._job2db(job).values() )
         else:
@@ -277,7 +273,7 @@ class aCTDBArc(aCTDB):
         Update arc job fields specified in desc and matching the select statement.
         '''
         self.updateArcJobsLazy(desc, select)
-        self.conn.commit()
+        self.Commit()
 
     def updateArcJobsLazy(self, desc, select):
         '''
@@ -287,14 +283,14 @@ class aCTDBArc(aCTDB):
         desc['modified']=self.getTimeStamp()
         s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" where "+select
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s,desc.values())
 
     def getArcJobInfo(self,id,columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
         ''' 
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE id="+str(id))
         row=c.fetchone()
         if not row:
@@ -309,10 +305,9 @@ class aCTDBArc(aCTDB):
         Return a list of column: value dictionaries for jobs matching select.
         If lock is True the row will be locked if possible.
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         if lock:
-            #select += self.addLock()
-            res = self.getMutexLock('arcjobs', timeout=2)
+            res = self.db.getMutexLock('arcjobs', timeout=2)
             if not res:
                 self.log.debug("Could not get lock: %s"%str(res))
                 return []
@@ -324,7 +319,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a dictionary of {proxyid: [(id, appjobid, arc.Job, created), ...]} for jobs matching select
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT id, proxyid, appjobid, created, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
@@ -345,7 +340,7 @@ class aCTDBArc(aCTDB):
         '''
         Return the job description for the given id in jobdescriptions
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT jobdescription from jobdescriptions where id="+str(jobdescid))
         row = c.fetchone()
         if not row:
@@ -356,7 +351,7 @@ class aCTDBArc(aCTDB):
         '''
         Return the total number of jobs in the table
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT COUNT(*) FROM arcjobs")
         row = c.fetchone()
         return row['COUNT(*)']
@@ -365,7 +360,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a list and count of clusters
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT cluster, COUNT(*) FROM arcjobs WHERE cluster!='' GROUP BY cluster")
         rows=c.fetchall()
         return rows
@@ -374,7 +369,7 @@ class aCTDBArc(aCTDB):
         '''
         Return a list and count of clusterlists for jobs to submit
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
         c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
@@ -459,7 +454,7 @@ class aCTDBArc(aCTDB):
           - myproxyid: id from myproxy
         Returns id of db entrance
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         s="INSERT INTO proxies (proxy, dn, attribute, proxytype, myproxyid, expirytime) VALUES ('"\
                   +proxy+"','"+dn+"','"+attribute+"','"+proxytype+"','"+myproxyid+"','"+expirytime+"')"
         c.execute(s)
@@ -468,7 +463,7 @@ class aCTDBArc(aCTDB):
         id=row['LAST_INSERT_ID()']
         proxypath=os.path.join(self.proxydir,"proxiesid"+str(id))
         c.execute("UPDATE proxies SET proxypath='"+proxypath+"' WHERE id="+str(id))
-        self.conn.commit()
+        self.Commit()
         self._writeProxyFile(proxypath, proxy)
         return id
 
@@ -478,9 +473,9 @@ class aCTDBArc(aCTDB):
         '''
         s="UPDATE proxies SET "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
         s+=" WHERE id="+str(id)
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute(s)
-        self.conn.commit()
+        self.Commit()
         # rewrite proxy file if proxy was updated
         if 'proxy' in desc:
             self._writeProxyFile(self.getProxyPath(id), self.getProxy(id))
@@ -489,7 +484,7 @@ class aCTDBArc(aCTDB):
         '''
         Get the path to the proxy file of a proxy
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT proxypath FROM proxies WHERE id="+str(id))
         row = c.fetchone()
         try:
@@ -504,7 +499,7 @@ class aCTDBArc(aCTDB):
         '''
         Get the string representation of a proxy
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("SELECT proxy FROM proxies WHERE id="+str(id))
         row = c.fetchone()
         try:
@@ -520,8 +515,8 @@ class aCTDBArc(aCTDB):
         only one row will be returned.
         '''
         if lock:
-            select += self.addLock()
-        c=self.getCursor()
+            select += self.db.addLock()
+        c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM proxies WHERE "+select)
         if expect_one:
             return c.fetchone()
@@ -536,19 +531,17 @@ class aCTDBArc(aCTDB):
         proxypath=self.getProxyPath(id)
         if os.path.isfile(proxypath):
             os.remove(proxypath)
-        c=self.getCursor()
+        c=self.db.getCursor()
         c.execute("DELETE FROM proxies WHERE id="+str(id))
-        self.conn.commit()
+        self.Commit()
 
 if __name__ == '__main__':
     import logging, sys
     log = logging.getLogger()
     out = logging.StreamHandler(sys.stdout)
     log.addHandler(out)
-    
-    conf = aCTConfig.aCTConfigARC()
-    
-    adb = aCTDBArc(log, dbname=conf.get(["db","file"]))
+
+    adb = aCTDBArc(log)
     adb.createTables()
 
     usercfg = arc.UserConfig("", "")

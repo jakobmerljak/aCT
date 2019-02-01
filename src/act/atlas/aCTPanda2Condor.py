@@ -12,7 +12,7 @@ class aCTPanda2Condor(aCTATLASProcess):
 
     def createCondorJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
+        jobs = self.dbpanda.getJobs("condorjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:
@@ -20,7 +20,7 @@ class aCTPanda2Condor(aCTATLASProcess):
             if job['proxyid'] not in proxies_map:
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
-            parser = aCTPanda2ClassAd(job['pandajob'], job['siteName'], self.sites[job['siteName']], proxies_map[job['proxyid']],
+            parser = aCTPanda2ClassAd(job['pandajob'], job['id'], job['siteName'], self.sites[job['siteName']], proxies_map[job['proxyid']],
                                    self.arcconf.get(["tmp", "dir"]), self.conf, job['metadata'], self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
@@ -45,7 +45,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                     continue
 
                 jd = {}
-                jd['arcjobid'] = aid['LAST_INSERT_ID()']
+                jd['condorjobid'] = aid['LAST_INSERT_ID()']
                 jd['pandastatus'] = 'starting'
                 # make sure actpandastatus is really 'sent', in case of resubmitting
                 jd['actpandastatus'] = 'sent'

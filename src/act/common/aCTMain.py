@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 import errno
 import os
@@ -256,8 +256,11 @@ class aCTMain:
         """
         self.log.info("Cleanup")
 
-        
-if __name__ == '__main__':
+def main():
     am = aCTMain(sys.argv)
     am.run()
     am.finish()
+
+if __name__ == '__main__':
+    main()
+

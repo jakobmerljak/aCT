@@ -39,7 +39,7 @@ class aCTValidator(aCTATLASProcess):
             
         self.uc = arc.UserConfig(cred_type)
         self.uc.ProxyPath(str(proxyfile))
-        self.uc.UtilsDirPath(arc.UserConfig.ARCUSERDIRECTORY)
+        self.uc.UtilsDirPath(str(arc.UserConfig.ARCUSERDIRECTORY))
         
         # Possible file status
         self.ok = 0
@@ -72,20 +72,19 @@ class aCTValidator(aCTATLASProcess):
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         aj = aj[0]
-        jobid=aj['JobID']
-        sessionid=jobid[jobid.rfind('/')+1:]
+        jobid = aj['JobID']
+        sessionid = jobid[jobid.rfind('/')+1:]
         date = aj['created'].strftime('%Y-%m-%d')
-        cluster = arc.URL(str(jobid)).Host()
         if extractmetadata:
             try:
                 pandapickle = self._extractFromSmallFiles(aj, "panda_node_struct.pickle")
             except Exception,x:
-                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                self.log.error("%s: failed to extract pickle for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 pandapickle = None
             try:
                 metadata = self._extractFromSmallFiles(aj, "metadata-surl.xml")
             except Exception,x:
-                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
+                self.log.error("%s: failed to extract metadata-surl.xml for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 metadata = None
 
             # update pickle and dump to tmp/pickle
@@ -98,7 +97,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
             if metadata:
                 jobinfo.xml = str(metadata.read())
-            jobinfo.computingElement = cluster
+            jobinfo.computingElement = arc.URL(str(aj['cluster'])).Host()
             if aj['EndTime']:
                 # datetime cannot be serialised to json so use string (for harvester)
                 jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).isoformat(' ')
@@ -112,7 +111,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.node = aj["ExecutionNode"]
 
             try:
-                smeta = json.loads(aj['metadata'])
+                smeta = json.loads(str(aj['metadata']))
             except:
                 smeta = None
 
@@ -139,23 +138,25 @@ class aCTValidator(aCTATLASProcess):
         if not os.path.exists(arcjoblog):
             try:
                 shutil.move(gmlogerrors, arcjoblog)
+                os.chmod(arcjoblog, 0644)
             except:
                 self.log.error("Failed to copy %s" % gmlogerrors) 
 
         pilotlog = aj['stdout']
-        if not pilotlog:
-            pilotlogs = [f for f in os.listdir(localdir) if f.find('.log') != -1]
-            if pilotlogs:
-                pilotlog = pilotlogs[0]
+        if not pilotlog and os.path.exists(localdir):
+            pilotlogs = [f for f in os.listdir(localdir)]
+            for f in pilotlogs:
+                if f.find('.log'):
+                    pilotlog = f
         if pilotlog:
             try:
                 shutil.move(os.path.join(localdir, pilotlog),
                             os.path.join(outd, '%s.out' % aj['appjobid']))
+                os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
             except Exception, e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False
-        # set right permissions
-        aCTUtils.setFilePermissionsRecursive(outd)
+
         return True
 
     def extractOutputFilesFromMetadata(self, arcjobid):
@@ -382,11 +383,14 @@ class aCTValidator(aCTATLASProcess):
         Remove directory to which job was downloaded.
         '''
 
-        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID'])
+        job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID','appjobid'])
         if job and job['JobID']:
             sessionid = job['JobID'][job['JobID'].rfind('/'):]
             localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
             shutil.rmtree(localdir, ignore_errors=True)
+            pandaid=job['appjobid']
+            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
     def validateEvents(self, arcjobid):
@@ -457,7 +461,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # get all jobs with pandastatus running and actpandastatus tovalidate
-        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 100000" % self.sitesselect
+        select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 1000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "siteName", "metadata"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -543,7 +547,7 @@ class aCTValidator(aCTATLASProcess):
         Move actpandastatus to failed. 
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
-        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 100000" % self.sitesselect
+        select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 1000" % self.sitesselect
         columns = ["arcjobid", "pandaid", "siteName"]
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
 
@@ -613,7 +617,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         
         # First check for resubmitting jobs with no arcjob id defined
-        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 100000" % self.sitesselect
+        select = "(actpandastatus='toresubmit' and arcjobid=NULL) and siteName in %s limit 1000" % self.sitesselect
         columns = ["pandaid", "id"]
         
         jobstoupdate=self.dbpanda.getJobs(select, columns=columns)
@@ -671,6 +675,7 @@ class aCTValidator(aCTATLASProcess):
                 else:
                     # Can't clean outputs so mark as failed (see more detail below)
                     self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                    self.cleanDownloadedJob(job['arcjobid'])
                     select = "arcjobid='"+str(job["arcjobid"])+"'"
                     desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}
                     self.dbpanda.updateJobs(select, desc)

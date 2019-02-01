@@ -6,7 +6,6 @@ import arc
 import aCTPanda
 from act.common import aCTProxy
 from aCTATLASProcess import aCTATLASProcess
-from aCTAGISParser import aCTAGISParser
 
 
 class PandaGetThr(Thread):
@@ -75,10 +74,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
         self.activated = {}
         # Flag for calling getJob no matter what to have a constant stream
         self.getjob = False
-
-
-    def getEndTime(self):
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
     def setSites(self):
@@ -172,7 +167,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             stopflag=False
 
             #getEventRanges = not attrs['truepilot']
-            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES','IN2P3-CC_HPC_IDRIS_MCORE']
+            getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES', 'IN2P3-CC_HPC_IDRIS_MCORE', 'praguelcg2_IT4I_MCORE']
             apfmonjobs = []
 
             for nc in range(0, max(int(num/nthreads), 1)):
@@ -225,6 +220,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         self.log.warning('%s: No event ranges given by panda' % pandaid)
                         n['pandastatus'] = 'finished'
                         n['actpandastatus'] = 'finished'
+                        # Assumes only ARC sites (not condor) pre-fetch events
                         n['arcjobid'] = -1 # dummy id so job is not submitted
                     else:
                         n['pandastatus'] = 'sent'
@@ -241,15 +237,16 @@ class aCTPandaGetJobs(aCTATLASProcess):
                             self.log.warning('%s: no corecount in job description' % pandaid)
                     n['sendhb'] = attrs['push']
                     if pandaid == 0:
-                        # Pull mode: set dummy arcjobid to avoid job getting picked
-                        # up before setting proper job desc after insertion
+                        # Pull mode: set dummy arcjobid and condorjobid to avoid
+                        # job getting picked up before setting proper job desc after insertion
                         n['arcjobid'] = -1
+                        n['condorjobid'] = -1
                     rowid = self.dbpanda.insertJob(pandaid, pandajob, n)
                     if pandaid == 0:
                         # Pull mode: use row id as job id for output files and APFmon
                         pandaid = rowid['LAST_INSERT_ID()']
                         pandajob = 'PandaID=%d&prodSourceLabel=%s' % (pandaid, prodsrclabel)
-                        self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob, 'arcjobid': None})
+                        self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob, 'arcjobid': None, 'condorjobid': None})
                     apfmonjobs.append(pandaid)
                     count += 1
 

@@ -4,8 +4,8 @@ from act.common import aCTConfig
 
 class aCTDBCondor(aCTDB):
 
-    def __init__(self,logger,dbname="aCTjobs.db"):
-        aCTDB.__init__(self, logger, dbname)
+    def __init__(self, log):
+        aCTDB.__init__(self, log, 'condorjobs')
 
 
     def createTables(self):
@@ -77,31 +77,25 @@ class aCTDBCondor(aCTDB):
             """
             
         # First check if table already exists
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("show tables like 'condorjobs'")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         if row:
             answer = raw_input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
-                return
+                return False
             c.execute("drop table condorjobs")
 
         # Create condorjobs
         try:
             c.execute(create)
-            self.conn.commit()
+            self.Commit()
         except Exception,x:
             self.log.error("failed create table %s" %x)
+            return False
 
-
-    def Commit(self, lock=False):
-        if lock:
-            res = self.releaseMutexLock('condorjobs')
-            if not res:
-                self.log.warning("Could not release lock: %s" % str(res))
-        self.conn.commit()
-
+        return True
 
     def insertCondorJobDescription(self, jobdesc, proxyid='', maxattempts=0, clusterlist='', appjobid='', fairshare=''):
         '''
@@ -120,7 +114,7 @@ class aCTDBCondor(aCTDB):
             return None
 
         # todo: find some useful default for proxyid
-        c = self.getCursor()
+        c = self.db.getCursor()
         
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdescstr])
@@ -145,7 +139,7 @@ class aCTDBCondor(aCTDB):
         c.execute(s,desc.values())
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         return row
         
 
@@ -153,35 +147,36 @@ class aCTDBCondor(aCTDB):
         '''
         Delete job from Condor table.
         '''
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("select jobdesc from condorjobs where id="+str(id))
         row = c.fetchone()
         if row:
             c.execute("delete from jobdescriptions where id="+str(row['jobdesc']))
         c.execute("delete from condorjobs where id="+str(id))
-        self.conn.commit()
+        self.Commit()
 
     def updateCondorJob(self, id, desc):
         '''
         Update condor job fields specified in desc
         '''
         self.updateCondorJobLazy(id, desc)
-        self.conn.commit()
+        self.Commit()
 
     def updateCondorJobLazy(self, id, desc):
         '''
         Update condor job fields specified in desc. Does not commit after
         executing update.
         '''
-        desc['modified'] = self.getTimeStamp()
-        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
-        s += " where id="+str(id)
-        c = self.getCursor()
-        c.execute("select id from condorjobs where id="+str(id))
+        c = self.db.getCursor()
+        c.execute("select id from condorjobs where id=%d limit 1" % id)
         row = c.fetchone()
         if row is None:
             self.log.warning("Condor job id %d no longer exists" % id)
             return
+
+        desc['modified'] = self.getTimeStamp()
+        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s += " where id="+str(id)
         c.execute(s, desc.values())
 
     def updateCondorJobs(self, desc, select):
@@ -190,7 +185,7 @@ class aCTDBCondor(aCTDB):
         statement.
         '''
         self.updateCondorJobsLazy(desc, select)
-        self.conn.commit()
+        self.Commit()
 
     def updateCondorJobsLazy(self, desc, select):
         '''
@@ -200,14 +195,14 @@ class aCTDBCondor(aCTDB):
         desc['modified'] = self.getTimeStamp()
         s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s += " where "+select
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute(s, desc.values())
 
     def getCondorJobInfo(self, id, columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
         ''' 
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM condorjobs WHERE id="+str(id))
         row = c.fetchone()
         if not row:
@@ -222,10 +217,10 @@ class aCTDBCondor(aCTDB):
         Return a list of column: value dictionaries for jobs matching select.
         If lock is True the row will be locked if possible.
         '''
-        c=self.getCursor()
+        c=self.db.getCursor()
         if lock:
             #select += self.addLock()
-            res = self.getMutexLock('condorjobs', timeout=2)
+            res = self.db.getMutexLock('condorjobs', timeout=2)
             if not res:
                 self.log.debug("Could not get lock: %s"%str(res))
                 return []
@@ -237,7 +232,7 @@ class aCTDBCondor(aCTDB):
         '''
         Return the job description for the given id in jobdescriptions
         '''
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("SELECT jobdescription from jobdescriptions where id="+str(jobdescid))
         row = c.fetchone()
         if not row:
@@ -248,7 +243,7 @@ class aCTDBCondor(aCTDB):
         '''
         Return a list and count of clusters
         '''
-        c = self.getCursor()
+        c = self.db.getCursor()
         c.execute("SELECT cluster, COUNT(*) FROM condorjobs WHERE cluster!='' GROUP BY cluster")
         rows = c.fetchall()
         return rows
@@ -257,7 +252,7 @@ class aCTDBCondor(aCTDB):
         '''
         Return a list and count of clusterlists for jobs to submit
         '''
-        c = self.getCursor()
+        c = self.db.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
         c.execute("SELECT clusterlist, COUNT(*) FROM condorjobs WHERE condorstate in ('tosubmit', 'submitting', 'torerun', 'toresubmit', 'tocancel') GROUP BY clusterlist")
@@ -269,8 +264,5 @@ if __name__ == '__main__':
     log = logging.getLogger()
     out = logging.StreamHandler(sys.stdout)
     log.addHandler(out)
-
-    conf = aCTConfig.aCTConfigARC()
-
-    adb = aCTDBCondor(log, dbname=conf.get(["db","file"]))
+    adb = aCTDBCondor(log)
     adb.createTables()

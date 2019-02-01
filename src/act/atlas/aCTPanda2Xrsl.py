@@ -12,6 +12,7 @@ class aCTPanda2Xrsl:
         self.log = log
         self.pandajob = pandadbjob['pandajob']
         self.jobdesc = cgi.parse_qs(self.pandajob)
+        self.pandajobid = pandadbjob['id']
         self.pandaid = self.jobdesc['PandaID'][0]
         self.xrsl = {}
         self.siteinfo = siteinfo
@@ -154,7 +155,7 @@ class aCTPanda2Xrsl:
         if self.sitename.startswith('BOINC'):
             walltime = min(240, walltime)
             cputime = walltime
-        self.log.info('%s: walltime: %d, cputime: %d' % (self.pandaid, walltime, cputime))
+        self.log.info('%s: walltime: %d, cputime: %d, maxtime: %d' % (self.pandaid, walltime, cputime, self.maxwalltime))
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
 
@@ -270,9 +271,9 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel == 'ptest': # pilot2
             pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
             if self.truepilot:
-                pargs += '"--url" "https://pandaserver.cern.ch" "-p" "25443"'
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443"'
             else:
-                pargs += '"-z" "-t"'
+                pargs += ' "-z" "-t"'
         else:
             pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-u" "%s"' % (self.schedconfig, self.sitename, self.prodSourceLabel)
             if self.truepilot:
@@ -338,6 +339,7 @@ class aCTPanda2Xrsl:
 
         if self.eventranges:
             x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'
+
         else:
             x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
@@ -346,7 +348,8 @@ class aCTPanda2Xrsl:
         elif self.prodSourceLabel == 'ptest':
             x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
         elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1', 'IN2P3-CC_HPC_IDRIS_MCORE']:
-            x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
+            #x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
+            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
         elif self.sitename in self.rtesites:
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
         #elif 'BOINC' in self.sitename or (self.sitename.startswith('ANALY') and not self.truepilot) or ('MPPMU' in self.sitename):
@@ -355,6 +358,8 @@ class aCTPanda2Xrsl:
             #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
         else:
             # Use no kill pilot to avoid pilot killing too much at end of job
+            # Paul's version using PILOT_NOKILL
+            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-72.12-NORDUGRID.tar.gz")'
             x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
             #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
             #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-AF.tar.gz")'
@@ -369,19 +374,21 @@ class aCTPanda2Xrsl:
 
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
-
-        x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+            x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+        else:
+            x += '(queuedata.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         if 'inFiles' in self.jobdesc:
             inf = {}
             if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
                 self.setInputsES(inf)
 
-            for filename, scope, dsn, guid, token in zip(self.jobdesc['inFiles'][0].split(","),
-                                                         self.jobdesc['scopeIn'][0].split(","),
-                                                         self.jobdesc['realDatasetsIn'][0].split(","),
-                                                         self.jobdesc['GUID'][0].split(","),
-                                                         self.jobdesc['prodDBlockToken'][0].split(",")):
+            for filename, scope, dsn, guid, token, ddmin in zip(self.jobdesc['inFiles'][0].split(","),
+                                                                self.jobdesc['scopeIn'][0].split(","),
+                                                                self.jobdesc['realDatasetsIn'][0].split(","),
+                                                                self.jobdesc['GUID'][0].split(","),
+                                                                self.jobdesc['prodDBlockToken'][0].split(","),
+                                                                self.jobdesc['ddmEndPointIn'][0].split(",")):
 
                 # Skip files which use direct I/O: site has it enabled, token is
                 # not 'local', file is root file and --useLocalIO is not used
@@ -402,7 +409,17 @@ class aCTPanda2Xrsl:
                 eventType = 'get_sm'
                 if re.match('user', self.prodSourceLabel):
                     eventType = 'get_sm_a'
-                self.traces.append({'uuid': str(uuid.uuid4()), 'scope': scope, 'filename': filename, 'dataset': dsn, 'guid': guid, 'eventVersion': 'aCT', 'timeStart': time.time(), 'usrdn': dn[0], 'eventType': eventType})
+                self.traces.append({'uuid': str(uuid.uuid4()),
+                                    'scope': scope,
+                                    'filename': filename,
+                                    'dataset': dsn,
+                                    'guid': guid,
+                                    'eventVersion': 'aCT',
+                                    'timeStart': time.time(),
+                                    'usrdn': dn[0],
+                                    'localSite': ddmin,
+                                    'remoteSite': ddmin,
+                                    'eventType': eventType})
 
             # some files are double:
             for k, v in inf.items():
@@ -492,8 +509,9 @@ class aCTPanda2Xrsl:
 
         # Vars for APFMon (truepilot only)
         if self.truepilot and self.monitorurl:
-            environment['APFCID'] = self.pandaid
-            environment['APFFID'] = self.schedulerid
+            environment['APFCID'] = self.pandajobid
+            # harvester prepends "harvester-" to the schedulerid but APFMon uses the original one
+            environment['APFFID'] = self.schedulerid.replace("harvester-","")
             environment['APFMON'] = self.monitorurl
             environment['FACTORYQUEUE'] = self.sitename
 

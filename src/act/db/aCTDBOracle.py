@@ -1,11 +1,13 @@
-class aCTDBOracle(object):
+from act.db.aCTDBMS import aCTDBMS
+
+class aCTDBOracle(aCTDBMS):
     """Class for Oracle specific db operations."""
 
-    def __init__(self,logger,socket="/tmp/act.mysql.socket",dbname="act"):
+    def __init__(self, log, conf):
         raise Exception, "Oracle class is not implemented yet"
 
     def getCursor(self):
-        return self.conn.cursor()
+        raise Exception, "Oracle class is not implemented yet"
 
     def timeStampLessThan(self, column, timediff):
         # should be tested...

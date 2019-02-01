@@ -139,12 +139,12 @@ class aCTSubmitter(aCTProcess):
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 100".format(self.cluster, fairshare),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 100".format(fairshare),
                                                 columns=["id", "jobdesc", "appjobid", "priority"])
                 # mark submitting in db
                 jobs_taken=[]
@@ -199,7 +199,7 @@ class aCTSubmitter(aCTProcess):
     
             # Set UserConfig credential for each proxy. Assumes that any proxy
             # in the fairshare can query the CE infosys
-            self.uc.CredentialString(self.db.getProxy(jobs[0]['proxyid']))
+            self.uc.CredentialString(str(self.db.getProxy(jobs[0]['proxyid'])))
             # retriever contains a list of CE endpoints
             retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
             retriever.wait()
@@ -290,7 +290,7 @@ class aCTSubmitter(aCTProcess):
                     continue
                 # TODO: might not work if proxies are different within a share
                 # since same uc object is shared among threads
-                self.uc.CredentialString(self.db.getProxy(j['proxyid']))
+                self.uc.CredentialString(str(self.db.getProxy(j['proxyid'])))
                 t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
                 self.RunThreadsSplit([t],1)
                 count=count+1
@@ -299,8 +299,11 @@ class aCTSubmitter(aCTProcess):
             # commit transaction to release row locks
             self.db.Commit()
 
-            # EMI-ES proxy problem - see bug 3685
+            # EMI-ES proxy problem - see bug 3685 (fixed in 5.4.3 but keep for issue below)
             if self.cluster and self.cluster.startswith('https://'):
+                raise ExceptInterrupt(15)
+            # Can't switch credentials when uploading files - bug 3772
+            if self.cluster and self.cluster.startswith('gsiftp://'):
                 raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
@@ -327,7 +330,7 @@ class aCTSubmitter(aCTProcess):
         
         self.log.info("Cancelling %i jobs" % sum(len(v) for v in jobstocancel.values()))
         for proxyid, jobs in jobstocancel.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
                 
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
@@ -367,7 +370,7 @@ class aCTSubmitter(aCTProcess):
         jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
  
         for proxyid, jobs in jobstoresubmit.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
             
             # Clean up jobs which were submitted
             jobstoclean = [job[2] for job in jobs if job[2].JobID]
@@ -421,7 +424,7 @@ class aCTSubmitter(aCTProcess):
 
         self.log.info("Resuming %i jobs" % sum(len(v) for v in jobstorerun.values()))
         for proxyid, jobs in jobstorerun.items():
-            self.uc.CredentialString(self.db.getProxy(proxyid))
+            self.uc.CredentialString(str(self.db.getProxy(proxyid)))
     
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()

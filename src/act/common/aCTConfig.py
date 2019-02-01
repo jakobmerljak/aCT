@@ -4,7 +4,8 @@ from xml.dom import minidom
 
 class aCTConfig:
 
-    def __init__(self):
+    def __init__(self, configfile):
+        self.configfile = configfile
         self.top=[]
         self.tparse=0
         self.parse()
@@ -17,7 +18,7 @@ class aCTConfig:
         self.top=xml.getElementsByTagName('config')
         self.tparse=mtime
 
-        
+
     def getList(self,nodes):
         n0=self.top
         for name in nodes:
@@ -61,7 +62,7 @@ class aCTConfig:
             l.append(nn.firstChild.data)
         return l
 
-        
+
     def get(self,nodes):
         l = self.getList(nodes)
         if l:
@@ -71,27 +72,37 @@ class aCTConfig:
 class aCTConfigARC(aCTConfig):
 
     def __init__(self):
-        self.log="aCTConfigARC.log"
-        if 'ACTCONFIGARC' in os.environ:
-            self.configfile = os.environ['ACTCONFIGARC']
+        if 'ACTCONFIGARC' in os.environ and os.path.exists(os.environ['ACTCONFIGARC']):
+            configfile = os.environ['ACTCONFIGARC']
+        elif 'VIRTUAL_ENV' in os.environ and os.path.exists(os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigARC.xml')):
+            configfile = os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigARC.xml')
+        elif os.path.exists('/etc/act/aCTConfigARC.xml'):
+            configfile = '/etc/act/aCTConfigARC.xml'
+        elif os.path.exists('aCTConfigARC.xml'):
+            configfile="aCTConfigARC.xml"
         else:
-            self.configfile="aCTConfigARC.xml"
-        aCTConfig.__init__(self)
+            raise Exception('Could not find aCTConfigARC.xml')
+        aCTConfig.__init__(self, configfile)
 
 class aCTConfigATLAS(aCTConfig):
-    
+
     def __init__(self):
-        self.log="aCTConfigATLAS.log"
-        if 'ACTCONFIGATLAS' in os.environ:
-            self.configfile = os.environ['ACTCONFIGATLAS']
+        if 'ACTCONFIGATLAS' in os.environ and os.path.exists(os.environ['ACTCONFIGATLAS']):
+            configfile = os.environ['ACTCONFIGATLAS']
+        elif 'VIRTUAL_ENV' in os.environ and os.path.exists(os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigATLAS.xml')):
+            configfile = os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigATLAS.xml')
+        elif os.path.exists('/etc/act/aCTConfigATLAS.xml'):
+            configfile = '/etc/act/aCTConfigATLAS.xml'
+        elif os.path.exists('aCTConfigATLAS.xml'):
+            configfile="aCTConfigATLAS.xml"
         else:
-            self.configfile="aCTConfigATLAS.xml"
-        aCTConfig.__init__(self)
+            raise Exception('Could not find aCTConfigATLAS.xml')
+        aCTConfig.__init__(self, configfile)
 
 
 if __name__ == '__main__':
 
-    actconf=aCTConfig()
+    actconf=aCTConfig("aCTConfigARC.xml")
     #actconf.printConfig()
     while 1:
         actconf.parse()

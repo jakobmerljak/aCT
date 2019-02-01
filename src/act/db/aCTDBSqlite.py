@@ -1,4 +1,5 @@
 import sqlite3 as sqlite
+from act.db.aCTDBMS import aCTDBMS
 
 def dict_factory(cursor, row):
     d = {}
@@ -6,15 +7,16 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
-class aCTDBSqlite(object):
+class aCTDBSqlite(aCTDBMS):
     """Class for Sqlite specific db operations."""
-    
-    def __init__(self,logger):
+
+    def __init__(self, log, config):
+        aCTDBMS.__init__(self, log, config)
         try:
-            self.conn=sqlite.connect(self.dbname,1800)
+            self.conn = sqlite.connect(self.dbname, 1800)
         except Exception, x:
             raise Exception, "Could not connect to sqlite: " + str(x)
-        self.conn.row_factory=dict_factory
+        self.conn.row_factory = dict_factory
         self.conn.execute('''PRAGMA synchronous=OFF''')
         self.log.info("initialized aCTDBSqlite")
 
@@ -34,7 +36,7 @@ class aCTDBSqlite(object):
     def getMutexLock(self):
         # SQLite does not support mutex locking
         return
-    
+
     def releaseMutexLock(self):
         # SQLite does not support mutex locking
         return
