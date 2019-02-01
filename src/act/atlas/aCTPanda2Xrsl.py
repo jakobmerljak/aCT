@@ -114,14 +114,13 @@ class aCTPanda2Xrsl:
             if cpucount == 600:
                 cpucount = 24*3600
 
-            cpucount = int(2 * cpucount)
             self.log.info('%s: job maxCpuCount %s' % (self.pandaid, cpucount))
         else:
-            cpucount = 2*24*3600
+            cpucount = 2*24*3600 * self.getNCores()
             self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
 
         if cpucount == 0:
-            cpucount = 2*24*3600
+            cpucount = 2*24*3600 * self.getNCores()
 
         #if cpucount < 50000:
         #    cpucount = 50000
@@ -138,9 +137,8 @@ class aCTPanda2Xrsl:
 
         walltime = int(cpucount / 60)
 
-        # panda changed to walltime
-        #if self.getNCores() > 1:
-        #    walltime = int (walltime / self.getNCores() )
+        if self.getNCores() > 1:
+            walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
         walltime = max(120, walltime)
@@ -339,7 +337,7 @@ class aCTPanda2Xrsl:
             return
         
         if self.eventranges:
-            x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es")'      
+            x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/runpilot3-wrapper-es.sh")'      
         else:
             x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
