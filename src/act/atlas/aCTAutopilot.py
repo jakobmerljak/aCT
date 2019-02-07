@@ -302,7 +302,7 @@ class aCTAutopilot(aCTATLASProcess):
               and re.search('eventService=True', j['pandajob']):
                 
                 if not j['eventranges'] or j['eventranges'] == '[]':
-                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
                     if not os.path.exists(fname):
                         # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
                         # Assume only ARC sites (not condor) run NG-mode ES
@@ -314,7 +314,7 @@ class aCTAutopilot(aCTATLASProcess):
                             substatus = 'pilot_failed'
                             self.log.info('%s: Job ran but has no eventranges to update, marking failed' % j['pandaid'])
                         jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': substatus})
-                        # Create the empty pickle so that heartbeat code below doesn't fail
+                        # Create empty file so that heartbeat code below doesn't fail
                         jobinfo.writeToFile(fname)
                     continue
                 
@@ -322,13 +322,13 @@ class aCTAutopilot(aCTATLASProcess):
                 # with jobMetrics containing the zip file
                 if 'es_to_zip' in self.sites[j['siteName']]['catchall']:
                     try:
-                        # Load pickled information from pilot
-                        fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                        # Load heartbeat information from pilot
+                        fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
                         jobinfo = aCTPandaJob(filename=fname)
                         jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
                         self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
                     except Exception,x:
-                        self.log.error('%s: No pickle info found: %s' % (j['pandaid'], x))
+                        self.log.error('%s: No heartbeat info found: %s' % (j['pandaid'], x))
                     else:
                         t = PandaThr(self.getPanda(j['siteName']).updateStatus, j['pandaid'], 'transferring', jobmetrics)
                         aCTUtils.RunThreadsSplit([t], nthreads)
@@ -396,7 +396,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.dbpanda.updateJob(j['pandaid'], jd)
                 continue
             
-            # Cancelled jobs have no pickle info
+            # Cancelled jobs have no heartbeat info
             if j['actpandastatus'] == 'cancelled':
                 jobinfo = aCTPandaJob(jobinfo = {'jobId': j['pandaid'], 'state': 'failed'})
                 jobinfo.pilotErrorCode = 1144
@@ -405,10 +405,10 @@ class aCTAutopilot(aCTATLASProcess):
                 jobinfo.endTime = j['endTime'] if j['endTime'] else datetime.datetime.utcnow()
             else:
                 try:
-                    # Load pickled information from pilot
-                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    # Load heartbeat information from pilot
+                    fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
                     jobinfo = aCTPandaJob(filename=fname)
-                except Exception,x:
+                except Exception as x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
                     # Send some basic info back to panda
                     info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 

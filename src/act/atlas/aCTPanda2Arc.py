@@ -65,7 +65,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 except:
                     pass
                 if not self.sites[job['siteName']]['truepilot']:
-                    downloadfiles += ';jobSmallFiles.tgz'
+                    downloadfiles += ';heartbeat.json'
+                if job['eventranges']:
+                    downloadfiles += ';metadata-es.xml'
 
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']),
