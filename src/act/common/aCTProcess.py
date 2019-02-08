@@ -40,6 +40,7 @@ class aCTProcess:
 
         # config
         self.conf=aCTConfig.aCTConfigARC()
+        self.tmpdir=str(self.conf.get(['tmp', 'dir']))
         # database
         # TODO: subclasses for arc and condor with respective DBs defined there
         self.db=aCTDBArc.aCTDBArc(self.log)

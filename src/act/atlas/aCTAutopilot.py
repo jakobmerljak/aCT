@@ -10,7 +10,6 @@ import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
-from aCTAGISParser import aCTAGISParser
 from aCTPandaJob import aCTPandaJob
 
 class PandaThr(Thread):
@@ -302,7 +301,7 @@ class aCTAutopilot(aCTATLASProcess):
               and re.search('eventService=True', j['pandajob']):
                 
                 if not j['eventranges'] or j['eventranges'] == '[]':
-                    fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
+                    fname = os.path.join(self.tmpdir, "heartbeats", "%d.json" % j['pandaid'])
                     if not os.path.exists(fname):
                         # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
                         # Assume only ARC sites (not condor) run NG-mode ES
@@ -323,7 +322,7 @@ class aCTAutopilot(aCTATLASProcess):
                 if 'es_to_zip' in self.sites[j['siteName']]['catchall']:
                     try:
                         # Load heartbeat information from pilot
-                        fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
+                        fname = os.path.join(self.tmpdir, "heartbeats", "%d.json" % j['pandaid'])
                         jobinfo = aCTPandaJob(filename=fname)
                         jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
                         self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
@@ -406,7 +405,7 @@ class aCTAutopilot(aCTATLASProcess):
             else:
                 try:
                     # Load heartbeat information from pilot
-                    fname = self.arcconf.get(['tmp','dir'])+"/heartbeats/"+str(j['pandaid'])+".json"
+                    fname = os.path.join(self.tmpdir, "heartbeats", "%d.json" % j['pandaid'])
                     jobinfo = aCTPandaJob(filename=fname)
                 except Exception as x:
                     self.log.error('%s: %s' % (j['pandaid'], x))

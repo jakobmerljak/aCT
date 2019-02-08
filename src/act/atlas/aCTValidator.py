@@ -67,7 +67,7 @@ class aCTValidator(aCTATLASProcess):
         date = aj['created'].strftime('%Y-%m-%d')
         if extractmetadata:
             try:
-                jobinfo = aCTPandaJob(os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid, 'heartbeat.json'))
+                jobinfo = aCTPandaJob(os.path.join(self.tmpdir, sessionid, 'heartbeat.json'))
             except Exception as x:
                 self.log.error("%s: failed to load heartbeat file for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
@@ -99,7 +99,7 @@ class aCTValidator(aCTATLASProcess):
                     self.log.warning("%s: no metaData in pilot metadata: %s" % (aj['appjobid'], str(e)))
                 jobinfo.writeToFile(os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json'))
             else:
-                jobinfo.writeToFile(self.arcconf.get(['tmp','dir'])+"/heartbeats/"+aj['appjobid']+".json")
+                jobinfo.writeToFile(os.path.join(self.tmpdir, "heartbeats", "%s.json" % aj['appjobid']))
 
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['fairshare'])
@@ -108,7 +108,7 @@ class aCTValidator(aCTATLASProcess):
         except:
             pass
 
-        localdir = os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid)
+        localdir = os.path.join(self.tmpdir, sessionid)
         gmlogerrors = os.path.join(localdir, "gmlog", "errors")
         arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
         if not os.path.exists(arcjoblog):
@@ -144,7 +144,7 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/'):]
         try:
-            metadata = aCTPandaJob(os.path.join(str(self.arcconf.get(['tmp','dir'])), sessionid, 'heartbeat.json')).xml
+            metadata = aCTPandaJob(filename=os.path.join(self.tmpdir, sessionid, 'heartbeat.json')).xml
         except Exception as x:
             self.log.error("%s: failed to extract metadata for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
             return {}
@@ -321,7 +321,7 @@ class aCTValidator(aCTATLASProcess):
                 continue
             jobid = job['JobID']
             sessionid = jobid[jobid.rfind('/'):]
-            localdir = str(self.arcconf.get(['tmp','dir'])) + sessionid
+            localdir = self.tmpdir + sessionid
 
             try:
                 os.makedirs(localdir, 0755)
@@ -344,7 +344,7 @@ class aCTValidator(aCTATLASProcess):
         job = self.dbarc.getArcJobInfo(arcjobid, columns=['JobID','appjobid'])
         if job and job['JobID']:
             sessionid = job['JobID'][job['JobID'].rfind('/'):]
-            localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+            localdir = self.tmpdir + sessionid
             shutil.rmtree(localdir, ignore_errors=True)
             pandaid=job['appjobid']
             pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
@@ -377,7 +377,7 @@ class aCTValidator(aCTATLASProcess):
             arcjob = self.dbarc.getArcJobInfo(arcjobid, ['JobID'])
             jobid = arcjob['JobID']
             sessionid = jobid[jobid.rfind('/'):]
-            metadata = os.path.join(self.arcconf.get(['tmp','dir']), sessionid, 'metadata-es.xml')
+            metadata = os.path.join(self.tmpdir, sessionid, 'metadata-es.xml')
             with open(metadata) as f:
                 processedevents = f.read()
         except Exception, e:

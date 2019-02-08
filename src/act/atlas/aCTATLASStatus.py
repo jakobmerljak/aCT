@@ -331,7 +331,7 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
-            localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
+            localdir = os.path.join(self.tmpdir, sessionid)
             gmlogerrors = os.path.join(localdir, "gmlog", "errors")
             arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
             if not os.path.exists(arcjoblog):
@@ -408,7 +408,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 if smeta and smeta.get('harvesteraccesspoint'):
                     hbfile = os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json')
                 else:
-                    hbfile = os.path.join(self.arcconf.get(['tmp','dir']), "heartbeats", str(aj['pandaid'])+".json")
+                    hbfile = os.path.join(self.tmpdir, "heartbeats", str(aj['pandaid'])+".json")
                 pupdate.writeToFile(hbfile)
             except Exception as e:
                 self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], hbfile, str(e)))
@@ -546,7 +546,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
             if job['JobID'] and job['JobID'].rfind('/') != -1:
                 sessionid = job['JobID'][job['JobID'].rfind('/'):]
-                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                localdir = self.tmpdir + sessionid
                 shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()
@@ -560,7 +560,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
             if job['JobID'] and job['JobID'].rfind('/') != -1:
                 sessionid = job['JobID'][job['JobID'].rfind('/'):]
-                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                localdir = self.tmpdir + sessionid
                 shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()

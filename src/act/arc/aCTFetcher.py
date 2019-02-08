@@ -38,7 +38,7 @@ class aCTFetcher(aCTProcess):
         job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
         job_supervisor.Update()
         dirs = arc.StringList()
-        job_supervisor.Retrieve(str(self.conf.get(['tmp','dir'])), False, False, dirs)
+        job_supervisor.Retrieve(self.tmpdir, False, False, dirs)
         
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
   
@@ -86,7 +86,7 @@ class aCTFetcher(aCTProcess):
             if arc.URL(jobid).ConnectionURL() != dp:
                 datapoint = aCTUtils.DataPoint(jobid, self.uc)
                 dp = datapoint.h
-            localdir = str(self.conf.get(['tmp','dir'])) + jobid[jobid.rfind('/'):] + '/'
+            localdir = self.tmpdir + jobid[jobid.rfind('/'):] + '/'
             
             files = downloadfiles[id].split(';')
             if re.search('[\*\[\]\?]', downloadfiles[id]):
@@ -149,7 +149,7 @@ class aCTFetcher(aCTProcess):
             
             # Clean the download dir just in case something was left from previous attempt
             for job in jobs:    
-                shutil.rmtree(self.conf.get(['tmp','dir']) + job[2].JobID[job[2].JobID.rfind('/'):], True)           
+                shutil.rmtree(self.tmpdir + job[2].JobID[job[2].JobID.rfind('/'):], True)           
 
             # Get list of downloadable files for these jobs
             filestodl = self.db.getArcJobsInfo("arcstate='"+arcstate+"' and cluster='"+self.cluster+"' and proxyid='"+str(proxyid)+"'", ['id', 'downloadfiles'])
@@ -200,7 +200,7 @@ class aCTFetcher(aCTProcess):
                 if job.JobID in notfetchedretry:
                     self.log.warning("%s: Could not get output from job %s" % (appjobid, job.JobID))
                     # Remove download directory to allow retry
-                    shutil.rmtree(self.conf.get(['tmp','dir']) + job.JobID[job.JobID.rfind('/'):], True)
+                    shutil.rmtree(self.tmpdir + job.JobID[job.JobID.rfind('/'):], True)
                     # Check if job still exists
                     fileinfo = arc.FileInfo()
                     self.uc.CredentialString(str(self.db.getProxy(proxyid)))

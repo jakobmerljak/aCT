@@ -34,6 +34,7 @@ class aCTATLASProcess:
         # config
         self.conf=aCTConfig.aCTConfigATLAS()
         self.arcconf=aCTConfig.aCTConfigARC()
+        self.tmpdir=str(self.arcconf.get(['tmp', 'dir']))
         # database
         self.dbarc=aCTDBArc.aCTDBArc(self.log)
         self.dbcondor=aCTDBCondor.aCTDBCondor(self.log)
