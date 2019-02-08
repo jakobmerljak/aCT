@@ -138,9 +138,8 @@ class aCTPanda2ClassAd:
 
     def setArguments(self):
 
-        fetchjob = 'false' if self.siteinfo['push'] else 'true'
-        psrclabel = '-u %s' % self.prodsourcelabel if self.prodsourcelabel != 'None' else ''
-        pargs = '-h %s -s %s -f %s %s -p 25443 -w https://pandaserver.cern.ch' % (self.schedconfig, self.sitename, fetchjob, psrclabel)
+        psrclabel = '-j %s' % self.prodsourcelabel if self.prodsourcelabel != 'None' else ''
+        pargs = '-q %s -r %s -s %s -d %s --pilot-user ATLAS -w generic --url https://pandaserver.cern.ch -p 25443'  % (self.schedconfig, self.sitename, self.sitename, psrclabel)
         self.classad['Arguments'] = str(pargs)
 
     def setInputs(self):
