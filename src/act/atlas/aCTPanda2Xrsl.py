@@ -116,11 +116,11 @@ class aCTPanda2Xrsl:
 
             self.log.info('%s: job maxCpuCount %s' % (self.pandaid, cpucount))
         else:
-            cpucount = 2*24*3600 * self.getNCores()
+            cpucount = 2*24*3600
             self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
 
         if cpucount == 0:
-            cpucount = 2*24*3600 * self.getNCores()
+            cpucount = 2*24*3600
 
         #if cpucount < 50000:
         #    cpucount = 50000
@@ -137,8 +137,10 @@ class aCTPanda2Xrsl:
 
         walltime = int(cpucount / 60)
 
-        if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() )
+        # Change in Jedi, maxcpucount=maxwalltime=true walltime
+
+        # if self.getNCores() > 1:
+        #     walltime = int (walltime / self.getNCores() )
 
         # JEDI analysis hack
         walltime = max(120, walltime)
