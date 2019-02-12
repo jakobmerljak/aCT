@@ -67,7 +67,7 @@ class aCTValidator(aCTATLASProcess):
         date = aj['created'].strftime('%Y-%m-%d')
         if extractmetadata:
             try:
-                jobinfo = aCTPandaJob(os.path.join(self.tmpdir, sessionid, 'heartbeat.json'))
+                jobinfo = aCTPandaJob(filename=os.path.join(self.tmpdir, sessionid, 'heartbeat.json'))
             except Exception as x:
                 self.log.error("%s: failed to load heartbeat file for arcjob %s: %s" %(aj['appjobid'], jobid, x))
                 jobinfo = aCTPandaJob(jobinfo={'jobId': aj['appjobid'], 'state': 'finished'})
