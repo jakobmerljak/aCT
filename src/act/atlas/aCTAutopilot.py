@@ -5,6 +5,7 @@ import os
 import json
 import re
 import time
+import shutil
 import arc
 import aCTPanda
 from act.common import aCTProxy
@@ -289,6 +290,12 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
         
+        # Clean inputfiles
+        for j in jobs:
+            pandaid=j['pandaid']
+            pandainputdir = os.path.join(self.conf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            shutil.rmtree(pandainputdir, ignore_errors=True)
+
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
         
