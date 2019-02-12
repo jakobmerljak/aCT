@@ -142,7 +142,7 @@ class aCTValidator(aCTATLASProcess):
             return {}
 
         jobid=aj['JobID']
-        sessionid=jobid[jobid.rfind('/'):]
+        sessionid=jobid[jobid.rfind('/')+1:]
         try:
             metadata = aCTPandaJob(filename=os.path.join(self.tmpdir, sessionid, 'heartbeat.json')).xml
         except Exception as x:
@@ -376,7 +376,7 @@ class aCTValidator(aCTATLASProcess):
         try:
             arcjob = self.dbarc.getArcJobInfo(arcjobid, ['JobID'])
             jobid = arcjob['JobID']
-            sessionid = jobid[jobid.rfind('/'):]
+            sessionid = jobid[jobid.rfind('/')+1:]
             metadata = os.path.join(self.tmpdir, sessionid, 'metadata-es.xml')
             with open(metadata) as f:
                 processedevents = f.read()
