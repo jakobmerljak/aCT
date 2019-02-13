@@ -137,6 +137,9 @@ class aCTPanda2Xrsl:
 
         walltime = int(cpucount / 60)
 
+        # Jedi underestimates walltime increase by 50% for now
+        walltime = walltime * 1.5
+
         # Change in Jedi, maxcpucount=maxwalltime=true walltime
 
         # if self.getNCores() > 1:
