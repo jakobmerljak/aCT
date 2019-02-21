@@ -290,11 +290,23 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
         
-        # Clean inputfiles
+        # Clean inputfiles, pickle and eventranges
         for j in jobs:
             pandaid=j['pandaid']
             pandainputdir = os.path.join(self.conf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            picklefile = os.path.join(self.conf.get(["tmp", "dir"]), 'pickle', str(pandaid+".pickle"))
+            eventrangesfile = os.path.join(self.conf.get(["tmp", "dir"]), 'eventranges', str(pandaid+".json"))
             shutil.rmtree(pandainputdir, ignore_errors=True)
+            # remove pickle
+            try:
+                os.unlink(picklefile)
+            except:
+                pass
+            # remove eventrangesfile
+            try:
+                os.unlink(eventrangesfile)
+            except:
+                pass
 
         self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
         
