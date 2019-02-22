@@ -417,6 +417,7 @@ class aCTAutopilot(aCTATLASProcess):
                 else:
                     os.remove(fname)
 
+            self.log.debug('%s: final heartbeat: %s' % (j['pandaid'], jobinfo.dictionary()))
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
         
