@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import signal
@@ -12,19 +13,21 @@ from act.atlas import aCTDBPanda
 
 class aCTReport:
     '''Print summary info on jobs in DB. Use --web to print html that is
-    automatically refreshed'''
+    automatically refreshed. Add filenames to query more than one aCT DB'''
 
-    def __init__(self):
+    def __init__(self, args):
         self.output = ""
-        self.harvester = False
-        self.outfile = None
+        self.harvester = args.harvester
+        self.outfile = args.web
+        self.actconfs = args.conffiles or [''] # empty string for default behaviour
+
         self.logger=aCTLogger.aCTLogger("aCTReport")
         self.actlog=self.logger()
         self.actlog.logger.setLevel(logging.ERROR)
         self.criticallogger = aCTLogger.aCTLogger('aCTCritical', arclog=False)
         self.criticallog = self.criticallogger()
 
-        if len(sys.argv) >= 2 and sys.argv[1] == '--web':
+        if self.outfile:
             self.log('<META HTTP-EQUIV="refresh" CONTENT="60"><pre>')
             self.log(time.asctime() + '\n')
 
@@ -35,6 +38,8 @@ class aCTReport:
         self.output += message + '\n'
 
     def ProcessReport(self):
+        if self.actconfs != ['']:
+            return # don't print processes for combined report
         actprocscmd = 'ps ax -ww -o pid,etime,args'
         p = subprocess.Popen(actprocscmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
@@ -81,50 +86,56 @@ class aCTReport:
         self.log()
 
     def PandaReport(self):
-        c=self.db.db.conn.cursor()
-        c.execute("select sitename, actpandastatus, corecount from pandajobs")
-        rows=c.fetchall()
         rep={}
         rtot={}
         states = ["sent", "starting", "running", "slots", "tovalidate", "toresubmit",
                   "toclean", "finished", "done", "failed", "donefailed",
                   "tobekilled", "cancelled", "donecancelled"]
 
-        self.log("All Panda jobs: %d" % len(rows))
-        self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
-        for r in rows:
+        for conf in self.actconfs:
+            if conf:
+                os.environ['ACTCONFIGARC'] = conf
 
-            site, state = (str(r[0]), str(r[1]))
-            if r[2] is None:
-                corecount=1
-            else:
-                corecount=int(r[2])
+            db=aCTDBArc.aCTDBArc(self.actlog)
+            c=db.db.conn.cursor()
+            c.execute("select sitename, actpandastatus, corecount from pandajobs")
+            rows=c.fetchall()
+            for r in rows:
 
-            try:
-                rep[site][state]+=1
-                if state == "running":
-                    rep[site]["slots"]+=1*corecount 
-            except:
+                site, state = (str(r[0]), str(r[1]))
+                if r[2] is None:
+                    corecount=1
+                else:
+                    corecount=int(r[2])
+
                 try:
-                    rep[site][state]=1
+                    rep[site][state]+=1
                     if state == "running":
-                        try:
-                            rep[site]["slots"]+=1*corecount
-                        except:
-                            rep[site]["slots"]=corecount
+                        rep[site]["slots"]+=1*corecount 
                 except:
-                    rep[site]={}
-                    rep[site][state]=1
+                    try:
+                        rep[site][state]=1
+                        if state == "running":
+                            try:
+                                rep[site]["slots"]+=1*corecount
+                            except:
+                                rep[site]["slots"]=corecount
+                    except:
+                        rep[site]={}
+                        rep[site][state]=1
+                        if state == "running":
+                            rep[site]["slots"]=corecount 
+                try:
+                    rtot[state]+=1
                     if state == "running":
-                        rep[site]["slots"]=corecount 
-            try:
-                rtot[state]+=1
-                if state == "running":
-                    rtot["slots"]+=1*corecount 
-            except:
-                rtot[state]=1
-                if state == "running":
-                    rtot["slots"]=corecount 
+                        rtot["slots"]+=1*corecount 
+                except:
+                    rtot[state]=1
+                    if state == "running":
+                        rtot["slots"]=corecount 
+        
+        self.log("All Panda jobs: %d" % sum([v for k,v in rtot.items() if k != 'slots']))
+        self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         for k in sorted(rep.keys()):
             log="%28s:" % k[:28]
@@ -143,42 +154,48 @@ class aCTReport:
         self.log(log+'\n\n')
 
     def ArcJobReport(self):
-        c=self.db.db.conn.cursor()
-        c.execute("select jobid,state from arcjobs")
-        rows=c.fetchall()
         rep={}
         rtot={}
         states = ["Undefined", "Accepted", "Preparing", "Submitting",
                  "Queuing", "Running", "Finishing", "Finished", "Hold", "Killed",
                  "Failed", "Deleted", "Other"]
 
-        self.log("All ARC jobs: %d" % len(rows))
-        self.log("%39s %s" % (' ', ' '.join(['%9s' % s for s in states])))
-        for r in rows:
+        for conf in self.actconfs:
+            if conf:
+                os.environ['ACTCONFIGARC'] = conf
 
-            reg=re.search('.+//([^:]+)',str(r[0]))
-            cl=""
-            try:
-                cl=reg.group(1)
-            except:
-                cl='WaitingSubmission'
+            db=aCTDBArc.aCTDBArc(self.actlog)
+            c=db.db.conn.cursor()
+            c.execute("select jobid,state from arcjobs")
+            rows=c.fetchall()
+            for r in rows:
 
-            jid=str(r[1])
-            if jid == 'None':
-                jid="Other"
-
-            try:
-                rep[cl][jid]+=1
-            except:
+                reg=re.search('.+//([^:]+)',str(r[0]))
+                cl=""
                 try:
-                    rep[cl][jid]=1
+                    cl=reg.group(1)
                 except:
-                    rep[cl]={}
-                    rep[cl][jid]=1
-            try:
-                rtot[jid]+=1
-            except:
-                rtot[jid]=1
+                    cl='WaitingSubmission'
+
+                jid=str(r[1])
+                if jid == 'None':
+                    jid="Other"
+
+                try:
+                    rep[cl][jid]+=1
+                except:
+                    try:
+                        rep[cl][jid]=1
+                    except:
+                        rep[cl]={}
+                        rep[cl][jid]=1
+                try:
+                    rtot[jid]+=1
+                except:
+                    rtot[jid]=1
+
+        self.log("All ARC jobs: %d" % sum([v for k,v in rtot.items()]))
+        self.log("%39s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         #for k in sorted(rep.keys()):
         for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
@@ -200,6 +217,8 @@ class aCTReport:
 
     def CondorJobReport(self):
 
+        rep = {}
+        rtot = {}
         condorjobstatemap = ['Undefined', # used before real state is known
                              'Idle',
                              'Running',
@@ -209,34 +228,38 @@ class aCTReport:
                              'Transferring',
                              'Suspended']
 
-        c = self.db.db.conn.cursor()
-        c.execute("select cluster, JobStatus from condorjobs")
-        rows = c.fetchall()
-        rep = {}
-        rtot = {}
+        for conf in self.actconfs:
+            if conf:
+                os.environ['ACTCONFIGARC'] = conf
 
-        self.log("All Condor jobs: %d" % len(rows))
-        self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap])))
-        for r in rows:
+            db=aCTDBArc.aCTDBArc(self.actlog)
+            c = db.db.conn.cursor()
+            c.execute("select cluster, JobStatus from condorjobs")
+            rows = c.fetchall()
 
-            cl = str(r[0])
-            if not cl:
-                cl = 'WaitingSubmission'
+            for r in rows:
 
-            jid = r[1]
+                cl = str(r[0])
+                if not cl:
+                    cl = 'WaitingSubmission'
 
-            try:
-                rep[cl][jid]+=1
-            except:
+                jid = r[1]
+
                 try:
-                    rep[cl][jid]=1
+                    rep[cl][jid]+=1
                 except:
-                    rep[cl]={}
-                    rep[cl][jid]=1
-            try:
-                rtot[jid]+=1
-            except:
-                rtot[jid]=1
+                    try:
+                        rep[cl][jid]=1
+                    except:
+                        rep[cl]={}
+                        rep[cl][jid]=1
+                try:
+                    rtot[jid]+=1
+                except:
+                    rtot[jid]=1
+
+        self.log("All Condor jobs: %d" % sum([v for k,v in rtot.items()]))
+        self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap])))
         #for k in sorted(rep.keys()):
         for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
 	    k='.'.join(list(reversed(y)))
@@ -328,18 +351,18 @@ class aCTReport:
         pass
 
     def end(self):
-        if len(sys.argv) >= 2 and sys.argv[1] == '--web':
+        if self.outfile:
             self.log('</pre>')
 
 
 def main():
-    acts=aCTReport()
-    args=iter(sys.argv)
-    for i in args:
-        if i == "--web":
-            acts.outfile = args.next()
-        if i == "--harvester":
-            acts.harvester = True
+    parser = argparse.ArgumentParser(description='Report table of aCT jobs.')
+    parser.add_argument('conffiles', nargs='*', help='list of configuration files')
+    parser.add_argument('--web', help='Output suitable for web page')
+    parser.add_argument('--harvester', action='store_true', help='Include harvester info')
+    args = parser.parse_args(sys.argv[1:])
+
+    acts = aCTReport(args)
     acts.PandaReport()
     if acts.harvester:
         acts.HarvesterReport()
