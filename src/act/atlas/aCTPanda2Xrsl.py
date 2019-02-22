@@ -107,46 +107,31 @@ class aCTPanda2Xrsl:
 
     def setTime(self):
 
-        if 'maxCpuCount' in self.jobdesc:
-            cpucount = int(self.jobdesc['maxCpuCount'][0])
+        wallfactor = 2.0
 
-            # hack for group production!!!
-            if cpucount == 600:
-                cpucount = 24*3600
-
-            self.log.info('%s: job maxCpuCount %s' % (self.pandaid, cpucount))
+        if 'maxWalltime' in self.jobdesc and str(self.jobdesc['maxWalltime'][0]) != "NULL":
+            walltime = int(self.jobdesc['maxWalltime'][0]) * wallfactor
+        elif 'maxCpuCount' in self.jobdesc:
+            walltime = int(self.jobdesc['maxCpuCount'][0]) * wallfactor
         else:
-            cpucount = 2*24*3600 * self.getNCores()
-            self.log.info('%s: Using default maxCpuCount %s' % (self.pandaid, cpucount))
+            walltime = self.defaults['cputime']
 
-        if cpucount == 0:
-            cpucount = 2*24*3600 * self.getNCores()
+        if walltime <= 0:
+            walltime = self.defaults['cputime']
 
-        #if cpucount < 50000:
-        #    cpucount = 50000
+        self.log.info('%s: Using default maxWalltime %s' % (self.pandaid, walltime))
 
-        # shorten installation jobs
-        try:
-            if self.prodSourceLabel == 'install':
-                cpucount = 12*3600
-        except:
-            pass
-
-        if int(cpucount) <= 0:
-            cpucount = self.defaults['cputime']
-
-        walltime = int(cpucount / 60)
-
-        if self.getNCores() > 1:
-            walltime = int (walltime / self.getNCores() )
+        walltime = int(walltime / 60)
 
         # JEDI analysis hack
         walltime = max(120, walltime)
         walltime = min(self.maxwalltime, walltime)
+
         cputime = self.getNCores() * walltime
         if self.sitename.startswith('BOINC'):
             walltime = min(240, walltime)
             cputime = walltime
+
         self.log.info('%s: walltime: %d, cputime: %d, maxtime: %d' % (self.pandaid, walltime, cputime, self.maxwalltime))
 
         self.xrsl['time'] = '(walltime=%d)(cputime=%d)' % (walltime, cputime)
@@ -325,9 +310,7 @@ class aCTPanda2Xrsl:
         # Panda queue configuration
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
-            x += '(queuedata.pilot.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
-        else:
-            x += '(queuedata.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
+        x += '(queuedata.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
         # Input files
         if 'inFiles' in self.jobdesc:

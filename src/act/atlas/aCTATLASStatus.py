@@ -105,10 +105,9 @@ class aCTATLASStatus(aCTATLASProcess):
         actpandastatus to starting, and also for jobs that were requeued
         from running.
         """
-
-        select = "arcjobs.id=pandajobs.arcjobid and (arcjobs.arcstate='submitted' or arcjobs.arcstate='holding')"
-        select += " and (pandajobs.actpandastatus='sent' or pandajobs.actpandastatus='running')"
-        select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
+        select = "((arcjobs.arcstate in ('submitted', 'holding') and pandajobs.actpandastatus='sent') or"
+        select += " (arcjobs.arcstate in ('tosubmit', 'submitting', 'submitted', 'holding') and pandajobs.actpandastatus='running'))"
+        select += " and arcjobs.id=pandajobs.arcjobid and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.cluster", "arcjobs.appjobid"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables="arcjobs,pandajobs")
 
@@ -122,7 +121,8 @@ class aCTATLASStatus(aCTATLASProcess):
             desc = {}
             desc["pandastatus"] = "starting"
             desc["actpandastatus"] = "starting"
-            desc["computingElement"] = urlparse(aj['cluster']).hostname
+            if aj['cluster']:
+                desc["computingElement"] = urlparse(aj['cluster']).hostname
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
@@ -435,7 +435,7 @@ class aCTATLASStatus(aCTATLASProcess):
         
         # Look for failed final states in ARC which are still starting or running in panda
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
-        select += " and actpandastatus in ('starting', 'running')"
+        select += " and actpandastatus in ('sent', 'starting', 'running')"
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
