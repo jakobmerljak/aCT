@@ -199,7 +199,7 @@ class aCTReport:
 
         #for k in sorted(rep.keys()):
         for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
-	    k='.'.join(list(reversed(y)))
+            k='.'.join(list(reversed(y)))
             log="%38s:" % k[:38]
             for s in states:
                 try:
@@ -262,7 +262,7 @@ class aCTReport:
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap])))
         #for k in sorted(rep.keys()):
         for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
-	    k='.'.join(list(reversed(y)))
+            k='.'.join(list(reversed(y)))
             log="%28s:" % k[:28]
             for s in range(8):
                 try:
@@ -306,49 +306,50 @@ class aCTReport:
             for cluster, count in clustercount.items():
                 self.log('%s %s' % (count, cluster))
             self.log()
+
     def HarvesterReport(self):
-      try:
-        from distutils.sysconfig import get_python_lib # pylint: disable=import-error
-        sys.path.append(get_python_lib()+'/pandacommon')
+        try:
+            from distutils.sysconfig import get_python_lib # pylint: disable=import-error
+            sys.path.append(get_python_lib()+'/pandacommon')
 
-        os.environ['PANDA_HOME']=os.environ['VIRTUAL_ENV']
+            os.environ['PANDA_HOME']=os.environ['VIRTUAL_ENV']
 
-        from collections import defaultdict # pylint: disable=import-error
-        from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy # pylint: disable=import-error
+            from collections import defaultdict # pylint: disable=import-error
+            from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy # pylint: disable=import-error
 
-        self.dbProxy = DBProxy()
+            self.dbProxy = DBProxy()
 
-        workers = self.dbProxy.get_worker_stats_bulk(None)
-        rep = {}
+            workers = self.dbProxy.get_worker_stats_bulk(None)
+            rep = {}
 
-        states = ["to_submit","submitted", "running"]
-        rtot = defaultdict(int)
+            states = ["to_submit","submitted", "running"]
+            rtot = defaultdict(int)
 
-        self.log("All Harvester jobs")
-        self.log( "%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
-        for site, resources in workers.items():
-            for resource, jobs in resources.items():
-                rep['%s-%s' % (site, resource)] = jobs
-                for state, count in jobs.items():
-                    rtot[state] += count
+            for site, resources in workers.items():
+                for resource, jobs in resources.items():
+                    rep['%s-%s' % (site, resource)] = jobs
+                    for state, count in jobs.items():
+                        rtot[state] += count
 
-        for k in sorted(rep.keys()):
-            log="%28s:" % k[:28]
+            self.log("All Harvester jobs: %d" % sum([v for k,v in rtot.items()]))
+            self.log( "%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
+            for k in sorted(rep.keys()):
+                log="%28s:" % k[:28]
+                for s in states:
+                    try:
+                        log += '%10s' % str(rep[k][s])
+                    except KeyError:
+                        log += '%10s' % '-'
+                self.log(log)
+            log = "%28s:" % "Totals"
             for s in states:
                 try:
-                    log += '%10s' % str(rep[k][s])
-                except KeyError:
+                    log += '%10s' % str(rtot[s])
+                except:
                     log += '%10s' % '-'
-            self.log(log)
-        log = "%28s:" % "Totals"
-        for s in states:
-            try:
-                log += '%10s' % str(rtot[s])
-            except:
-                log += '%10s' % '-'
-        self.log(log+'\n\n')
-      except:
-        pass
+            self.log(log+'\n\n')
+        except:
+            pass
 
     def end(self):
         if self.outfile:
