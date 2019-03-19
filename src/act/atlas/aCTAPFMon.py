@@ -29,7 +29,7 @@ class aCTAPFMon:
         payload = json.dumps(factory)
 
         self.log.debug("Registering %s as new factory at %s" % (self.factory, factoryregister))
-        r = requests.put(factoryregister, data=payload)
+        r = requests.put(factoryregister, data=payload, timeout=10)
         self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
     def registerLabels(self, sites):
@@ -43,7 +43,7 @@ class aCTAPFMon:
         payload = json.dumps(labels)
 
         self.log.debug("Registering new labels: %s" % ','.join([s for s in sites]))
-        r = requests.put(labelregister, data=payload)
+        r = requests.put(labelregister, data=payload, timeout=10)
         self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
     def registerJobs(self, pandaids, site):
@@ -59,7 +59,7 @@ class aCTAPFMon:
         payload = json.dumps(jobs)
 
         self.log.debug("sending to %s: %s" % (jobregister, jobs))
-        r = requests.put(jobregister, data=payload)
+        r = requests.put(jobregister, data=payload, timeout=10)
         self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
     def updateJob(self, pandaid, status, exitcode=None):
@@ -74,7 +74,7 @@ class aCTAPFMon:
             payload['rc'] = exitcode
 
         self.log.debug("sending to %s: %s" % (jobupdate, payload))
-        r = requests.post(jobupdate, data=payload)
+        r = requests.post(jobupdate, data=payload, timeout=10)
         self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
 def test():

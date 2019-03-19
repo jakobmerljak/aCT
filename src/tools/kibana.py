@@ -56,7 +56,7 @@ def getAvailability():
         mtime = os.stat('%s/aCTAutopilot.log' % logdir).st_mtime
     except:
         return 'degraded', 'Autopilot log not available'
-    if time.time() - mtime > 600:
+    if time.time() - mtime > 900:
         return 'degraded', 'Autopilot log not updated in %d seconds' % (time.time() - mtime)
 
     # Check heartbeats are being updated
