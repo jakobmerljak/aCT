@@ -247,7 +247,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         pandaid = rowid
                         pandajob = 'PandaID=%d&prodSourceLabel=%s' % (pandaid, prodsrclabel)
                         self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob, 'arcjobid': None, 'condorjobid': None})
-                    apfmonjobs.append(rowid)
+                    apfmonjobs.append((rowid, pandaid))
                     count += 1
 
                 if not activatedjobs:
