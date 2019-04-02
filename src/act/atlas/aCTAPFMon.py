@@ -1,3 +1,4 @@
+import datetime
 import json
 import requests
 from act.common.aCTLogger import aCTLogger
@@ -52,10 +53,14 @@ class aCTAPFMon:
         if not self.apfmonurl or not pandaids:
             return
 
+        logdir = '%s/%s/%s' % (self.acturl, datetime.date.today().isoformat(), site)
         jobregister = '%s/jobs' % self.apfmonurl
-        jobs = [{'cid'        : '%s' % pid,
+        jobs = [{'cid'        : '%s' % rowid,
                  'factory'    : self.factory,
-                 'label'      : site} for pid in pandaids]
+                 'label'      : site,
+                 'stdouturl'  : '%s/%s.out' % (logdir, pid),
+                 'stderrurl'  : '%s/%s.err' % (logdir, pid),
+                 'logurl'     : '%s/%s.log' % (logdir, pid)} for (rowid, pid) in pandaids]
         payload = json.dumps(jobs)
 
         self.log.debug("sending to %s: %s" % (jobregister, jobs))
