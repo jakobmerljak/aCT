@@ -10,8 +10,8 @@ from act.common.aCTLogger import aCTLogger
 logger = aCTLogger('acttest', cluster='test')
 log = logger()
 
-#db = aCTDBArc(log, "act")
-dbcondor = aCTDBCondor(log, 'act')
+#db = aCTDBArc(log)
+dbcondor = aCTDBCondor(log)
 
 xrsl = '''&(executable=/bin/sleep)
            (arguments=1)
@@ -42,6 +42,6 @@ validHours=5
 proxyid =1 # p.createVOMSAttribute(voms, attribute, proxypath, validHours)
 
 #db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo5.cern.ch/fork', proxyid=proxyid, maxattempts=5)
-#dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
+dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
 #dbcondor.insertCondorJobDescription(cad, clusterlist='condor ce503.cern.ch ce503.cern.ch:9619', proxyid=proxyid, maxattempts=5)
-dbcondor.insertCondorJobDescription(cad, clusterlist='condor gridgk01.racf.bnl.gov gridgk01.racf.bnl.gov:9619', proxyid=proxyid, maxattempts=5)
+#dbcondor.insertCondorJobDescription(cad, clusterlist='condor gridgk01.racf.bnl.gov gridgk01.racf.bnl.gov:9619', proxyid=proxyid, maxattempts=5)
