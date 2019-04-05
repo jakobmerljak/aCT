@@ -324,7 +324,7 @@ class aCTSubmitter(aCTProcess):
 
     def processToCancel(self):
         
-        jobstocancel = self.db.getArcJobs("arcstate='tocancel' and cluster='"+self.cluster+"'")
+        jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
         if not jobstocancel:
             return
         
