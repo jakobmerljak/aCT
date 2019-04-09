@@ -241,13 +241,13 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         # job getting picked up before setting proper job desc after insertion
                         n['arcjobid'] = -1
                         n['condorjobid'] = -1
-                    rowid = self.dbpanda.insertJob(pandaid, pandajob, n)
+                    rowid = self.dbpanda.insertJob(pandaid, pandajob, n)['LAST_INSERT_ID()']
                     if pandaid == 0:
-                        # Pull mode: use row id as job id for output files and APFmon
-                        pandaid = rowid['LAST_INSERT_ID()']
+                        # Pull mode: use row id as job id for output files
+                        pandaid = rowid
                         pandajob = 'PandaID=%d&prodSourceLabel=%s' % (pandaid, prodsrclabel)
                         self.dbpanda.updateJobs('id=%d' % pandaid, {'pandaid': pandaid, 'pandajob': pandajob, 'arcjobid': None, 'condorjobid': None})
-                    apfmonjobs.append(pandaid)
+                    apfmonjobs.append((rowid, pandaid))
                     count += 1
 
                 if not activatedjobs:

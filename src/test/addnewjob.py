@@ -10,8 +10,8 @@ from act.common.aCTLogger import aCTLogger
 logger = aCTLogger('acttest', cluster='test')
 log = logger()
 
-#db = aCTDBArc(log, "act")
-dbcondor = aCTDBCondor(log, 'act')
+#db = aCTDBArc(log)
+dbcondor = aCTDBCondor(log)
 
 xrsl = '''&(executable=/bin/sleep)
            (arguments=1)
