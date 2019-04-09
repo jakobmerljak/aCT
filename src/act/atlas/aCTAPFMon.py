@@ -6,7 +6,7 @@ from act.common.aCTLogger import aCTLogger
 class aCTAPFMon:
 
     def __init__(self, conf, log=None):
-        
+
         if log:
             self.log = log
         else:
@@ -14,13 +14,15 @@ class aCTAPFMon:
             self.log = self.logger()
 
         self.apfmonurl = conf.get(["monitor", "apfmon"])
+        self.sendupdates = conf.get(["monitor", "update"])
         self.acturl = conf.get(["joblog", "urlprefix"])
         self.factory = conf.get(["panda", "schedulerid"])
 
     def registerFactory(self):
         '''Register this instance of aCT'''
 
-        if not self.apfmonurl:
+        if not self.apfmonurl or not self.sendupdates:
+            self.log.info('APFmon updates disabled')
             return
 
         factoryregister = '%s/factories/%s' % (self.apfmonurl, self.factory)
@@ -36,7 +38,7 @@ class aCTAPFMon:
     def registerLabels(self, sites):
         '''Register labels (panda queues)'''
 
-        if not self.apfmonurl or not sites:
+        if not self.apfmonurl or not sites or not self.sendupdates:
             return
 
         labelregister = '%s/labels' % self.apfmonurl
@@ -50,7 +52,7 @@ class aCTAPFMon:
     def registerJobs(self, pandaids, site):
         '''Register new jobs'''
 
-        if not self.apfmonurl or not pandaids:
+        if not self.apfmonurl or not pandaids or not self.sendupdates:
             return
 
         logdir = '%s/%s/%s' % (self.acturl, datetime.date.today().isoformat(), site)
@@ -70,8 +72,8 @@ class aCTAPFMon:
 
     def updateJob(self, pandaid, status, exitcode=None):
         '''Update job status. Exit code is required for "exiting" state'''
-        
-        if not self.apfmonurl:
+
+        if not self.apfmonurl or not self.sendupdates:
             return
  
         jobupdate = '%s/jobs/%s:%s' % (self.apfmonurl, self.factory, pandaid)
