@@ -1,4 +1,5 @@
 import httplib
+import os
 import traceback
 import json
 
@@ -80,6 +81,18 @@ class aCTPanda2Arc(aCTATLASProcess):
                 # make sure actpandastatus is really 'sent', in case of resubmitting
                 jd['actpandastatus'] = 'sent'
                 self.dbpanda.updateJob(job['pandaid'], jd)
+
+                # Dump description for APFMon
+                if self.conf.get(["monitor", "apfmon"]):
+                    logdir = os.path.join(self.conf.get(["joblog", "dir"]),
+                                          job['created'].strftime('%Y-%m-%d'),
+                                          job['siteName'])
+                    try: os.makedirs(logdir, 0755)
+                    except: pass
+                    jdlfile = os.path.join(logdir, '%s.jdl' % job['pandaid'])
+                    with open(jdlfile, 'w') as f:
+                        self.log.debug('Wrote description to %s' % jdlfile)
+                        f.write(xrsl)
 
     def process(self):
         self.setSites()
