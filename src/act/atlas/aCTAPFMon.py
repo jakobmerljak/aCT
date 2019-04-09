@@ -60,7 +60,8 @@ class aCTAPFMon:
                  'label'      : site,
                  'stdouturl'  : '%s/%s.out' % (logdir, pid),
                  'stderrurl'  : '%s/%s.err' % (logdir, pid),
-                 'logurl'     : '%s/%s.log' % (logdir, pid)} for (rowid, pid) in pandaids]
+                 'logurl'     : '%s/%s.log' % (logdir, pid),
+                 'jdlurl'     : '%s/%s.jdl' % (logdir, pid)} for (rowid, pid) in pandaids]
         payload = json.dumps(jobs)
 
         self.log.debug("sending to %s: %s" % (jobregister, jobs))

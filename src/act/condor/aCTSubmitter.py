@@ -226,14 +226,14 @@ class aCTSubmitter(aCTProcess):
                                                       "tcondorstate": self.dbcondor.getTimeStamp()})
 
     def processToCancel(self):
-        
-        jobstocancel = self.dbcondor.getCondorJobsInfo("condorstate='tocancel' and cluster='"+self.cluster+"'",
+
+        jobstocancel = self.dbcondor.getCondorJobsInfo("condorstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster),
                                                        ['id', 'appjobid', 'ClusterId'])
         if not jobstocancel:
             return
         
         for job in jobstocancel:
-	    self.log.info("%s: Cancelling condor job" % job['appjobid'])
+            self.log.info("%s: Cancelling condor job" % job['appjobid'])
     
             if not job['ClusterId']:
                 # Job not submitted
