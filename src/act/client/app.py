@@ -21,6 +21,7 @@ import os
 import shutil
 import io
 
+# TODO: switch to cryptography library
 from OpenSSL.crypto import load_certificate, load_privatekey
 from OpenSSL.crypto import X509Store, X509StoreContext
 from OpenSSL.crypto import FILETYPE_PEM
@@ -30,13 +31,6 @@ from six import u, b, binary_type, PY3
 from flask import Flask, request, send_file, jsonify
 app = Flask(__name__)
 
-@app.route('/test', methods=['GET', 'POST'])
-def test():
-    print request.form
-    print request.files
-    for arg in request.args:
-        print '{}: {}'.format(arg, request.args[arg])
-    return "Hello World!"
 
 @app.route('/jobs', methods=['GET'])
 def stat():
@@ -280,6 +274,23 @@ def getResults():
             mimetype='application/zip',
             as_attachment=True,
             attachment_filename=archivePath.split('/')[-1])
+
+
+@app.route('/proxies', methods=['PUT'])
+def createProxyCSR():
+    """
+    Create and return CSR for delegated proxy.
+    """
+    issuer_pem = request.form['cert']
+    issuer_cert = x509.load_pem_x509_certificate(six.b(issuer_pem), default_backend())
+
+    delegatee_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=1024,
+        backend=default_backend()
+    )
+
+    csr = x509proxy.create_proxy_csr(issuer_cert, delegatee_key)
 
 
 @app.route('/proxies', methods=['PUT'])
