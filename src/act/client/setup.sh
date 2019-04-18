@@ -29,7 +29,7 @@ source venv/bin/activate
 
 # install mysql.connector
 echo "Installing mysql.connector ..."
-pip install mysql-connector==2.1.6
+pip install mysql-connector==2.1.7
 
 echo "Installing pyOpenSSL ..."
 pip install pyOpenSSL
