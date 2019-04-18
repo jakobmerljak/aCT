@@ -42,12 +42,13 @@ class ClientDB(aCTDB):
 
     def createTables(self):
         """Create clientjobs table."""
+        c = self.db.getCursor()
+
         # delete table if already exists
         try:
-            c = self.getCursor()
             c.execute('DROP TABLE IF EXISTS clientjobs')
+            self.Commit()
         except:
-            self.conn.rollback()
             self.log.exception('Error dropping clientjobs table')
             raise
 
@@ -62,16 +63,13 @@ class ClientDB(aCTDB):
             arcjobid integer,
             proxyid integer
         )"""
-        c = self.getCursor()
         try:
             c.execute(query)
             c.execute('ALTER TABLE clientjobs ADD INDEX (arcjobid)')
+            self.Commit()
         except:
-            self.conn.rollback()
             self.log.exception('Error creating clientjobs table')
             raise
-        else:
-            self.conn.commit()
 
     def deleteTables(self):
         """Delete clientjobs table."""
