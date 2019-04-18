@@ -60,7 +60,7 @@ class JobManager(object):
         self.logger = logging.getLogger(__name__)
         arcconf = aCTConfig.aCTConfigARC()
         dbname = arcconf.get(['db', 'name'])
-        self.arcdb = aCTDBArc.aCTDBArc(self.logger, dbname)
+        self.arcdb = aCTDBArc.aCTDBArc(self.logger)
         self.clidb = clientdb.ClientDB(self.logger, dbname)
 
         # TODO: if and when sites from arc config are used, move everything

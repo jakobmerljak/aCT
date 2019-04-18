@@ -55,7 +55,7 @@ class Client2Arc(object):
         self.logger = aCTLogger.aCTLogger(self.name)
         self.log = self.logger()
         self.clidb = clientdb.ClientDB(self.log, self.arcconf.get(['db', 'name']))
-        self.arcdb = aCTDBArc.aCTDBArc(self.log, self.arcconf.get(['db', 'file']))
+        self.arcdb = aCTDBArc.aCTDBArc(self.log)
 
         self.log.info('Started {}'.format(self.name))
 

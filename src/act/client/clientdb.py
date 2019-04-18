@@ -29,6 +29,7 @@ class ClientDB(aCTDB):
     has :meth:`Commit`  method (inherited from ancestors).
     """
 
+    # TODO: dbname was omitted from aCTDBArc; should this be done here?
     def __init__(self, logger=logging.getLogger(__name__), dbname='act'):
         """
         Initialize base object.

@@ -36,7 +36,7 @@ class ProxyManager(object):
         """Initialize object."""
         self.logger = logging.getLogger(__name__)
         self.actproxy = aCTProxy.aCTProxy(self.logger)
-        self.arcdb = aCTDBArc.aCTDBArc(self.logger, 'act') # TODO: hardcoded
+        self.arcdb = aCTDBArc.aCTDBArc(self.logger)
 
     def getProxyInfo(self, dn, attribute='', columns=[]):
         """
