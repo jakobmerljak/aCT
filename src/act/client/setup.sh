@@ -38,6 +38,11 @@ pip install pyOpenSSL
 echo "Installing flask ..."
 pip install Flask
 
+# install SQLAlchemy
+pip install sqlalchemy
+# needed for sqlalchemy because it doesn't find
+pip install pymysql
+
 # create database tables
 echo "Creating database ..."
 python setup_db.py
