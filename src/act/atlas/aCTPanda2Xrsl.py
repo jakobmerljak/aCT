@@ -68,9 +68,6 @@ class aCTPanda2Xrsl:
             self.ncores = int(self.jobdesc.get('coreCount', [1])[0])
         except: # corecount is NULL
             self.ncores = 1
-        # For accounting BOINC running slots, force corecount to 1
-        if 'BOINC' in self.sitename:
-            self.ncores = 1
 
         self.xrsl['count'] = '(count=%d)' % self.ncores
 
@@ -90,7 +87,7 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
-        if 'UIO' not in self.sitename or self.sitename == 'UIO_MCORE_LOPRI':
+        if self.sitename not in ['UIO_MCORE', 'ANALY_UIO']:
             return
         # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
@@ -107,21 +104,25 @@ class aCTPanda2Xrsl:
 
     def setTime(self):
 
-        wallfactor = 2.0
+        if 'maxCpuCount' in self.jobdesc:
+            cpucount = int(self.jobdesc['maxCpuCount'][0])
 
-        if 'maxWalltime' in self.jobdesc and str(self.jobdesc['maxWalltime'][0]) != "NULL":
-            walltime = int(self.jobdesc['maxWalltime'][0]) * wallfactor
-        elif 'maxCpuCount' in self.jobdesc:
-            walltime = int(self.jobdesc['maxCpuCount'][0]) * wallfactor
+            # hack for group production!!!
+            if cpucount == 600:
+                cpucount = 24*3600
+
+            self.log.info('%s: job maxCpuCount %d' % (self.pandaid, cpucount))
         else:
-            walltime = self.defaults['cputime']
+            cpucount = self.defaults['cputime']
+            self.log.info('%s: Using default maxCpuCount %d' % (self.pandaid, cpucount))
 
-        if walltime <= 0:
-            walltime = self.defaults['cputime']
+        if cpucount <= 0:
+            cpucount = self.defaults['cputime']
 
-        self.log.info('%s: Using default maxWalltime %s' % (self.pandaid, walltime))
+        walltime = int(cpucount / 60)
 
-        walltime = int(walltime / 60)
+        # Jedi underestimates walltime increase by 50% for now
+        walltime = walltime * 1.5
 
         # JEDI analysis hack
         walltime = max(120, walltime)
@@ -152,7 +153,7 @@ class aCTPanda2Xrsl:
         if memory <= 1000:
             memory = 1000
 
-        if self.sitename == 'BOINC' or self.sitename == 'BOINC_MCORE':
+        if self.sitename == 'BOINC_MCORE':
             memory = 2400
 
         # hack mcore pile, use new convention for memory
@@ -248,7 +249,6 @@ class aCTPanda2Xrsl:
         self.xrsl['arguments'] = '(arguments = %s)' % pargs
 
         # Panda job hacks for specific sites
-
         # Commented on request of Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
         if self.sitename in ['IN2P3-CC_HPC_IDRIS_MCORE']:

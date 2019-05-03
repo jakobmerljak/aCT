@@ -139,13 +139,13 @@ class aCTSubmitter(aCTProcess):
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 100".format(self.cluster, fairshare),
-                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid"], lock=True)
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 100".format(fairshare),
-                                                columns=["id", "jobdesc", "appjobid", "priority"])
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
+                                                columns=["id", "jobdesc", "appjobid", "priority", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
                 for j in jobs:
@@ -248,11 +248,12 @@ class aCTSubmitter(aCTProcess):
                         maxprioqueued = 0
                     self.log.info("Max priority queued: %d" % maxprioqueued)
 
-                    # Limit number of submitted jobs using configuration or default 0.15 + 100/num of shares
+                    # Limit number of submitted jobs using configuration or default (0.15 + 100/num of shares)/num CEs
                     # Note: assumes only a few shares are used
                     qfraction = float(self.conf.get(['jobs', 'queuefraction'])) if self.conf.get(['jobs', 'queuefraction']) else 0.15
                     qoffset = int(self.conf.get(['jobs', 'queueoffset'])) if self.conf.get(['jobs', 'queueoffset']) else 100
-                    jlimit = len(rjobs) * qfraction + qoffset/len(fairshares)
+                    jlimit = (len(rjobs) * qfraction + qoffset/len(fairshares)) / len(jobs[0]['clusterlist'].split(','))
+                    self.log.debug("running %d, queued %d, queue limit %d" % (len(rjobs), len(qjobs), jlimit))
                     if str(self.cluster).find('arc-boinc-0') != -1:
                         jlimit = len(rjobs)*0.15 + 400
                     if str(self.cluster).find('XXXpikolit') != -1:
@@ -325,6 +326,7 @@ class aCTSubmitter(aCTProcess):
     def processToCancel(self):
         
         jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
+
         if not jobstocancel:
             return
         

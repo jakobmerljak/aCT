@@ -164,6 +164,9 @@ class aCTValidator(aCTATLASProcess):
                 se = arc.URL(str(surl)).Host()
             except Exception as x:
                 self.log.error('%s: %s' % (aj['appjobid'], x))
+
+            if not surl:
+                self.log.error("%s: no surl found in xml" % aj['appjobid'])
             else:
                 checksum = "adler32:"+ adler32
                 if not surls.has_key(se):
@@ -192,6 +195,8 @@ class aCTValidator(aCTATLASProcess):
         for surl in surls:
             count += 1
             if not surl['surl']:
+                self.log.error("Missing surl for %s, cannot validate" % surl['arcjobid'])
+                result[surl['arcjobid']] = self.failed
                 continue
             dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
             if not dp or not dp.h:
