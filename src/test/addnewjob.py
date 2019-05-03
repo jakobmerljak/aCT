@@ -10,15 +10,15 @@ from act.common.aCTLogger import aCTLogger
 logger = aCTLogger('acttest', cluster='test')
 log = logger()
 
-#db = aCTDBArc(log)
+db = aCTDBArc(log)
 dbcondor = aCTDBCondor(log)
 
 xrsl = '''&(executable=/bin/sleep)
-           (arguments=1)
+           (arguments=100)
            (stdout=stdout)
            (rerun=2)
            (gmlog=gmlog)
-           (inputfiles = (file1 "srm://srm.ndgf.org:8443;cache=no/atlas/disk/atlasdatadisk/rucio/mc15_13TeV/fe/a0/AOD.07849074._019904.pool.root.1"))
+           (*inputfiles = (file1 "srm://srm.ndgf.org:8443;cache=no/atlas/disk/atlasdatadisk/rucio/mc15_13TeV/fe/a0/AOD.07849074._019904.pool.root.1")*)
            '''
 
 cad = classad.ClassAd('''\n
@@ -52,7 +52,7 @@ proxypath=p.conf.get(["voms", "proxypath"])
 validHours=5
 proxyid =1 # p.createVOMSAttribute(voms, attribute, proxypath, validHours)
 
-#db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo5.cern.ch/fork', proxyid=proxyid, maxattempts=5)
-dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
+db.insertArcJobDescription(xrsl, clusterlist='gsiftp://pcoslo5.cern.ch/condor,https://pcoslo5.cern.ch/condor', proxyid=proxyid, maxattempts=5)
+#dbcondor.insertCondorJobDescription(cad, clusterlist='nordugrid pcoslo5.cern.ch', proxyid=proxyid, maxattempts=5)
 #dbcondor.insertCondorJobDescription(cad, clusterlist='condor ce503.cern.ch ce503.cern.ch:9619', proxyid=proxyid, maxattempts=5)
 #dbcondor.insertCondorJobDescription(cad, clusterlist='condor gridgk01.racf.bnl.gov gridgk01.racf.bnl.gov:9619', proxyid=proxyid, maxattempts=5)
