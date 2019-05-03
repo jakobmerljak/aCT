@@ -90,7 +90,7 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
-        if 'UIO' not in self.sitename or self.sitename == 'UIO_MCORE_LOPRI':
+        if self.sitename not in ['UIO_MCORE', 'ANALY_UIO']:
             return
         # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
@@ -107,21 +107,25 @@ class aCTPanda2Xrsl:
 
     def setTime(self):
 
-        wallfactor = 2.0
+        if 'maxCpuCount' in self.jobdesc:
+            cpucount = int(self.jobdesc['maxCpuCount'][0])
 
-        if 'maxWalltime' in self.jobdesc and str(self.jobdesc['maxWalltime'][0]) != "NULL":
-            walltime = int(self.jobdesc['maxWalltime'][0]) * wallfactor
-        elif 'maxCpuCount' in self.jobdesc:
-            walltime = int(self.jobdesc['maxCpuCount'][0]) * wallfactor
+            # hack for group production!!!
+            if cpucount == 600:
+                cpucount = 24*3600
+
+            self.log.info('%s: job maxCpuCount %d' % (self.pandaid, cpucount))
         else:
-            walltime = self.defaults['cputime']
+            cpucount = self.defaults['cputime']
+            self.log.info('%s: Using default maxCpuCount %d' % (self.pandaid, cpucount))
 
-        if walltime <= 0:
-            walltime = self.defaults['cputime']
+        if cpucount <= 0:
+            cpucount = self.defaults['cputime']
 
-        self.log.info('%s: Using default maxWalltime %s' % (self.pandaid, walltime))
+        walltime = int(cpucount / 60)
 
-        walltime = int(walltime / 60)
+        # Jedi underestimates walltime increase by 50% for now
+        walltime = walltime * 1.5
 
         # JEDI analysis hack
         walltime = max(120, walltime)
