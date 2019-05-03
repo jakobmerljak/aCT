@@ -64,7 +64,7 @@ class aCTAGISParser:
         self.log.info("Parsed sites from config: %s" % str(sites.keys()))
         return sites 
 
-    def _parseAgisJson(self, agisfilename, pilotmgr):
+    def _parseAgisJson(self, agisfilename, pilotmgr, pilotver):
         with open(agisfilename) as f:
             agisjson = json.load(f)
         sites = dict([(agisjson[entry]['panda_resource'], dict(agisjson[entry].items()+[('schedconfig', entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
@@ -72,7 +72,9 @@ class aCTAGISParser:
             siteinfo['push'] = True # TODO configure in AGIS 
             if not siteinfo.has_key('schedconfig'):
                 siteinfo['schedconfig'] = sitename
-            if (pilotmgr == 'all' or siteinfo['pilot_manager'] == pilotmgr) and siteinfo['state'] == 'ACTIVE':
+            if (pilotmgr == 'all' or siteinfo['pilot_manager'] == pilotmgr) and \
+               (pilotver is None or siteinfo['pilot_version'] == str(pilotver)) and \
+               siteinfo['state'] == 'ACTIVE':
                 siteinfo['enabled'] = True
                 siteinfo['maxjobs'] = int(self.conf.get(["agis", "maxjobs"]))
             else:
@@ -210,9 +212,10 @@ class aCTAGISParser:
         if (self.tparse < agismtime) or (self.tparse < os.stat(self.conf.configfile).st_mtime):
             self.log.info("AGIS file and/or config modified, reparsing site info")
             pilotmgr = self.conf.get(['agis','pilotmanager'])
+            pilotver = self.conf.get(['agis','pilotversion'])
             start_parsing = time.time()
             self._parseDDMEndpoints(self.conf.get(['agis', 'osfilename']))
-            self.sites = self._parseAgisJson(agisfile, pilotmgr)
+            self.sites = self._parseAgisJson(agisfile, pilotmgr, pilotver)
             self._mergeSiteDicts(self.sites, self._parseConfigSites())
             self.tparse = time.time()
             self.log.debug("Time to parse site info: %g s"%(self.tparse-start_parsing))
