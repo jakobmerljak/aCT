@@ -65,9 +65,6 @@ class aCTPanda2Xrsl:
             self.ncores = int(self.jobdesc.get('coreCount', [1])[0])
         except: # corecount is NULL
             self.ncores = 1
-        # For accounting BOINC running slots, force corecount to 1
-        if 'BOINC' in self.sitename:
-            self.ncores = 1
 
         self.xrsl['count'] = '(count=%d)' % self.ncores
 
@@ -156,7 +153,7 @@ class aCTPanda2Xrsl:
         if memory <= 1000:
             memory = 1000
 
-        if self.sitename == 'BOINC' or self.sitename == 'BOINC_MCORE':
+        if self.sitename == 'BOINC_MCORE':
             memory = 2400
 
         # hack mcore pile, use new convention for memory
@@ -265,24 +262,6 @@ class aCTPanda2Xrsl:
         self.xrsl['arguments'] = '(arguments = %s)' % pargs
 
         # Panda job hacks for specific sites
-        
-        # Set corecount to 1 to allow single core jobs to run. For other numbers
-        # corecount is set dynamically using ATHENA_PROC_NUMBER. This hack can be
-        # removed when ATHENA_PROC_NUMBER=1 works.
-        if 'BOINC' in self.sitename:
-            self.log.debug('hacking boinc corecount')
-            self.pandajob = re.sub(r'&coreCount=\d+&', '&coreCount=1&', self.pandajob)
-            # Set maxCPUCount to one week to avoid pilot killing suspended jobs
-            self.pandajob = re.sub(r'&maxCpuCount=\d+&', '&maxCpuCount=604800&', self.pandajob)
-            self.log.debug(self.pandajob)
-        # Hack to tell job to start from checkpoint
-        if self.sitename == 'BOINC_CHECKPOINT':
-            # Filter by task ID, one task using checkpoint and the other not
-            if int(self.jobdesc['taskID'][0]) == 12522345:
-                self.log.debug('%s: setting checkpoint restart arg for task %s' % (self.pandaid, self.jobdesc['taskID'][0]))
-                self.pandajob = re.sub(r'MC15aPlus', 'MC15aPlus+--restart%3D%2Fhome%2Fatlas01%2Ftest-checkpoint%2Fckpt%2Fcheckpoint.tar', self.pandajob)
-            # use newest DB release
-            self.pandajob = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', self.pandajob)
         # Commented on request of Rod
         #if self.sitename in ['LRZ-LMU_MUC_MCORE1', 'LRZ-LMU_MUC1_MCORE']:
         if self.sitename in ['IN2P3-CC_HPC_IDRIS_MCORE']:
