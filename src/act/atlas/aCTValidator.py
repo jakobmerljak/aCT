@@ -188,9 +188,9 @@ class aCTValidator(aCTATLASProcess):
         datapointlist = arc.DataPointList()
         surllist = []
         dummylist = []
-        count = 0
         bulklimit = 100
         for surls in surldict.values():
+            count = 0
             for surl in surls:
                 count += 1
                 if not surl['surl']:
