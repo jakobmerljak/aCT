@@ -440,12 +440,13 @@ class aCTValidator(aCTATLASProcess):
                 self.log.info('%s: Skip validation' % job['pandaid'])
                 if not self.copyFinishedFiles(job["arcjobid"], False):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJob(job['arcjobid'], desc)
+                # set pandajob done
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
                 self.cleanDownloadedJob(job['arcjobid'])
                 jobstoupdate.remove(job)
 
@@ -456,12 +457,13 @@ class aCTValidator(aCTATLASProcess):
             if not jobsurls:
                 # Problem extracting files, fail the job
                 self.log.error("%s: Cannot validate output of arc job %s" % (job['pandaid'], job["arcjobid"]))
-                select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
-                self.dbpanda.updateJobs(select, desc)
                 # set arcjobs state toclean
                 desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJob(job['arcjobid'], desc)
+                # set pandajob failed
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
+                self.dbpanda.updateJobs(select, desc)
                 self.cleanDownloadedJob(job['arcjobid'])
             else:
                 for se in jobsurls:
@@ -524,14 +526,15 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate[:]:
             if self.sites[job['siteName']]['truepilot']:
                 self.log.info("%s: Skip cleanup of output files" % job['pandaid'])
+                # set arcjobs state toclean
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                # set pandajob failed
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
-                self.cleanDownloadedJob(job["arcjobid"])
                 jobstoupdate.remove(job)
- 
+                self.cleanDownloadedJob(job["arcjobid"])
+
         # pull out output file info from pilot heartbeat json into dict, order by SE
         surls = {}
         for job in jobstoupdate:
@@ -539,11 +542,12 @@ class aCTValidator(aCTATLASProcess):
             if not jobsurls:
                 # Problem extracting files, just continue to failed
                 self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                # set arcjobs state toclean
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                # set pandajob failed
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
                 self.cleanDownloadedJob(job["arcjobid"])
             else:
                 surls.update(jobsurls)
@@ -557,11 +561,12 @@ class aCTValidator(aCTATLASProcess):
             for id, result in removedsurls.items():
                 # If failed, not much we can do except continue
                 if result == self.ok or result == self.failed:
+                    # set arcjobs state toclean
+                    self.dbarc.updateArcJobLazy(id, cleandesc)
+                    # set pandajob failed
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                     self.dbpanda.updateJobsLazy(select, desc)
-                    # set arcjobs state toclean
-                    self.dbarc.updateArcJobLazy(id, cleandesc)
                     self.cleanDownloadedJob(id)
                 else:
                     # Retry next time
