@@ -144,7 +144,8 @@ class aCTValidator(aCTATLASProcess):
         jobid=aj['JobID']
         sessionid=jobid[jobid.rfind('/')+1:]
         try:
-            metadata = aCTPandaJob(filename=os.path.join(self.tmpdir, sessionid, 'heartbeat.json')).xml
+            jobinfo = aCTPandaJob(filename=os.path.join(self.tmpdir, sessionid, 'heartbeat.json'))
+            metadata = getattr(jobinfo, 'xml') # travis doesn't like jobinfo.xml
         except Exception as x:
             self.log.error("%s: failed to extract metadata for arcjob %s: %s" %(aj['appjobid'], sessionid, x))
             return {}
@@ -172,7 +173,7 @@ class aCTValidator(aCTATLASProcess):
 
         return surls
 
-    def checkOutputFiles(self, surls):
+    def checkOutputFiles(self, surldict):
         '''
         Check if SURLs are working. Returns a dict of arcjobid:file status
         Do bulk arc.DataPoint.Stat() with max 100 files per request. The list
@@ -181,7 +182,7 @@ class aCTValidator(aCTATLASProcess):
 
         if self.arcconf.get(['downtime', 'srmdown']) == 'True':
             self.log.info("SRM down, will validate later")
-            return dict((k['arcjobid'], self.retry) for k in surls)
+            return dict((k['arcjobid'], self.retry) for k in surldict.values())
 
         result = {}
         datapointlist = arc.DataPointList()
@@ -189,93 +190,94 @@ class aCTValidator(aCTATLASProcess):
         dummylist = []
         count = 0
         bulklimit = 100
-        for surl in surls:
-            count += 1
-            if not surl['surl']:
-                self.log.error("Missing surl for %s, cannot validate" % surl['arcjobid'])
-                result[surl['arcjobid']] = self.failed
-                continue
-            dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
-            if not dp or not dp.h:
-                self.log.warning("URL %s not supported, skipping validation" % str(surl['surl']))
-                result[surl['arcjobid']] = self.ok
-                continue
-            datapointlist.append(dp.h)
-            dummylist.append(dp) # to not destroy objects
-            surllist.append(surl)
+        for surls in surldict.values():
+            for surl in surls:
+                count += 1
+                if not surl['surl']:
+                    self.log.error("Missing surl for %s, cannot validate" % surl['arcjobid'])
+                    result[surl['arcjobid']] = self.failed
+                    continue
+                dp = aCTUtils.DataPoint(str(surl['surl']), self.uc)
+                if not dp or not dp.h:
+                    self.log.warning("URL %s not supported, skipping validation" % str(surl['surl']))
+                    result[surl['arcjobid']] = self.ok
+                    continue
+                datapointlist.append(dp.h)
+                dummylist.append(dp) # to not destroy objects
+                surllist.append(surl)
 
-            if count % bulklimit != 0 and count != len(surls):
-                continue
+                if count % bulklimit != 0 and count != len(surls):
+                    continue
 
-            # do bulk call
-            (files, status) = dp.h.Stat(datapointlist)
-            if not status and status.GetErrno() != os.errno.EOPNOTSUPP:
-                # If call fails it is generally a server or connection problem
-                # and in most cases should be retryable
-                if status.Retryable():
-                    self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.h.GetURL().Host(), str(status)))
-                    result.update(dict((k['arcjobid'], self.retry) for k in surllist))
-                else:
-                    self.log.error("Failed to query files on %s: %s" % (dp.h.GetURL().Host(), str(status)))
-                    result.update(dict((k['arcjobid'], self.failed) for k in surllist))
-
-            else:
-                # files is a list of FileInfo objects. If file is not found or has
-                # another error in the listing FileInfo object will be invalid
-                for i in range(len(datapointlist)):
-                    if status.GetErrno() == os.errno.EOPNOTSUPP:
-                        # Bulk stat was not supported, do non-bulk here
-                        f = arc.FileInfo()
-                        st = datapointlist[i].Stat(f)
-                        if not st or not f:
-                            if status.Retryable():
-                                self.log.warning("Failed to query files on %s, will retry later: %s" % (datapointlist[i].GetURL().Host(), str(st)))
-                                result[surllist[i]['arcjobid']] = self.retry
-                            else:
-                                self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
-                                result[surllist[i]['arcjobid']] = self.failed
-                            files.append(None)
-                        else:
-                            files.append(f)
-
-                    if not files[i]:
-                        self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
-                        result[surllist[i]['arcjobid']] = self.failed
+                # do bulk call
+                (files, status) = dp.h.Stat(datapointlist)
+                if not status and status.GetErrno() != os.errno.EOPNOTSUPP:
+                    # If call fails it is generally a server or connection problem
+                    # and in most cases should be retryable
+                    if status.Retryable():
+                        self.log.warning("Failed to query files on %s, will retry later: %s" % (dp.h.GetURL().Host(), str(status)))
+                        result.update(dict((k['arcjobid'], self.retry) for k in surllist))
                     else:
-                        # compare metadata
-                        try:
-                            self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
-                                           (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
-                                           surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
-                        except:
-                            self.log.warning("Unhandled issue %d",i)
-                            result[surllist[i]['arcjobid']] = self.failed
-                            continue
-                        if int(surllist[i]['fsize']) != int(files[i].GetSize()):
-                            self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
-                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
-                                              int(files[i].GetSize()), int(surllist[i]['fsize'])))
-                            result[surllist[i]['arcjobid']] = self.failed
-                            continue
-                        if not files[i].CheckCheckSum():
-                            self.log.warning("File %s for %s: no checksum information available" %
-                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
-                        elif surllist[i]['checksum'] != files[i].GetCheckSum():
-                            self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
-                                             (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
-                                              files[i].GetCheckSum(), surllist[i]['checksum']))
-                            result[surllist[i]['arcjobid']] = self.failed
-                            continue
+                        self.log.error("Failed to query files on %s: %s" % (dp.h.GetURL().Host(), str(status)))
+                        result.update(dict((k['arcjobid'], self.failed) for k in surllist))
 
-                        self.log.info("File %s validated for %s" % (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
-                        # don't overwrite previous failed file for this job
-                        if surllist[i]['arcjobid'] not in result:
-                            result[surllist[i]['arcjobid']] = self.ok
+                else:
+                    # files is a list of FileInfo objects. If file is not found or has
+                    # another error in the listing FileInfo object will be invalid
+                    for i in range(len(datapointlist)):
+                        if status.GetErrno() == os.errno.EOPNOTSUPP:
+                            # Bulk stat was not supported, do non-bulk here
+                            f = arc.FileInfo()
+                            st = datapointlist[i].Stat(f)
+                            if not st or not f:
+                                if status.Retryable():
+                                    self.log.warning("Failed to query files on %s, will retry later: %s" % (datapointlist[i].GetURL().Host(), str(st)))
+                                    result[surllist[i]['arcjobid']] = self.retry
+                                else:
+                                    self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
+                                    result[surllist[i]['arcjobid']] = self.failed
+                                files.append(None)
+                            else:
+                                files.append(f)
 
-            # Clear lists and go to next round
-            datapointlist = arc.DataPointList()
-            surllist = []
-            dummylist = []
+                        if not files[i]:
+                            self.log.warning("%s: Failed to find info on %s" % (surllist[i]['arcjobid'], datapointlist[i].GetURL().str()))
+                            result[surllist[i]['arcjobid']] = self.failed
+                        else:
+                            # compare metadata
+                            try:
+                                self.log.debug("File %s for %s: expected size %d, checksum %s, actual size %d, checksum %s" %
+                                               (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], int(surllist[i]['fsize']),
+                                               surllist[i]['checksum'], int(files[i].GetSize()), files[i].GetCheckSum()))
+                            except:
+                                self.log.warning("Unhandled issue %d",i)
+                                result[surllist[i]['arcjobid']] = self.failed
+                                continue
+                            if int(surllist[i]['fsize']) != int(files[i].GetSize()):
+                                self.log.warning("File %s for %s: size on storage (%d) differs from expected size (%d)" %
+                                                 (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
+                                                  int(files[i].GetSize()), int(surllist[i]['fsize'])))
+                                result[surllist[i]['arcjobid']] = self.failed
+                                continue
+                            if not files[i].CheckCheckSum():
+                                self.log.warning("File %s for %s: no checksum information available" %
+                                                 (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
+                            elif surllist[i]['checksum'] != files[i].GetCheckSum():
+                                self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
+                                                 (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
+                                                  files[i].GetCheckSum(), surllist[i]['checksum']))
+                                result[surllist[i]['arcjobid']] = self.failed
+                                continue
+
+                            self.log.info("File %s validated for %s" % (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
+                            # don't overwrite previous failed file for this job
+                            if surllist[i]['arcjobid'] not in result:
+                                result[surllist[i]['arcjobid']] = self.ok
+
+                # Clear lists and go to next round
+                datapointlist = arc.DataPointList()
+                surllist = []
+                dummylist = []
 
         return result
 
@@ -439,12 +441,13 @@ class aCTValidator(aCTATLASProcess):
                 self.log.info('%s: Skip validation' % job['pandaid'])
                 if not self.copyFinishedFiles(job["arcjobid"], False):
                     self.log.warning("%s: Failed to copy log files" % job['pandaid'])
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJob(job['arcjobid'], desc)
+                # set pandajob done
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"pandastatus": None, "actpandastatus": "done"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                self.dbarc.updateArcJobLazy(job['arcjobid'], desc)
                 self.cleanDownloadedJob(job['arcjobid'])
                 jobstoupdate.remove(job)
 
@@ -455,12 +458,13 @@ class aCTValidator(aCTATLASProcess):
             if not jobsurls:
                 # Problem extracting files, fail the job
                 self.log.error("%s: Cannot validate output of arc job %s" % (job['pandaid'], job["arcjobid"]))
-                select = "arcjobid='"+str(job["arcjobid"])+"'"
-                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
-                self.dbpanda.updateJobs(select, desc)
                 # set arcjobs state toclean
                 desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJob(job['arcjobid'], desc)
+                # set pandajob failed
+                select = "arcjobid='"+str(job["arcjobid"])+"'"
+                desc = {"actpandastatus": "failed", "pandastatus": "failed"}
+                self.dbpanda.updateJobs(select, desc)
                 self.cleanDownloadedJob(job['arcjobid'])
             else:
                 for se in jobsurls:
@@ -473,31 +477,30 @@ class aCTValidator(aCTATLASProcess):
             return
 
         # check if surls valid, update pandastatus accordingly
-        for se in surls:
-            checkedsurls = self.checkOutputFiles(surls[se])
-            for id, result in checkedsurls.items():
-                if result == self.ok:
-                    # For ES jobs, modify eventranges to what was produced
-                    self.validateEvents(id)
+        checkedsurls = self.checkOutputFiles(surls)
+        for id, result in checkedsurls.items():
+            if result == self.ok:
+                # For ES jobs, modify eventranges to what was produced
+                self.validateEvents(id)
 
-                    select = "arcjobid='"+str(id)+"'"
-                    desc = {"pandastatus": "finished", "actpandastatus": "finished"}
-                    self.dbpanda.updateJobsLazy(select, desc) 
-                    if not self.copyFinishedFiles(id, True):
-                        # id was gone already
-                        continue
-                    # set arcjobs state toclean
-                    desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
-                    self.dbarc.updateArcJobLazy(id, desc)
-                    self.cleanDownloadedJob(id)
-                elif result == self.failed:
-                    select = "arcjobid='"+str(id)+"'"
-                    # output file failed, set to toresubmit to clean up output and resubmit
-                    desc = {"pandastatus": "starting", "actpandastatus": "toresubmit"}
-                    self.dbpanda.updateJobsLazy(select, desc)
-                else:
-                    # Retry next time
-                    pass
+                select = "arcjobid='"+str(id)+"'"
+                desc = {"pandastatus": "finished", "actpandastatus": "finished"}
+                self.dbpanda.updateJobsLazy(select, desc) 
+                if not self.copyFinishedFiles(id, True):
+                    # id was gone already
+                    continue
+                # set arcjobs state toclean
+                desc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJobLazy(id, desc)
+                self.cleanDownloadedJob(id)
+            elif result == self.failed:
+                select = "arcjobid='"+str(id)+"'"
+                # output file failed, set to toresubmit to clean up output and resubmit
+                desc = {"pandastatus": "starting", "actpandastatus": "toresubmit"}
+                self.dbpanda.updateJobsLazy(select, desc)
+            else:
+                # Retry next time
+                pass
 
         self.dbpanda.Commit()
         self.dbarc.Commit()
@@ -524,14 +527,15 @@ class aCTValidator(aCTATLASProcess):
         for job in jobstoupdate[:]:
             if self.sites[job['siteName']]['truepilot']:
                 self.log.info("%s: Skip cleanup of output files" % job['pandaid'])
+                # set arcjobs state toclean
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                # set pandajob failed
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
-                self.cleanDownloadedJob(job["arcjobid"])
                 jobstoupdate.remove(job)
- 
+                self.cleanDownloadedJob(job["arcjobid"])
+
         # pull out output file info from pilot heartbeat json into dict, order by SE
         surls = {}
         for job in jobstoupdate:
@@ -539,11 +543,12 @@ class aCTValidator(aCTATLASProcess):
             if not jobsurls:
                 # Problem extracting files, just continue to failed
                 self.log.error("%s: Cannot remove output of arc job %s" % (job['pandaid'], job["arcjobid"]))
+                # set arcjobs state toclean
+                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
+                # set pandajob failed
                 select = "arcjobid='"+str(job["arcjobid"])+"'"
                 desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                 self.dbpanda.updateJobs(select, desc)
-                # set arcjobs state toclean
-                self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
                 self.cleanDownloadedJob(job["arcjobid"])
             else:
                 surls.update(jobsurls)
@@ -557,11 +562,12 @@ class aCTValidator(aCTATLASProcess):
             for id, result in removedsurls.items():
                 # If failed, not much we can do except continue
                 if result == self.ok or result == self.failed:
+                    # set arcjobs state toclean
+                    self.dbarc.updateArcJobLazy(id, cleandesc)
+                    # set pandajob failed
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"actpandastatus": "failed", "pandastatus": "failed"}
                     self.dbpanda.updateJobsLazy(select, desc)
-                    # set arcjobs state toclean
-                    self.dbarc.updateArcJobLazy(id, cleandesc)
                     self.cleanDownloadedJob(id)
                 else:
                     # Retry next time
