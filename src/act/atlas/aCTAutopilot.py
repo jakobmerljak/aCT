@@ -314,7 +314,7 @@ class aCTAutopilot(aCTATLASProcess):
                         else:
                             substatus = 'pilot_failed'
                             self.log.info('%s: Job ran but has no eventranges to update, marking failed' % j['pandaid'])
-                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'failed', 'jobSubStatus': substatus})
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'closed', 'jobSubStatus': substatus})
                         # Create the empty pickle so that heartbeat code below doesn't fail
                         jobinfo.writeToFile(fname)
                     continue

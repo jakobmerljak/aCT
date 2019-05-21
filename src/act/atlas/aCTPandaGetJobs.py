@@ -218,7 +218,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     # Check eventranges is defined for ES jobs
                     if re.search('eventService=True', pandajob) and getEventRanges and (eventranges is None or eventranges == '[]'):
                         self.log.warning('%s: No event ranges given by panda' % pandaid)
-                        n['pandastatus'] = 'finished'
+                        n['pandastatus'] = 'closed'
                         n['actpandastatus'] = 'finished'
                         # Assumes only ARC sites (not condor) pre-fetch events
                         n['arcjobid'] = -1 # dummy id so job is not submitted
