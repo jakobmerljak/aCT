@@ -123,7 +123,7 @@ class Client2Arc(object):
             [{'arcstate': 'toclean', 'COUNT(arcstate)': 10},
              {'arcstate': 'running', 'COUNT(arcstate)': 58}]
         """
-        c = self.arcdb.getCursor()
+        c = self.arcdb.db.getCursor()
         try:
             c.execute(
                 'SELECT arcstate,COUNT(arcstate) \

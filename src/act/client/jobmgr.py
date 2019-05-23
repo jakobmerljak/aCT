@@ -411,7 +411,7 @@ class JobManager(object):
         where, where_params = self._addIDFilter(jobids, where, where_params)
         where = where.rstrip('AND ')
 
-        res = self.arcdb.getMutexLock('arcjobs', timeout=2)
+        res = self.arcdb.db.getMutexLock('arcjobs', timeout=2)
         if not res:
             raise Exception("Could not lock table for killing jobs")
 
@@ -451,7 +451,7 @@ class JobManager(object):
                     clientdb.createMysqlEscapeList(len(client_ids)))
             self.clidb.deleteJobs(client_where, client_ids)
 
-        res = self.arcdb.releaseMutexLock('arcjobs')
+        res = self.arcdb.db.releaseMutexLock('arcjobs')
         if not res:
             raise Exception("Could not release lock after killing jobs")
 

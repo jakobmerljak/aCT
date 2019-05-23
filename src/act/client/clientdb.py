@@ -117,18 +117,17 @@ class ClientDB(aCTDB):
             INSERT INTO clientjobs (created, jobname, jobdesc, siteName, proxyid)
             VALUES (%s, %s, %s, %s, %s)
         """
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, [self.getTimeStamp(), jobname, None, siteName, proxyid])
             c.execute('SELECT LAST_INSERT_ID()')
             jobid = c.fetchone()['LAST_INSERT_ID()']
         except:
-            self.conn.rollback()
             self.log.exception('Error while inserting new job')
             raise
         else:
             if not lazy:
-                self.conn.commit()
+                self.Commit()
             return jobid
 
     def insertJobAndDescription(self, jobdesc, proxyid, siteName, lazy=False):
@@ -150,7 +149,7 @@ class ClientDB(aCTDB):
         Returns:
             ID of inserted job.
         """
-        c = self.getCursor()
+        c = self.db.getCursor()
 
         # first, insert job description and retreive the job ID
         try:
@@ -159,7 +158,6 @@ class ClientDB(aCTDB):
             c.execute('SELECT LAST_INSERT_ID()')
             jobdescid = c.fetchone()['LAST_INSERT_ID()']
         except:
-            self.conn.rollback()
             self.log.exception('Error inserting job description')
             raise
 
@@ -173,18 +171,17 @@ class ClientDB(aCTDB):
             INSERT INTO clientjobs (created, jobname, jobdesc, siteName, proxyid)
             VALUES (%s, %s, %s, %s, %s)
         """
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, [self.getTimeStamp(), jobname, jobdescid, siteName, proxyid])
             c.execute('SELECT LAST_INSERT_ID()')
             jobid = c.fetchone()['LAST_INSERT_ID()']
         except:
-            self.conn.rollback()
             self.log.exception('Error while inserting new job')
             raise
         else:
             if not lazy:
-                self.conn.commit()
+                self.Commit()
             return jobid
 
     def insertArcJob(self, jobdesc, jobdescid, proxyid='', maxattempts=0, clusterlist='', appjobid='', downloadfiles='', fairshare=''):
@@ -208,7 +205,7 @@ class ClientDB(aCTDB):
         if priority == -1: # use nicer default priority
             priority = 50
 
-        c=self.getCursor()
+        c = self.db.getCursor()
 
         desc = {}
         desc['created'] = self.getTimeStamp()
@@ -229,7 +226,7 @@ class ClientDB(aCTDB):
         c.execute(s,desc.values())
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
-        self.conn.commit()
+        self.Commit()
         return row
 
     def deleteJobs(self, where, params):
@@ -247,15 +244,14 @@ class ClientDB(aCTDB):
         if where:
             query += ' WHERE {}'.format(where)
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, params)
         except:
-            self.conn.rollback()
             self.log.exception('Error deleting jobs with query: "{}"'.format(where))
             raise
         else:
-            self.conn.commit()
+            self.Commit()
             return c.rowcount
 
     # Although function is only used inside of aCT, column checking is still
@@ -295,7 +291,7 @@ class ClientDB(aCTDB):
             params.append(kwargs['limit'])
 
         # execute
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, params)
         except:
@@ -306,7 +302,7 @@ class ClientDB(aCTDB):
 
     def getProxies(self):
         """Return a list of all proxies in client engine's table."""
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute('SELECT DISTINCT(proxyid) AS proxyid FROM clientjobs')
         except:
@@ -342,16 +338,15 @@ class ClientDB(aCTDB):
         query += ' WHERE id = %s'
         params.append(jobid)
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, params)
         except:
-            self.conn.rollback()
             self.log.exception('Error updating job {}'.format(jobid))
             raise
         else:
             if not lazy:
-                self.conn.commit()
+                self.Commit()
 
     # TODO: mysql escaping
     def getJoinJobsInfo(self, clicols=[], arccols=[], **kwargs):
@@ -382,7 +377,7 @@ class ClientDB(aCTDB):
                 self._checkColumns('arcjobs', arccols) == False:
             raise Exception("Invalid columns")
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         query = "SELECT "
         # prepend table name for all columns and add them to query
         for col in clicols:
@@ -407,7 +402,7 @@ class ClientDB(aCTDB):
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, params)
         except:
@@ -450,7 +445,7 @@ class ClientDB(aCTDB):
                 self._checkColumns('arcjobs', arccols) == False:
             raise Exception("Invalid columns")
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         query = "SELECT "
         # prepend table name for all columns and add them to query
         for col in clicols:
@@ -475,7 +470,7 @@ class ClientDB(aCTDB):
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute(query, params)
         except:
@@ -499,7 +494,7 @@ class ClientDB(aCTDB):
         for database (:class:~`act.arc.aCTDBArc.aCTDBArc`) implemented
         the same interface.
         """
-        c = self.getCursor()
+        c = self.db.getCursor()
         query = 'SHOW columns FROM {}'.format(tableName)
         try:
             c.execute(query)
