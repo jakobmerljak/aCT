@@ -70,18 +70,19 @@ class ClientDB(aCTDB):
         except:
             self.log.exception('Error creating clientjobs table')
             raise
+        
+        return True
 
     def deleteTables(self):
         """Delete clientjobs table."""
-        c = self.getCursor()
+        c = self.db.getCursor()
         try:
             c.execute('DROP TABLE clientjobs')
         except:
-            self.conn.rollback()
             self.log.exception('Error dropping clientjobs table')
             raise
         else:
-            self.conn.commit()
+            self.Commit()
 
     def insertJob(self, jobdesc, proxyid, siteName, lazy=False):
         """
