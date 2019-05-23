@@ -160,7 +160,7 @@ class Client2Arc(object):
                 binpath = os.path.dirname(os.environ['ACTCONFIGARC'])
                 confpath = os.path.join(binpath, 'sites.json')
             else:
-                confpath = 'sites.json'
+                confpath = '/etc/act/sites.json'
 
             # get cluster list from config
             clusterlist = ''

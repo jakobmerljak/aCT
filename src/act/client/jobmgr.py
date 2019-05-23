@@ -651,7 +651,7 @@ def checkJobDesc(jobdesc):
         raise InvalidJobDescriptionError()
 
 
-def checkSite(siteName, confpath='sites.json'):
+def checkSite(siteName, confpath='/etc/act/sites.json'):
     """
     Check if site is configured.
 
