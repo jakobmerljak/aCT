@@ -14,6 +14,14 @@ Returns:
 
 import argparse
 import sys
+import logging
+import os
+
+import act.client.jobmgr as jobmgr
+import act.client.proxymgr as proxymgr
+import act.client.errors.InvalidJobRangeError as InvalidJobRangeError
+import act.client.errors.InvalidJobIDError as InvalidJobIDError
+import act.client.errors.NoSuchProxyError as NoSuchProxyError
 
 
 def main():
@@ -32,17 +40,11 @@ def main():
     args = parser.parse_args()
 
     # logging
-    import logging
     logFormat = "[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s"
     if args.verbose:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, stream=sys.stdout)
     else:
-        import os
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
-
-    import act.client.jobmgr as jobmgr
-    import act.client.proxymgr as proxymgr
-    from act.client.errors import *
 
     jobs = []
     if args.jobs:

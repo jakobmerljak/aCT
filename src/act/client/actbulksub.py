@@ -11,6 +11,16 @@ Returns:
 
 import argparse
 import sys
+import logging
+import os
+
+import act.client.jobmgr as jobmgr
+import act.client.clientdb as clientdb
+import act.client.proxymgr as proxymgr
+import act.common.aCTConfig as aCTConfig
+import act.client.errors.NoSuchProxyError as NoSuchProxyError
+import act.client.errors.NoSuchSiteError as NoSuchSiteError
+import act.client.errors.InvalidJobDescriptionError as InvalidJobDescriptionError
 
 
 def readXRSL(filepath):
@@ -32,19 +42,12 @@ def main():
     args = parser.parse_args()
 
     # logging
-    import logging
     logFormat = "[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s"
     if args.verbose:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, stream=sys.stdout)
     else:
-        import os
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
 
-    import act.client.jobmgr as jobmgr
-    import act.client.clientdb as clientdb
-    import act.client.proxymgr as proxymgr
-    import act.common.aCTConfig as aCTConfig
-    from act.client.errors import *
 
     # get ID given proxy
     proxyManager = proxymgr.ProxyManager()
@@ -57,7 +60,7 @@ def main():
     # check site
     try:
         jobmgr.checkSite(args.site) # use default path for sites.json
-    except jobmgr.NoSuchSiteError as e:
+    except NoSuchSiteError as e:
         print "error: site '{}' is not configured".format(args.site)
         sys.exit(4)
 
@@ -68,7 +71,7 @@ def main():
         try:
             jobdesc = readXRSL(xrsl)
             jobmgr.checkJobDesc(jobdesc)
-        except jobmgr.InvalidJobDescriptionError:
+        except InvalidJobDescriptionError:
             print 'error: invalid job description in {}'.format(xrsl)
         except IOError:
             print 'error: could not read file {}'.format(xrsl)

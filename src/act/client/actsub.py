@@ -14,6 +14,15 @@ Returns:
 import os
 import argparse
 import sys
+import logging
+
+import act.client.jobmgr as jobmgr
+import act.client.clientdb as clientdb
+import act.client.proxymgr as proxymgr
+import act.common.aCTConfig as aCTConfig
+import act.client.errors.NoSuchProxyError as NoSuchProxyError
+import act.client.errors.InvalidJobDescriptionError as InvalidJobDescriptionError
+import act.client.errors.NoSuchSiteError as NoSuchSiteError
 
 
 def readXRSL(filepath):
@@ -35,18 +44,11 @@ def main():
     args = parser.parse_args()
 
     # logging
-    import logging
     logFormat = "[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s"
     if args.verbose:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, stream=sys.stdout)
     else:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
-
-    import act.client.jobmgr as jobmgr
-    import act.client.clientdb as clientdb
-    import act.client.proxymgr as proxymgr
-    import act.common.aCTConfig as aCTConfig
-    from act.client.errors import *
 
     # get ID given proxy
     proxyManager = proxymgr.ProxyManager()

@@ -15,7 +15,16 @@ import argparse
 import sys
 import shutil
 import os
-from act.client.errors import *
+import logging
+
+import act.client.jobmgr as jobmgr
+import act.client.proxymgr as proxymgr
+import act.client.errors.TargetDirExistsError import TargetDirExistsError
+import act.client.errors.InvalidJobRangeError import InvalidJobRangeError
+import act.client.errors.InvalidJobIDError import InvalidJobIDError
+import act.client.errors.NoSuchProxyError import NoSuchProxyError
+import act.client.errors.TmpConfigurationError import TmpConfigurationError
+import act.client.errors.NoJobDirectoryError import NoJobDirectoryError
 
 
 def getLocalDir(jobdir, dirname=''):
@@ -53,15 +62,11 @@ def main():
     args = parser.parse_args()
 
     # logging
-    import logging
     logFormat = "[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s"
     if args.verbose:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, stream=sys.stdout)
     else:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
-
-    import act.client.jobmgr as jobmgr
-    import act.client.proxymgr as proxymgr
 
     # create a list of jobs to work on
     jobs = []

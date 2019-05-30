@@ -11,6 +11,9 @@ Returns:
 import argparse
 import os
 import sys
+import logging
+
+import act.client.proxymgr as proxymgr
 
 
 def printProxyInfo(proxyInfo):
@@ -28,15 +31,11 @@ def main():
     args = parser.parse_args()
 
     # logging
-    import logging
     logFormat = "[%(asctime)s] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s"
     if args.verbose:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, stream=sys.stdout)
     else:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
-
-    import act.client.proxymgr as proxymgr
-    from act.client.errors import *
 
     # determine proxy file path from args
     if not args.proxy: # default proxy path is /tmp/x509_u<user id>
