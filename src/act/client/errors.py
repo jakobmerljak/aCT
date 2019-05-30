@@ -1,20 +1,6 @@
 """
 This module defines all exceptions that are used by aCT.
 """
-# TODO: check if all exceptions are still used after changes.
-
-
-class NoSuchJobError(Exception):
-    """Error when job is not in database."""
-
-    def __init__(self, jobid):
-        """
-        Initialize job ID attribute.
-
-        Args:
-            jobid: An integer ID of job.
-        """
-        self.jobid = jobid
 
 
 class InvalidJobDescriptionError(Exception):
@@ -61,21 +47,6 @@ class InvalidJobIDError(Exception):
         self.jobid = jobid
 
 
-class ChangeStateError(Exception):
-    """Error when switching between two states is illegal."""
-
-    def __init__(self, fromState, toState):
-        """
-        Initialize exception attributes.
-
-        Args:
-            fromState: The state job was in when user tried to change state.
-            toState: The state user wanted to change job's state to.
-        """
-        self.fromState = fromState
-        self.toState = toState
-
-
 class TmpConfigurationError(Exception):
     """Error when tmp is not configured in aCT configuration."""
     pass
@@ -92,48 +63,6 @@ class NoJobDirectoryError(Exception):
             jobdir: A string with directory path where results should be.
         """
         self.jobdir = jobdir
-
-
-class JobNotInARCTableWarning(Warning):
-    """
-    Warning when job is not in arcjobs table.
-    
-    Happens when job information is needed from ARC table but
-    there is no reference to ARC table, because job hasn't
-    been submitted to ARC table yet.
-    """
-
-    def __init__(self, jobid):
-        """
-        Initialize job ID attribute.
-
-        Args:
-            jobid: An integer ID of job that is not in ARC table yet.
-        """
-        self.jobid = jobid
-
-
-class JobNotInARCTableError(Exception):
-    """
-    Error when job is not in arcjobs table.
-
-    Happens when job reference in ARC table doesn't exist which
-    clearly is an error.
-    """
-
-    def __init__(self, jobid):
-        """
-        Initialize job ID attribute.
-
-        Args:
-            jobid: An integer ID of job that should be in ARC table.
-        """
-        self.jobid = jobid
-
-
-class NoJobDirInARCError(Exception):
-    """Error when cannot get job directory name from ARC table."""
-    pass
 
 
 class TargetDirExistsError(Exception):
