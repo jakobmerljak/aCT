@@ -94,6 +94,7 @@ class aCTAutopilot(aCTATLASProcess):
             
         # queue interval
         self.queuestamp=0
+        self.nthreads=int(self.conf.get(["panda","threads"]))
 
         self.sites={}
 
@@ -110,7 +111,6 @@ class aCTAutopilot(aCTATLASProcess):
         """
         Heartbeat status updates.
         """
-        nthreads=int(self.conf.get(["panda","threads"]))
         columns = ['pandaid', 'siteName', 'startTime', 'computingElement', 'node', 'corecount', 'eventranges']
         jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
@@ -152,7 +152,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.log.warning('%s: no corecount available' % j['pandaid'])
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
-        aCTUtils.RunThreadsSplit(tlist,nthreads)
+        aCTUtils.RunThreadsSplit(tlist, self.nthreads)
         
         for t in tlist:
             if t.result == None or not t.result.has_key('StatusCode'):
@@ -190,7 +190,6 @@ class aCTAutopilot(aCTATLASProcess):
         """
         Heartbeat status updates in bulk.
         """
-        nthreads=int(self.conf.get(["panda","threads"]))
         columns = ['pandaid', 'siteName', 'startTime', 'computingElement', 'node', 'corecount', 'eventranges']
         jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         #jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", 60)+" or modified > theartbeat) limit 1000", columns)
@@ -241,7 +240,7 @@ class aCTAutopilot(aCTATLASProcess):
         for sitetype, jobs in jobsbyproxy.items():
             t = PandaBulkThr(self.pandas[sitetype].updateStatuses, [j['jobId'] for j in jobs], jobs)
             tlist.append(t)
-        aCTUtils.RunThreadsSplit(tlist,nthreads)
+        aCTUtils.RunThreadsSplit(tlist, self.nthreads)
 
         for t in tlist:
             if not t or not t.result or not t.result[0]:
@@ -251,7 +250,7 @@ class aCTAutopilot(aCTATLASProcess):
             for pandaid, response in zip(t.ids, t.result[1]):
                 try:
                     result = cgi.parse_qs(response)
-                except Exception as e:
+                except Exception:
                     self.log.error('Could not parse result from panda: %s' % response)
                     continue
 
@@ -284,101 +283,14 @@ class aCTAutopilot(aCTATLASProcess):
         Final status update for completed jobs (finished or failed in athena)
         and cancelled jobs
         """
-        nthreads=int(self.conf.get(["panda","threads"]))
         jobs=self.dbpanda.getJobs("actpandastatus='finished' or actpandastatus='failed' or actpandastatus='cancelled' limit 1000")
 
         if not jobs:
             return
-        
-        self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
-        
-        
-        tlist=[]
-        # If event service update event ranges. Validator filters for the successful ones
-        for j in jobs:
-            eventrangestoupdate = []
-            if j['actpandastatus'] == 'finished' \
-              and j['sendhb'] \
-              and 'plugin=arc' in self.sites[j['siteName']]['catchall'] \
-              and re.search('eventService=True', j['pandajob']):
-                
-                if not j['eventranges'] or j['eventranges'] == '[]':
-                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                    if not os.path.exists(fname):
-                        # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
-                        # Assume only ARC sites (not condor) run NG-mode ES
-                        if j['arcjobid'] == -1 or j['arcjobid'] is None:
-                            substatus = 'pilot_noevents'
-                            self.log.info('%s: Job did not run and has no eventranges to update, marking pilot_noevents' % j['pandaid'])
-                        # Jobs which ran but produced no events have pilot_failed so they go to failed
-                        else:
-                            substatus = 'pilot_failed'
-                            self.log.info('%s: Job ran but has no eventranges to update, marking failed' % j['pandaid'])
-                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'closed', 'jobSubStatus': substatus})
-                        # Create the empty pickle so that heartbeat code below doesn't fail
-                        jobinfo.writeToFile(fname)
-                    continue
-                
-                # If zip is used we need to first send transferring heartbeat
-                # with jobMetrics containing the zip file
-                if 'es_to_zip' in self.sites[j['siteName']]['catchall']:
-                    try:
-                        # Load pickled information from pilot
-                        fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
-                        jobinfo = aCTPandaJob(filename=fname)
-                        jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
-                        self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
-                    except Exception,x:
-                        self.log.error('%s: No pickle info found: %s' % (j['pandaid'], x))
-                    else:
-                        t = PandaThr(self.getPanda(j['siteName']).updateStatus, j['pandaid'], 'transferring', jobmetrics)
-                        aCTUtils.RunThreadsSplit([t], nthreads)
-                        # If update fails panda won't see the zip and events
-                        # will be rescheduled to another job
-                        if t.result == None or not t.result.has_key('StatusCode'):
-                            # Strange response from panda
-                            continue
-                        if t.result['StatusCode'][0] == '60':
-                            self.log.error('Failed to contact Panda, proxy may have expired')
-                        elif t.result['StatusCode'][0] == '30':
-                            self.log.error('Job was already killed')
-                                
-                eventranges = j['eventranges']
-                eventrangeslist = json.loads(eventranges)
-                
-                # Get object store ID used
-                try:
-                    objstoreID = self.sites[j['siteName']]['ddmoses']
-                except:
-                    self.log.warning('No ES object store defined for %s' % j['siteName'])
-                    objstoreID = None
-                
-                for eventrange in eventrangeslist:
-                    node = {}
-                    node['eventRangeID'] = eventrange['eventRangeID']
-                    try:
-                        node['eventStatus'] = eventrange['status']
-                    except:
-                        node['eventStatus'] = j['actpandastatus']
-                    node['objstoreID'] = objstoreID
-                    eventrangestoupdate.append(node)
-                    
-                self.log.info('%s: updating %i event ranges: %s' % (j['pandaid'], len(eventrangestoupdate), eventrangestoupdate))
-                node = {'eventRanges': json.dumps(eventrangestoupdate)}
-                t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRanges, j['pandaid'], node)
-                tlist.append(t)
 
-        aCTUtils.RunThreadsSplit(tlist, nthreads)
-        for t in tlist:
-            # If update fails events will be rescheduled to another job
-            if t.result == None or not t.result.has_key('StatusCode'):
-                # Strange response from panda
-                continue
-            if t.result['StatusCode'][0] == '60':
-                self.log.error('Failed to contact Panda, proxy may have expired')
-            elif t.result['StatusCode'][0] == '30':
-                self.log.warning('%s: Job was already killed' % j['pandaid'])
-                
+        self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
+
+        self.updateEvents(jobs)
         tlist = []
         for j in jobs:
             # If true pilot skip heartbeat and just update DB
@@ -409,7 +321,7 @@ class aCTAutopilot(aCTATLASProcess):
                     # Load pickled information from pilot
                     fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
                     jobinfo = aCTPandaJob(filename=fname)
-                except Exception,x:
+                except Exception as x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
                     # Send some basic info back to panda
                     info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
@@ -422,7 +334,7 @@ class aCTAutopilot(aCTATLASProcess):
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
         
-        aCTUtils.RunThreadsSplit(tlist,nthreads)
+        aCTUtils.RunThreadsSplit(tlist, self.nthreads)
 
         for t in tlist:
             if t.result == None:
@@ -447,9 +359,9 @@ class aCTAutopilot(aCTATLASProcess):
         # Clean inputfiles, pickle and eventranges
         for j in jobs:
             pandaid=j['pandaid']
-            pandainputdir = os.path.join(self.conf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
-            picklefile = os.path.join(self.conf.get(["tmp", "dir"]), 'pickle', str(pandaid)+".pickle")
-            eventrangesfile = os.path.join(self.conf.get(["tmp", "dir"]), 'eventranges', str(pandaid)+".json")
+            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            picklefile = os.path.join(self.arcconf.get(["tmp", "dir"]), 'pickle', str(pandaid)+".pickle")
+            eventrangesfile = os.path.join(self.arcconf.get(["tmp", "dir"]), 'eventranges', str(pandaid)+".json")
             shutil.rmtree(pandainputdir, ignore_errors=True)
             # remove pickle
             if os.path.exists(picklefile):
@@ -457,6 +369,117 @@ class aCTAutopilot(aCTATLASProcess):
             # remove eventrangesfile
             if os.path.exists(eventrangesfile):
                 os.unlink(eventrangesfile)
+
+
+    def updateEvents(self, jobs):
+        """
+        Handle event service updates for finished jobs
+        """
+        tlist=[]
+        for j in jobs:
+            eventrangestoupdate = []
+
+            if j['actpandastatus'] == 'finished' \
+              and 'plugin=arc' in self.sites[j['siteName']]['catchall'] \
+              and re.search('eventService=True', j['pandajob']):
+
+                # Check if we are running in harvester mode
+                try:
+                    smeta = json.loads(str(j['metadata']))
+                    harvesteraccesspoint = smeta.get('harvesteraccesspoint')
+                except:
+                    harvesteraccesspoint = None
+
+                if not harvesteraccesspoint and j['sendhb'] == 0:
+                    continue
+
+                if not j['eventranges'] or j['eventranges'] == '[]':
+                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    if not os.path.exists(fname):
+                        # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
+                        # Assume only ARC sites (not condor) run NG-mode ES
+                        if j['arcjobid'] == -1 or j['arcjobid'] is None:
+                            substatus = 'pilot_noevents'
+                            self.log.info('%s: Job did not run and has no eventranges to update, marking pilot_noevents' % j['pandaid'])
+                        # Jobs which ran but produced no events have pilot_failed so they go to failed
+                        else:
+                            substatus = 'pilot_failed'
+                            self.log.info('%s: Job ran but has no eventranges to update, marking failed' % j['pandaid'])
+                        jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'closed', 'jobSubStatus': substatus})
+                        # Create the empty pickle so that heartbeat code below doesn't fail
+                        if harvesteraccesspoint:
+                            jobinfo.writeToJsonFile(os.path.join(harvesteraccesspoint, 'jobReport.json'))
+                        else:
+                            jobinfo.writeToFile(fname)
+                    continue
+
+                # If zip is used we need to first send transferring heartbeat
+                # with jobMetrics containing the zip file
+                # In harvester mode harvester does this itself?
+                if 'es_to_zip' in self.sites[j['siteName']]['catchall'] and not harvesteraccesspoint:
+                    try:
+                        # Load pickled information from pilot
+                        fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                        jobinfo = aCTPandaJob(filename=fname)
+                        jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
+                        self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))
+                    except Exception as x:
+                        self.log.error('%s: No pickle info found: %s' % (j['pandaid'], x))
+                    else:
+                        t = PandaThr(self.getPanda(j['siteName']).updateStatus, j['pandaid'], 'transferring', jobmetrics)
+                        aCTUtils.RunThreadsSplit([t], self.nthreads)
+                        # If update fails panda won't see the zip and events
+                        # will be rescheduled to another job
+                        if t.result == None or not t.result.has_key('StatusCode'):
+                            # Strange response from panda
+                            continue
+                        if t.result['StatusCode'][0] == '60':
+                            self.log.error('Failed to contact Panda, proxy may have expired')
+                        elif t.result['StatusCode'][0] == '30':
+                            self.log.error('Job was already killed')
+
+                eventranges = j['eventranges']
+                eventrangeslist = json.loads(eventranges)
+
+                # Get object store ID used
+                try:
+                    objstoreID = self.sites[j['siteName']]['ddmoses']
+                except:
+                    self.log.warning('No ES object store defined for %s' % j['siteName'])
+                    objstoreID = None
+
+                for eventrange in eventrangeslist:
+                    node = {}
+                    node['eventRangeID'] = eventrange['eventRangeID']
+                    try:
+                        node['eventStatus'] = eventrange['status']
+                    except:
+                        node['eventStatus'] = j['actpandastatus']
+                    node['objstoreID'] = objstoreID
+                    eventrangestoupdate.append(node)
+
+                self.log.info('%s: updating %i event ranges: %s' % (j['pandaid'], len(eventrangestoupdate), eventrangestoupdate))
+                if harvesteraccesspoint:
+                    self.log.info('%s: Dumping processed event ranges to %s' % 
+                                 (j['pandaid'], os.path.join(harvesteraccesspoint, 'worker_updateevents.json')))
+                    harvesterdict = {j['pandaid']: eventrangestoupdate}
+                    with open(os.path.join(harvesteraccesspoint, 'worker_updateevents.json'), 'w') as f:
+                        json.dump(harvesterdict, f)
+                else:
+                    updatenode = {'eventRanges': json.dumps(eventrangestoupdate)}
+                    t = PandaEventsThr(self.getPanda(j['siteName']).updateEventRanges, j['pandaid'], updatenode)
+                    tlist.append(t)
+
+        aCTUtils.RunThreadsSplit(tlist, self.nthreads)
+        for t in tlist:
+            # If update fails events will be rescheduled to another job
+            if t.result == None or not t.result.has_key('StatusCode'):
+                # Strange response from panda
+                continue
+            if t.result['StatusCode'][0] == '60':
+                self.log.error('Failed to contact Panda, proxy may have expired')
+            elif t.result['StatusCode'][0] == '30':
+                self.log.warning('%s: Job was already killed' % j['pandaid'])
 
 
     def checkJobs(self):
