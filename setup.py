@@ -14,7 +14,11 @@ setup(name='aCT',
         'mysql-connector==2.1.*',   # connection to MySQL database
         'htcondor',                 # bindings to use HTCondor to submit jobs
         'pylint',                   # for travis automatic tests
-        'requests'                  # for APF mon calls
+        'requests',                 # for APF mon calls
+
+        'pyopenssl',
+        'flask',
+        'gunicorn'
       ],
       entry_points={
         'console_scripts': [
