@@ -231,8 +231,6 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     if pandaid != 0:
                         try:
                             n['corecount'] = int(re.search(r'coreCount=(\d+)', pandajob).group(1))
-                            if re.match('BOINC', site):
-                                n['corecount'] = 1
                         except:
                             self.log.warning('%s: no corecount in job description' % pandaid)
                     n['sendhb'] = attrs['push']

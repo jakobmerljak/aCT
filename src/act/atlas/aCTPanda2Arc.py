@@ -53,8 +53,6 @@ class aCTPanda2Arc(aCTATLASProcess):
                 cls = ",".join(cl)
                 self.log.info("Inserting job %i with clusterlist %s" % (job['pandaid'], cls))
                 maxattempts = 5
-                if job['siteName'] == 'BOINC':
-                    maxattempts = 30
                 if self.sites[job['siteName']]['truepilot']:
                     # truepilot jobs should never be resubmitted
                     maxattempts = 0
