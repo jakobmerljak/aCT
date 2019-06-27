@@ -11,6 +11,8 @@ import act.common.aCTProxy as aCTProxy
 import act.arc.aCTDBArc as aCTDBArc
 from act.client.errors import *
 
+# TODO: Should this be handled on library level? Default proxy path is
+#       managed in actproxy.
 DEFAULT_PROXY_PATH = '/tmp/x509up_u'
 
 
@@ -73,7 +75,10 @@ class ProxyManager(object):
             proxyPath: A string with path to proxy file.
         
         Returns:
-            A tuple with proxy string, dn and expiry time."""
+            A tuple with proxy string, dn and expiry time.
+        """
+        if not os.path.isfile(proxyPath):
+            raise NoProxyFile(proxyPath)
         try:
             return self.actproxy._readProxyFromFile(proxyPath)
         except: # probably some file reading error

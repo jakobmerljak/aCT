@@ -17,9 +17,9 @@ import os
 
 import act.client.jobmgr as jobmgr
 import act.client.proxymgr as proxymgr
+import act.client.clicommon as clicommon
 from act.client.errors import InvalidJobRangeError
 from act.client.errors import InvalidJobIDError
-from act.client.errors import NoSuchProxyError
 
 
 def main():
@@ -88,12 +88,7 @@ def main():
         arccols = args.arc_cols.split(',')
 
     # get proxy ID given proxy
-    proxyManager = proxymgr.ProxyManager()
-    try:
-        proxyid = proxyManager.getProxyIdForProxyFile(args.proxy)
-    except NoSuchProxyError as e:
-        print 'error: no proxy found, run actproxy'
-        sys.exit(1)
+    proxyid = clicommon.getProxyIdFromProxy(args.proxy)
 
     # get information
     try:

@@ -14,6 +14,7 @@ import sys
 import logging
 
 import act.client.proxymgr as proxymgr
+from act.client.errors import NoProxyFile
 
 
 def printProxyInfo(proxyInfo):
@@ -46,6 +47,8 @@ def main():
     manager = proxymgr.ProxyManager()
     try:
         manager.updateProxy(proxyPath)
+    except NoProxyFile as e:
+        print "error: path \"{}\" is not a proxy file; use arcproxy".format(e.path)
     except Exception as e:
         print 'error: {}'.format(str(e))
         sys.exit(8)

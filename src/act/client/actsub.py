@@ -19,8 +19,8 @@ import logging
 import act.client.jobmgr as jobmgr
 import act.client.clientdb as clientdb
 import act.client.proxymgr as proxymgr
+import act.client.clicommon as clicommon
 import act.common.aCTConfig as aCTConfig
-from act.client.errors import NoSuchProxyError
 from act.client.errors import InvalidJobDescriptionError
 from act.client.errors import NoSuchSiteError
 
@@ -51,12 +51,7 @@ def main():
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
 
     # get ID given proxy
-    proxyManager = proxymgr.ProxyManager()
-    try:
-        proxyid = proxyManager.getProxyIdForProxyFile(args.proxy)
-    except NoSuchProxyError as e:
-        print 'error: no proxy found, run actproxy'
-        sys.exit(1)
+    proxyid = clicommon.getProxyIdFromProxy(args.proxy)
 
     # get and check job description, check sites
     try:
