@@ -20,9 +20,9 @@ import act.client.jobmgr as jobmgr
 import act.client.clientdb as clientdb
 import act.client.proxymgr as proxymgr
 import act.common.aCTConfig as aCTConfig
-import act.client.errors.NoSuchProxyError as NoSuchProxyError
-import act.client.errors.InvalidJobDescriptionError as InvalidJobDescriptionError
-import act.client.errors.NoSuchSiteError as NoSuchSiteError
+from act.client.errors import NoSuchProxyError
+from act.client.errors import InvalidJobDescriptionError
+from act.client.errors import NoSuchSiteError
 
 
 def readXRSL(filepath):

@@ -19,9 +19,9 @@ import os
 
 import act.client.jobmgr as jobmgr
 import act.client.proxymgr as proxymgr
-import act.client.errors.InvalidJobRangeError as InvalidJobRangeError
-import act.client.errors.InvalidJobIDError as InvalidJobIDError
-import act.client.errors.NoSuchProxyError as NoSuchProxyError
+from act.client.errors import InvalidJobRangeError
+from act.client.errors import InvalidJobIDError
+from act.client.errors import NoSuchProxyError
 
 
 def main():

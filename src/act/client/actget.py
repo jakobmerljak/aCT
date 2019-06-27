@@ -19,12 +19,12 @@ import logging
 
 import act.client.jobmgr as jobmgr
 import act.client.proxymgr as proxymgr
-import act.client.errors.TargetDirExistsError import TargetDirExistsError
-import act.client.errors.InvalidJobRangeError import InvalidJobRangeError
-import act.client.errors.InvalidJobIDError import InvalidJobIDError
-import act.client.errors.NoSuchProxyError import NoSuchProxyError
-import act.client.errors.TmpConfigurationError import TmpConfigurationError
-import act.client.errors.NoJobDirectoryError import NoJobDirectoryError
+from act.client.errors import TargetDirExistsError
+from act.client.errors import InvalidJobRangeError
+from act.client.errors import InvalidJobIDError
+from act.client.errors import NoSuchProxyError
+from act.client.errors import TmpConfigurationError
+from act.client.errors import NoJobDirectoryError
 
 
 def getLocalDir(jobdir, dirname=''):
