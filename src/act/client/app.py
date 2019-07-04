@@ -32,6 +32,11 @@ from flask import Flask, request, send_file, jsonify
 app = Flask(__name__)
 
 
+@app.route('/test', methods=['GET'])
+def test():
+    return "Hello World!\n", 200
+
+
 @app.route('/jobs', methods=['GET'])
 def stat():
     """
