@@ -32,7 +32,7 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
-        self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.piloturl = siteinfo.get('piloturl') or atlasconf.get(["executable", "ptarurl"])
         self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
 
         self.tmpdir = tmpdir
@@ -245,7 +245,8 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel.startswith('rc_'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443"'
+            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
+                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_') else self.piloturl)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
