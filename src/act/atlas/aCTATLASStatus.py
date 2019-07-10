@@ -527,7 +527,7 @@ class aCTATLASStatus(aCTATLASProcess):
          - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
          - arcstate=cancelled and actpandastatus=cancelled/donecancelled/failed/donefailed
         """
-        select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
+        select = "arcstate in ('tocancel', 'cancelling', 'toclean') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
         for job in jobs:
             self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])

@@ -113,6 +113,7 @@ class aCTDBArc(aCTDB):
             c.execute("drop table arcjobs")
 
         # Create arcjobs
+        self.log.info("creating arcjobs table")
         try:
             c.execute(create)
             self.Commit()
@@ -121,6 +122,7 @@ class aCTDBArc(aCTDB):
             return False
 
         # Create job description table
+        self.log.info("creating jobdescriptions table")
         create="""CREATE TABLE jobdescriptions (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             jobdescription mediumtext)
