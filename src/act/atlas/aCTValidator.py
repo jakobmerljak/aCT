@@ -351,7 +351,7 @@ class aCTValidator(aCTATLASProcess):
             localdir = self.tmpdir + sessionid
             shutil.rmtree(localdir, ignore_errors=True)
             pandaid=job['appjobid']
-            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+            pandainputdir = os.path.join(self.tmpdir, 'inputfiles', str(pandaid))
             shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
