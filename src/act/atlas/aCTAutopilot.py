@@ -374,6 +374,7 @@ class aCTAutopilot(aCTATLASProcess):
     def updateEvents(self, jobs):
         """
         Handle event service updates for finished jobs
+        TOFIX for pilot2
         """
         tlist=[]
         for j in jobs:
@@ -408,7 +409,7 @@ class aCTAutopilot(aCTATLASProcess):
                         jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'closed', 'jobSubStatus': substatus})
                         # Create the empty pickle so that heartbeat code below doesn't fail
                         if harvesteraccesspoint:
-                            jobinfo.writeToJsonFile(os.path.join(harvesteraccesspoint, 'jobReport.json'))
+                            jobinfo.writeToFile(os.path.join(harvesteraccesspoint, 'jobReport.json'))
                         else:
                             jobinfo.writeToFile(fname)
                     continue
