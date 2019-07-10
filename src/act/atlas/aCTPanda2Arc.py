@@ -26,7 +26,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2Xrsl(job, self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), self.conf, self.log)
+                                   self.tmpdir, self.conf, self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 

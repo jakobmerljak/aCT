@@ -52,7 +52,7 @@ class aCTPandaJob:
 
     def writeToFile(self, filename):
         '''
-        Write job info to filename. Overwrites an existing file.
+        Write json of job info to filename. Overwrites an existing file.
         '''
         try:
             os.makedirs(os.path.dirname(filename), 0755)

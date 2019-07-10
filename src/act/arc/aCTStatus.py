@@ -119,7 +119,7 @@ class aCTStatus(aCTProcess):
                 if updatedjob.State.GetGeneralState() == 'Queuing' and (updatedjob.State.GetSpecificState() == 'INLRMS:S' or updatedjob.State.GetSpecificState() == 'INLRMS:O'):
                     updatedjob.State = arc.JobState('Hold')
                 if originaljob.State.GetGeneralState() == updatedjob.State.GetGeneralState() \
-                     and self.cluster != 'gsiftp://gar-ex-etpgrid1.garching.physik.uni-muenchen.de:2811/preempt':
+                     and self.cluster not in ['gsiftp://gar-ex-etpgrid1.garching.physik.uni-muenchen.de:2811/preempt', 'gsiftp://arc1-it4i.farm.particle.cz/qfree', 'gsiftp://arc2-it4i.farm.particle.cz/qfree']:
                     # just update timestamp
                     # Update numbers every time for superMUC since walltime is missing for finished jobs
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})

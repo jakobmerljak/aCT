@@ -32,7 +32,7 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
-        self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.piloturl = siteinfo.get('piloturl') or atlasconf.get(["executable", "ptarurl"])
         self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
 
         self.tmpdir = tmpdir
@@ -175,7 +175,8 @@ class aCTPanda2Xrsl:
     def setRTE(self):
 
         # Non-RTE setup only requires ATLAS-SITE and possibly ENV/PROXY
-        if self.truepilot and 'BOINC' not in self.sitename:
+        if self.truepilot:
+            #self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)"
             return
         if self.siteinfo['type'] == 'analysis' and 'BOINC' not in self.sitename:
@@ -244,7 +245,8 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel.startswith('rc_'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443"'
+            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
+                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_') else self.piloturl)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
@@ -261,7 +263,7 @@ class aCTPanda2Xrsl:
         for f, s, i in zip (self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['prodDBlockToken'][0].split(",")):
             if i == 'None':
                 # Rucio file
-                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", s, f])
+                lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;cache=invariant/replicas", s, f])
             else:
                 i = int(i.split("/")[0])
                 if i in self.osmap:
@@ -337,10 +339,10 @@ class aCTPanda2Xrsl:
                 #    continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
-                if 'SiGNET' in self.sitename or 'ARNES' in self.sitename:
+                if self.sitename in []:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename]) 
                 else:
-                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=gsiftp;cache=invariant/replicas", scope, filename])
+                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;cache=invariant/replicas", scope, filename])
                 inf[filename] = lfn
                 dn = self.jobdesc.get('prodUserID', [])
                 eventType = 'get_sm'

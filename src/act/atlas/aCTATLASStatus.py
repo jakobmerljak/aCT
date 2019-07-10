@@ -295,9 +295,8 @@ class aCTATLASStatus(aCTATLASProcess):
                     lns.append(l)
             log+=''.join(lns[:nlines])
             # copy logfiles to failedlogs dir
-            failedlogsd = self.arcconf.get(["tmp","dir"])+"/failedlogs"
             try:
-                f=open(os.path.join(failedlogsd, str(pandaid)+".log"),"w")
+                f=open(os.path.join(self.tmpdir, "failedlogs", str(pandaid)+".log"),"w")
                 f.write(log)
                 f.close()
             except:
@@ -527,7 +526,7 @@ class aCTATLASStatus(aCTATLASProcess):
          - arcstate=done or cancelled or lost or donefailed when id not in pandajobs
          - arcstate=cancelled and actpandastatus=cancelled/donecancelled/failed/donefailed
         """
-        select = "(arcstate='tocancel' or arcstate='cancelling') and (cluster='' or cluster is NULL)"
+        select = "arcstate in ('tocancel', 'cancelling', 'toclean') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
         for job in jobs:
             self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
