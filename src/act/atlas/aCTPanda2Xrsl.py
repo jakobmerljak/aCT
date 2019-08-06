@@ -300,9 +300,9 @@ class aCTPanda2Xrsl:
 
         # Pilot tarball
         if self.prodSourceLabel.startswith('rc_'):
-            x += '(pilot2.tar.gz "%s")' % self.piloturlrc
+            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturlrc
         else:
-            x += '(pilot2.tar.gz "%s")' % self.piloturl
+            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get agis files from cvmfs or over network
         if re.match('BEIJING-.*_MCORE', self.sitename):
