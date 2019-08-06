@@ -32,7 +32,7 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
-        self.piloturl = siteinfo.get('piloturl') or atlasconf.get(["executable", "ptarurl"])
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url') or atlasconf.get(["executable", "ptarurl"])
         self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
 
         self.tmpdir = tmpdir
