@@ -25,6 +25,7 @@ class aCTPanda2Xrsl:
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
+        self.agisjsons = siteinfo.get('agisjsons', 0)
         self.osmap = osmap
         self.maxwalltime = siteinfo['maxwalltime']
         if self.maxwalltime == 0:
@@ -305,10 +306,8 @@ class aCTPanda2Xrsl:
             x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get agis files from cvmfs or over network
-        if re.match('BEIJING-.*_MCORE', self.sitename):
-            x += '(agis_schedconf.agis.%s.json "http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&panda_queue=%s")' % (self.sitename,self.sitename)
+        if self.agisjsons:
             x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_ddmblacklisting.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmblacklisting.json")'
             x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
 
         # Panda queue configuration

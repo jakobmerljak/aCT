@@ -46,6 +46,8 @@
       <maxjobs>10</maxjobs>
       <!-- Number of cores for each job in this queue (eg 8 for mcore) -->
       <corecount>1</corecount>
+      <!-- Whether the site needs AGIS jsons sent as input files (1 or 0, default 0) -->
+      <agisjsons>1</agisjsons>
     </site>
 
   </sites>

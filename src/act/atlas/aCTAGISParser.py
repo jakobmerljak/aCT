@@ -53,6 +53,10 @@ class aCTAGISParser:
                 siteinfo['push'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["push"])[0])
             except:
                 pass
+            try:
+                siteinfo['agisjsons'] = int(self.conf.getListCond(["sites","site"],"name=" + sitename, ["agisjsons"])[0])
+            except:
+                siteinfo['agisjsons'] = 0
             # If status is already defined in AGIS then only override if explicity specified here
             try:
                 siteinfo['status'] = self.conf.getListCond(["sites","site"],"name=" + sitename, ["status"])[0]
@@ -90,6 +94,10 @@ class aCTAGISParser:
             if not siteinfo.has_key('endpoints'):
                 endpoints = []
                 for queue in siteinfo['queues']:
+                    if queue.get('ce_state') != 'ACTIVE':
+                        if siteinfo['enabled']:
+                            self.log.info('Skipping inactive CE %s' % queue.get('ce_endpoint'))
+                        continue
                     if queue['ce_flavour'] == 'CREAM-CE':
                         endpoints.append('cream %s/ce-cream/services/CREAM2 %s %s' % (queue['ce_endpoint'], queue['ce_jobmanager'], queue['ce_queue_name']))
                     elif queue['ce_flavour'] == 'HTCONDOR-CE':
