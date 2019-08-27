@@ -145,7 +145,7 @@ class aCTSubmitter(aCTProcess):
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
                     jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
-                                                columns=["id", "jobdesc", "appjobid", "priority", "clusterlist"])
+                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
                 for j in jobs:
@@ -325,7 +325,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToCancel(self):
         
-        jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
+        if self.cluster:
+            jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
+        else:
+            jobstocancel = self.db.getArcJobs("arcstate='tocancel' and cluster=''")
 
         if not jobstocancel:
             return
@@ -369,7 +372,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToResubmit(self):
         
-        jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
+        if self.cluster:
+            jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
+        else:
+            jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and clusterlist=''")
  
         for proxyid, jobs in jobstoresubmit.items():
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
@@ -415,6 +421,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToRerun(self):
         
+        if not self.cluster:
+            # Rerun only applies to job which have been submitted
+            return
+
         jobstorerun = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
         if not jobstorerun:
             return
