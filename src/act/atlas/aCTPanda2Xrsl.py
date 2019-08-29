@@ -308,7 +308,7 @@ class aCTPanda2Xrsl:
         # Special HPCs which cannot get agis files from cvmfs or over network
         if self.agisjsons:
             x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+            x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
 
         # Panda queue configuration
         if self.eventranges:
