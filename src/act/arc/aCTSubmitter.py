@@ -458,7 +458,7 @@ class aCTSubmitter(aCTProcess):
                     # infosys to update and avoid the failed state being picked
                     # up again
                     self.db.updateArcJob(id, {"arcstate": "submitted",
-                                              "tarcstate": self.db.getTimeStamp(time.time()+1800)})
+                                              "tarcstate": self.db.getTimeStamp(time.time()+3600)})
 
 
     def process(self):
