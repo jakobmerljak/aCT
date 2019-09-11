@@ -150,7 +150,10 @@ class aCTStatus(aCTProcess):
                      updatedjob.State == arc.JobState.OTHER:
                     # unexpected
                     arcstate = 'failed'
-                    
+
+                # Walltime reported by ARC 6 is multiplied by cores
+                if arc.ARC_VERSION_MAJOR >= 6:
+                    updatedjob.UsedTotalWallTime /= updatedjob.RequestedSlots
                 # Fix crazy wallclock and CPU times
                 if updatedjob.UsedTotalWallTime > arc.Time() - arc.Time(int(created.strftime("%s"))):
                     fixedwalltime = arc.Time() - arc.Time(int(created.strftime("%s")))
