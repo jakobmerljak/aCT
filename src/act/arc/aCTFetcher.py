@@ -121,7 +121,7 @@ class aCTFetcher(aCTProcess):
                 # do the copy
                 status = dm.Transfer(dp, localdp.h, arc.FileCache(), arc.URLMap())
                 if not status and str(status).find('File unavailable') == -1: # tmp fix for globus error which is always retried
-                    if status.Retryable():
+                    if status.Retryable() and not self.cluster.startswith('http'): # http error codes are not propagated correctly (bug 3861)
                         self.log.warning('Failed to download but will retry %s: %s', dp.GetURL().str(), str(status))
                         notfetchedretry.append(jobid)
                     else:
