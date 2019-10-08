@@ -12,19 +12,21 @@ aCT requires python 2.7 and is designed to run in a python virtual environment.
 
 For CentOS 7:
 
-`yum install epel-release`
+`# yum install epel-release`
 
-`yum install python-pip python2-nordugrid-arc`
+`# yum install python-pip python2-nordugrid-arc git`
+
+`# pip install virtualenv`
 
 ARC python bindings are not available in pip so must be installed as a system package
 
 ## Optional dependencies
 
-`yum install nordugrid-arc-plugins-globus` - for submission to ARC's GridFTP interface
+`# yum install nordugrid-arc-plugins-globus` - for submission to ARC's GridFTP interface
 
-`yum install nordugrid-arc-plugins-xrootd` - for aCT to validate any output files written using the xrootd protocol
+`# yum install nordugrid-arc-plugins-xrootd` - for aCT to validate any output files written using the xrootd protocol
 
-`yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
+`# yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
 
 ## Setting up the virtualenv
 
