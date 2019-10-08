@@ -43,7 +43,12 @@ class aCTPanda:
             self.log.warning('No queue info returned by panda')
             return None
 
-        data = pickle.loads(urldata)
+        try:
+            data = pickle.loads(urldata)
+        except Exception as e:
+            self.log.error('Could not load panda response: %s' % urldata)
+            return None
+
         return data
     
     def getJob(self,siteName,prodSourceLabel=None,getEventRanges=True):
