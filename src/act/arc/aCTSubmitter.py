@@ -349,9 +349,6 @@ class aCTSubmitter(aCTProcess):
             if not queuelist:
                 self.log.info("No free queues available")
                 self.db.Commit()
-                # EMI-ES proxy problem - see bug 3685
-                if self.cluster and self.cluster.startswith('https://'):
-                    raise ExceptInterrupt(15)
                 continue
     
             self.log.info("start submitting")
@@ -423,14 +420,6 @@ class aCTSubmitter(aCTProcess):
             self.log.info("threads finished")
             # commit transaction to release row locks
             self.db.Commit()
-
-            # Those bugs should be now fixed with 6.2.0 arclib
-            #AF # EMI-ES proxy problem - see bug 3685 (fixed in 5.4.3 but keep for issue below)
-            #AF if self.cluster and self.cluster.startswith('https://'):
-            #AF     raise ExceptInterrupt(15)
-            #AF # Can't switch credentials when uploading files - bug 3772
-            #AF if self.cluster and self.cluster.startswith('gsiftp://'):
-            #AF     raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
