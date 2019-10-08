@@ -6,13 +6,30 @@ ATLAS Control Tower (aCT) provides an interface between Panda and Grid sites for
 
 # Installing
 
-aCT requires python 2.7 and is designed to run in a python virtual environment
+aCT requires python 2.7 and is designed to run in a python virtual environment.
+
+## Mandatory dependencies
+
+For CentOS 7:
+
+`yum install epel-release`
+`yum install python-pip python2-nordugrid-arc`
+
+ARC python bindings are not available in pip so must be installed as a system package
+
+## Optional dependencies
+
+`yum install nordugrid-arc-plugins-globus` - for submission to ARC's GridFTP interface
+`yum install nordugrid-arc-plugins-xrootd` - for aCT to validate any output files written using the xrootd protocol
+`yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
+
+## Setting up the virtualenv
+
 ```
 $ virtualenv aCT
 $ source aCT/bin/activate
 $ pip install git+https://github.com/ATLASControlTower/aCT
 ```
-However, ARC python bindings are not available in pip so must be installed as a system package, eg `yum install python2-nordugrid-arc`
 
 Then one of two workarounds must be done to use ARC modules in the virtualenv, either create symlinks inside the virtualenv, eg
 ```
