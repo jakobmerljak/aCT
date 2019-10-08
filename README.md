@@ -14,7 +14,7 @@ For CentOS 7:
 
 `# yum install epel-release`
 
-`# yum install python-pip python2-nordugrid-arc git`
+`# yum install python-pip nordugrid-arc-client python2-nordugrid-arc git`
 
 `# pip install virtualenv`
 
