@@ -325,8 +325,8 @@ class aCTAutopilot(aCTATLASProcess):
                     # Send some basic info back to panda
                     info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
                     jobinfo = aCTPandaJob(jobinfo=info)
-                    jobinfo.pilotErrorCode = 1008
-                    jobinfo.pilotErrorDiag = 'Job failed for unknown reason'
+                    jobinfo.errorCode = 9000
+                    jobinfo.errorDiag = 'Job failed for unknown reason'
                 else:
                     os.remove(fname)
 
