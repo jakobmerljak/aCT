@@ -26,7 +26,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2Xrsl(job, self.sites[job['siteName']], self.osmap,
-                                   self.arcconf.get(["tmp", "dir"]), self.conf, self.log)
+                                   self.tmpdir, self.conf, self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 
@@ -64,7 +64,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 except:
                     pass
                 if not self.sites[job['siteName']]['truepilot']:
-                    downloadfiles += ';jobSmallFiles.tgz'
+                    downloadfiles += ';heartbeat.json'
+                if job['eventranges']:
+                    downloadfiles += ';metadata-es.xml'
 
                 aid = self.dbarc.insertArcJobDescription(xrsl, maxattempts=maxattempts, clusterlist=cls,
                                                          proxyid=job['proxyid'], appjobid=str(job['pandaid']),

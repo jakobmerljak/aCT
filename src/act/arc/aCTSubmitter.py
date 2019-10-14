@@ -6,29 +6,141 @@ from urlparse import urlparse
 from threading import Thread
 from act.common.aCTProcess import aCTProcess
 from act.common.aCTSignal import ExceptInterrupt
+import multiprocessing, logging
+import signal
+import os
 
-class SubmitThr(Thread):
-    def __init__ (self,func,id,appjobid,jobdescs,uc,logger):
-        Thread.__init__(self)
-        self.func=func
-        self.id=id
-        self.appjobid=appjobid
-        self.jobdescs = jobdescs
-        self.uc = uc
-        self.log=logger
-        self.job = None
-    def run(self):
-        self.job=self.func(self.jobdescs,self.uc,self.log,self.appjobid)
+def KillPool(pool):
+    # stop repopulating new child
+    pool._state = multiprocessing.pool.TERMINATE
+    pool._worker_handler._state = multiprocessing.pool.TERMINATE
+    for p in pool._pool:
+        try:
+            os.kill(p.pid, signal.SIGKILL)
+        except:
+            pass
+    # .is_alive() will reap dead process
+    while any(p.is_alive() for p in pool._pool):
+        pass
+    pool.terminate()
 
+class JobConv:
 
-def Submit(jobdescs,uc,log,appjobid):
+    def __init__(self):
+        self.jobattrmap = {int: 'integer',
+                      str: 'varchar(255)',
+                      arc.JobState: 'varchar(255)',
+                      arc.StringList: 'varchar(1024)',
+                      arc.URL: 'varchar(255)',
+                      arc.Period: 'int',
+                      arc.Time: 'datetime',
+                      arc.StringStringMap: 'varchar(1024)'}
+        ignoremems=['STDIN',
+                    'STDOUT',
+                    'STDERR',
+                    'STAGEINDIR',
+                    'STAGEOUTDIR',
+                    'SESSIONDIR',
+                    'JOBLOG',
+                    'JOBDESCRIPTION',
+                    'JobDescriptionDocument']
+
+        # Attributes of Job class mapped to DB column type
+        self.jobattrs={}
+        j=arc.Job()
+        for i in dir(j):
+            if re.match('^__',i):
+                continue
+            if i in ignoremems:
+                continue
+            if type(getattr(j, i)) in self.jobattrmap:
+                self.jobattrs[i] = type(getattr(j, i))
+
+    def db2job(self,dbinfo):
+        '''
+        Convert a dictionary of DB key value into arc Job object
+        '''
+        if dbinfo is None:
+            return None
+        j = arc.Job()
+        for attr in self.jobattrs:
+            if attr not in dbinfo or dbinfo[attr] is None:
+                continue
+            # Some object types need special treatment
+            if self.jobattrs[attr] == arc.StringList:
+                l = arc.StringList()
+                for item in dbinfo[attr].encode('utf-8').split('|'):
+                    l.append(item)
+                setattr(j, attr, l)
+                continue
+            if self.jobattrs[attr] == arc.StringStringMap:
+                m = arc.StringStringMap()
+                d = eval(dbinfo[attr])
+                if not isinstance(d, dict):
+                    continue
+                for (k,v) in d.items():
+                    m[k] = v
+                setattr(j, attr, m)
+                continue
+
+            setattr(j, attr, self.jobattrs[attr](str(dbinfo[attr])))
+        return j
+
+    def job2db(self,job):
+        '''
+        Convert an arc Job object to a dictionary of column name: value
+        '''
+        d = {}
+        for attr in self.jobattrs:
+            if self.jobattrs[attr] == int or self.jobattrs[attr] == str:
+                d[attr] = str(getattr(job, attr))[:250]
+            elif self.jobattrs[attr] == arc.JobState:
+                d[attr] = getattr(job, attr).GetGeneralState()
+            elif self.jobattrs[attr] == arc.StringList:
+                d[attr] = '|'.join(getattr(job, attr))[:1000]
+            elif self.jobattrs[attr] == arc.URL:
+                d[attr] = getattr(job, attr).str().replace(r'\2f',r'/')
+            elif self.jobattrs[attr] == arc.Period:
+                d[attr] = str(getattr(job, attr).GetPeriod())
+            elif self.jobattrs[attr] == arc.Time:
+                if getattr(job, attr).GetTime() != -1:
+                    # Use UTC time but strip trailing Z since mysql doesn't like it
+                    t = str(getattr(job, attr).str(arc.UTCTime))
+                    d[attr] = re.sub('Z$', '', t)
+            elif self.jobattrs[attr] == arc.StringStringMap:
+                ssm = getattr(job, attr)
+                tmpdict = dict(zip(ssm.keys(), ssm.values()))
+                d[attr] = str(tmpdict)[:1000]
+            # Force everything to ASCII
+                        # Force everything to ASCII
+            if attr in d:
+                d[attr] = ''.join([i for i in d[attr] if ord(i) < 128])
+        return d
+
+def Submit(id, appjobid, jobdescstr, ucproxy, timeout):
 
     global queuelist
+    global usercred
+
+    # get the submission logger
+    #log = logger()
+    log = logging.getLogger()
 
     if len(queuelist) == 0  :
         log.error("%s: no cluster free for submission" % appjobid)
         return None
+
+    #cred_type=arc.initializeCredentialsType(arc.initializeCredentialsType.SkipCredentials)
+    #uc=arc.UserConfig(cred_type)
+    uc=usercred
+
+    uc.CredentialString(ucproxy)
     
+    jobdescs = arc.JobDescriptionList()
+    if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
+        log.error("%s: Failed to prepare job description" % appjobid)
+        return None
+
     # Do brokering among the available queues
     jobdesc = jobdescs[0]
     broker = arc.Broker(uc, jobdesc, "Random")
@@ -52,48 +164,10 @@ def Submit(jobdescs,uc,log,appjobid):
         log.error("%s: Submission failed" % appjobid)
         return None
 
-    return job
+    jconv = JobConv()
+    return jconv.job2db(job)
 
 class aCTSubmitter(aCTProcess):
-
-    def RunThreadsSplit(self,plist,nthreads=1):
-        it=0
-        while it < len(plist):
-            tl=[]
-            for i in range(0,nthreads):
-                try:
-                    t=plist[it]
-                    tl.append(t)
-                    t.start()
-                except:
-                    pass
-                it+=1
-            errfl=False
-            for t in tl:
-                # Be careful to wait longer than submission timeout
-                t.join(t.uc.Timeout() + 60.0)
-                if t.isAlive() :
-                    # abort due to timeout and try again
-                    self.log.error("%s: submission timeout: exit and try again" % t.appjobid)
-                    errfl=True
-                    continue
-                # updatedb
-                if t.job is None:
-                    #self.log.error("no jobname")
-                    self.log.error("%s: no job defined for %d" % (t.appjobid, t.id))
-                    errfl=True
-                    continue
-                jd={}
-                jd['arcstate']='submitted'
-                # initial offset to 1 minute to force first status check
-                jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+120)
-                # extract hostname of cluster (depends on JobID being a URL)
-                self.log.info("%s: job id %s" % (t.appjobid, t.job.JobID))
-                jd['cluster']=self.cluster
-                self.db.updateArcJobLazy(t.id,jd,t.job)
-            if errfl:
-                break
-
 
     def submit(self):
         """
@@ -145,7 +219,7 @@ class aCTSubmitter(aCTProcess):
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
                     jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
-                                                columns=["id", "jobdesc", "appjobid", "priority", "clusterlist"])
+                                                columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
                 for j in jobs:
@@ -200,6 +274,8 @@ class aCTSubmitter(aCTProcess):
             # Set UserConfig credential for each proxy. Assumes that any proxy
             # in the fairshare can query the CE infosys
             self.uc.CredentialString(str(self.db.getProxy(jobs[0]['proxyid'])))
+            global usercred
+            usercred = self.uc
             # retriever contains a list of CE endpoints
             retriever = arc.ComputingServiceRetriever(self.uc, infoendpoints)
             retriever.wait()
@@ -273,15 +349,13 @@ class aCTSubmitter(aCTProcess):
             if not queuelist:
                 self.log.info("No free queues available")
                 self.db.Commit()
-                # EMI-ES proxy problem - see bug 3685
-                if self.cluster and self.cluster.startswith('https://'):
-                    raise ExceptInterrupt(15)
                 continue
     
             self.log.info("start submitting")
     
             # Just run one thread for each job in sequence. Strange things happen
             # when trying to create a new UserConfig object for each thread.
+            tasks = []
             for j in jobs:
                 self.log.debug("%s: preparing submission" % j['appjobid'])
                 jobdescstr = str(self.db.getArcJobDescription(str(j['jobdesc'])))
@@ -291,21 +365,61 @@ class aCTSubmitter(aCTProcess):
                     continue
                 # TODO: might not work if proxies are different within a share
                 # since same uc object is shared among threads
-                self.uc.CredentialString(str(self.db.getProxy(j['proxyid'])))
-                t=SubmitThr(Submit,j['id'],j['appjobid'],jobdescs,self.uc,self.log)
-                self.RunThreadsSplit([t],1)
+                tasks.append((j['id'], j['appjobid'], jobdescstr, str(self.db.getProxy(j['proxyid'])), int(self.conf.get(['atlasgiis','timeout'])) ))
                 count=count+1
-    
+
+            npools=1
+            if any(s in self.cluster for s in self.conf.getList(['parallelsubmit','item'])):
+                npools=int(self.conf.get(['parallelsubmit','npools']))
+            self.log.debug("Starting submitters: %s" % npools)
+
+            pool = multiprocessing.Pool(npools)
+            #results = []
+            #for task in tasks:
+            #    result = pool.apply_async(Submit,(task))
+            #    results.append(result)
+            # Submit in workers
+            results = [pool.apply_async(Submit, (t)) for t in tasks]
+
+            # timeout per submission
+            timeout = 60
+            stopflag = False
+            for result,task in zip(results,tasks):
+                try:
+                    jdb = result.get(timeout)
+                    jconv = JobConv()
+                    job = jconv.db2job(jdb)
+                except multiprocessing.TimeoutError:
+                    self.log.error("%s: submission timeout: exit and try again" % task[1])
+                    # abort submission if Submit process is stuck
+                    #pool.terminate()
+                    KillPool(pool)
+                    pool.join()
+                    stopflag = True
+                    # reduce timeout to finish quickly
+                    timeout = 0.1
+                    continue
+                if job is None:
+                    self.log.error("%s: no job defined for %d" % (task[1], task[0]))
+                    continue
+                jd={}
+                jd['arcstate']='submitted'
+                # initial offset to 1 minute to force first status check
+                jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+120)
+                # extract hostname of cluster (depends on JobID being a URL)
+                self.log.info("%s: job id %s" % (task[1], job.JobID))
+                jd['cluster']=self.cluster
+                self.db.updateArcJobLazy(task[0],jd,job)
+            if not stopflag:
+                pool.terminate()
+                pool.join()
+            else:
+                # stop submitting, gsiftp connection problem likely
+                raise ExceptInterrupt(15)
+
             self.log.info("threads finished")
             # commit transaction to release row locks
             self.db.Commit()
-
-            # EMI-ES proxy problem - see bug 3685 (fixed in 5.4.3 but keep for issue below)
-            if self.cluster and self.cluster.startswith('https://'):
-                raise ExceptInterrupt(15)
-            # Can't switch credentials when uploading files - bug 3772
-            if self.cluster and self.cluster.startswith('gsiftp://'):
-                raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
@@ -325,8 +439,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToCancel(self):
         
-        jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
-
+        if self.cluster:
+            jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
+        else:
+            jobstocancel = self.db.getArcJobs("arcstate='tocancel' and cluster=''")
         if not jobstocancel:
             return
         
@@ -369,7 +485,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToResubmit(self):
         
-        jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
+        if self.cluster:
+            jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
+        else:
+            jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and clusterlist=''")
  
         for proxyid, jobs in jobstoresubmit.items():
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
@@ -415,6 +534,10 @@ class aCTSubmitter(aCTProcess):
 
     def processToRerun(self):
         
+        if not self.cluster:
+            # Rerun only applies to job which have been submitted
+            return
+        
         jobstorerun = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
         if not jobstorerun:
             return
@@ -448,7 +571,7 @@ class aCTSubmitter(aCTProcess):
                     # infosys to update and avoid the failed state being picked
                     # up again
                     self.db.updateArcJob(id, {"arcstate": "submitted",
-                                              "tarcstate": self.db.getTimeStamp(time.time()+1800)})
+                                              "tarcstate": self.db.getTimeStamp(time.time()+3600)})
 
 
     def process(self):

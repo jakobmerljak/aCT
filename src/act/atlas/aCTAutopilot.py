@@ -11,7 +11,6 @@ import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
 from aCTATLASProcess import aCTATLASProcess
-from aCTAGISParser import aCTAGISParser
 from aCTPandaJob import aCTPandaJob
 
 class PandaThr(Thread):
@@ -309,7 +308,7 @@ class aCTAutopilot(aCTATLASProcess):
                 self.dbpanda.updateJob(j['pandaid'], jd)
                 continue
             
-            # Cancelled jobs have no pickle info
+            # Cancelled jobs have no heartbeat info
             if j['actpandastatus'] == 'cancelled':
                 jobinfo = aCTPandaJob(jobinfo = {'jobId': j['pandaid'], 'state': 'failed'})
                 jobinfo.pilotErrorCode = 1144
@@ -318,8 +317,8 @@ class aCTAutopilot(aCTATLASProcess):
                 jobinfo.endTime = j['endTime'] if j['endTime'] else datetime.datetime.utcnow()
             else:
                 try:
-                    # Load pickled information from pilot
-                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    # Load heartbeat information from pilot
+                    fname = os.path.join(self.tmpdir, "heartbeats", "%d.json" % j['pandaid'])
                     jobinfo = aCTPandaJob(filename=fname)
                 except Exception as x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
@@ -331,6 +330,7 @@ class aCTAutopilot(aCTATLASProcess):
                 else:
                     os.remove(fname)
 
+            self.log.debug('%s: final heartbeat: %s' % (j['pandaid'], jobinfo.dictionary()))
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
         
@@ -359,9 +359,9 @@ class aCTAutopilot(aCTATLASProcess):
         # Clean inputfiles, pickle and eventranges
         for j in jobs:
             pandaid=j['pandaid']
-            pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
-            picklefile = os.path.join(self.arcconf.get(["tmp", "dir"]), 'pickle', str(pandaid)+".pickle")
-            eventrangesfile = os.path.join(self.arcconf.get(["tmp", "dir"]), 'eventranges', str(pandaid)+".json")
+            pandainputdir = os.path.join(self.tmpdir, 'inputfiles', str(pandaid))
+            picklefile = os.path.join(self.tmpdir, 'pickle', str(pandaid)+".pickle")
+            eventrangesfile = os.path.join(self.tmpdir, 'eventranges', str(pandaid)+".json")
             shutil.rmtree(pandainputdir, ignore_errors=True)
             # remove pickle
             if os.path.exists(picklefile):
@@ -374,6 +374,7 @@ class aCTAutopilot(aCTATLASProcess):
     def updateEvents(self, jobs):
         """
         Handle event service updates for finished jobs
+        TOFIX for pilot2
         """
         tlist=[]
         for j in jobs:
@@ -394,7 +395,7 @@ class aCTAutopilot(aCTATLASProcess):
                     continue
 
                 if not j['eventranges'] or j['eventranges'] == '[]':
-                    fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                    fname = os.path.join(self.tmpdir, "pickle", "%d.pickle" % j['pandaid'])
                     if not os.path.exists(fname):
                         # Jobs which were never submitted should have substatus pilot_noevents so they go to closed
                         # Assume only ARC sites (not condor) run NG-mode ES
@@ -408,7 +409,7 @@ class aCTAutopilot(aCTATLASProcess):
                         jobinfo = aCTPandaJob({'jobId': j['pandaid'], 'state': 'closed', 'jobSubStatus': substatus})
                         # Create the empty pickle so that heartbeat code below doesn't fail
                         if harvesteraccesspoint:
-                            jobinfo.writeToJsonFile(os.path.join(harvesteraccesspoint, 'jobReport.json'))
+                            jobinfo.writeToFile(os.path.join(harvesteraccesspoint, 'jobReport.json'))
                         else:
                             jobinfo.writeToFile(fname)
                     continue
@@ -419,7 +420,7 @@ class aCTAutopilot(aCTATLASProcess):
                 if 'es_to_zip' in self.sites[j['siteName']]['catchall'] and not harvesteraccesspoint:
                     try:
                         # Load pickled information from pilot
-                        fname = self.arcconf.get(['tmp','dir'])+"/pickle/"+str(j['pandaid'])+".pickle"
+                        fname = os.path.join(self.tmpdir, "pickle", "%d.pickle" % j['pandaid'])
                         jobinfo = aCTPandaJob(filename=fname)
                         jobmetrics = {'jobMetrics': getattr(jobinfo, 'jobMetrics', '')}
                         self.log.info('%s: Sending jobMetrics and transferring state: %s' % (j['pandaid'], jobmetrics))

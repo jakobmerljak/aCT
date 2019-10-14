@@ -1,39 +1,30 @@
 import cgi
 import json
-import urllib2, urllib, socket, httplib
+import urllib, urlparse, socket, httplib
 import os
 import pickle
-import re
 from act.common import aCTConfig
 
 class aCTPanda:
 
 
     def __init__(self,logger, proxyfile):
-        self.conf=aCTConfig.aCTConfigATLAS()
-        #self.srv='https://pandasrv.usatlas.bnl.gov:25443/server/panda/'
-        #self.siteName='ARC'
-        self.srv=self.conf.get(['panda','server'])
-        self.mon=self.conf.get(['panda','monitor'])
-        res=re.match('.+//([^/]+)(.+)',self.srv)
-        self.hostport=res.group(1)
-        self.topdir=res.group(2)
-        #self.proxypath=self.conf.get(['voms','proxypath'])
-        #self.proxypath='/tmp/x509up_u%s' % str(os.getuid())
-        self.proxypath=proxyfile
-        #self.siteName=self.conf.get(['panda','site'])
-        self.log=logger
+        self.conf = aCTConfig.aCTConfigATLAS()
+        server = self.conf.get(['panda','server'])
+        u = urlparse.urlparse(server)
+        self.hostport = u.netloc
+        self.topdir = u.path
+        self.proxypath = proxyfile
+        self.log = logger
         # timeout in seconds
-        # TODO checkw
         self.timeout = int(self.conf.get(['panda','timeout']))
         socket.setdefaulttimeout(self.timeout)
-        
+
     def __HTTPConnect__(self,mode,node):
         urldata = None
         try:
             conn = httplib.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
             rdata=urllib.urlencode(node)
-            #req=urllib2.Request(self.srv+mode)
             conn.request("POST", self.topdir+mode,rdata)
             resp = conn.getresponse()
             urldata = resp.read()
@@ -42,19 +33,6 @@ class aCTPanda:
             self.log.error("error in connection: %s" %x)
         return urldata
 
-    def __HTTPConnectMon__(self,mode,node):
-        urldata = None
-        try:
-            rdata=urllib.urlencode(node)
-            req=urllib2.Request(self.mon+mode)
-            fd=urllib2.urlopen(req,rdata)
-            urldata = fd.read()
-            fd.close
-        except Exception,x:
-            self.log.error("error in connection: %s" %x)
-            return None
-        return urldata
-        
     def getQueueStatus(self, queue=None):
         node = {}
         if queue:
@@ -65,7 +43,12 @@ class aCTPanda:
             self.log.warning('No queue info returned by panda')
             return None
 
-        data = pickle.loads(urldata)
+        try:
+            data = pickle.loads(urldata)
+        except Exception as e:
+            self.log.error('Could not load panda response: %s' % urldata)
+            return None
+
         return data
     
     def getJob(self,siteName,prodSourceLabel=None,getEventRanges=True):
@@ -230,4 +213,4 @@ if __name__ == '__main__':
     logger = aCTLogger('test')
     log = logger()
     p = aCTPanda(log, os.environ['X509_USER_PROXY'])
-    print p.getQueueStatus('UIO')
+    print p.getQueueStatus('UIO_MCORE')

@@ -25,6 +25,7 @@ class aCTPanda2Xrsl:
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
+        self.agisjsons = siteinfo.get('agisjsons', 0)
         self.osmap = osmap
         self.maxwalltime = siteinfo['maxwalltime']
         if self.maxwalltime == 0:
@@ -32,13 +33,16 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url') or atlasconf.get(["executable", "ptarurl"])
+        self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
+
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
         self.inputjobdir = os.path.join(self.inputfiledir, self.jobdesc['PandaID'][0])
         self.atlasconf = atlasconf
         self.eventranges = pandadbjob['eventranges']
         self.traces = []
-            
+
         try:
             self.schedulerid = json.loads(pandadbjob['metadata'])['schedulerid']
         except:
@@ -71,9 +75,6 @@ class aCTPanda2Xrsl:
         # force single-node jobs for now
         if self.ncores > 1:
             self.xrsl['countpernode'] = '(countpernode=%d)' % self.ncores
-	    # try if it works without mcore
-            #if self.sitename.find('RAL-LCG2') < 0 and self.sitename.find('TOKYO') < 0 and self.sitename.find('FZK') < 0 and self.sitename.find('TRIUMF') < 0:
-            #    self.xrsl['countpernode'] = '(runtimeenvironment = APPS/HEP/ATLAS-MULTICORE-1.0)'
 
         return self.ncores
 
@@ -167,11 +168,6 @@ class aCTPanda2Xrsl:
             else:
                 memory = memory / self.getNCores()
 
-        #AF # fix memory to 500MB units
-        #AF memory = int(memory-1)/500*500 + 500
-        # temp hack
-        if self.sitename == 'CSCS-LCG2-HPC_MCORE_TEST':
-            memory = 850
         if self.sitename == 'MPPMU_MCORE' and memory < 2000:
             memory = 2000
 
@@ -190,7 +186,7 @@ class aCTPanda2Xrsl:
         if self.sitename not in self.rtesites:
             self.xrsl['rtes'] = "(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
             return
-        
+
         # Old-style RTE setup
         atlasrtes = []
         for (package, cache) in zip(self.jobdesc['swRelease'][0].split('\n'), self.jobdesc['homepackage'][0].split('\n')):
@@ -242,22 +238,18 @@ class aCTPanda2Xrsl:
 
     def setExecutable(self):
 
-        self.xrsl['executable'] = "(executable = runpilot3-wrapper.sh)"
+        self.xrsl['executable'] = "(executable = runpilot2-wrapper.sh)"
 
     def setArguments(self):
 
-        if self.prodSourceLabel == 'ptest': # pilot2
-            pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
-            if self.truepilot:
-                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443"'
-            else:
-                pargs += ' "-z" "-t"'
+        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
+        if self.prodSourceLabel.startswith('rc_'):
+            pargs += ' "-i" "RC"'
+        if self.truepilot:
+            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
+                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_') else self.piloturl)
         else:
-            pargs = '"-h" "%s" "-s" "%s" "-f" "false" "-u" "%s"' % (self.schedconfig, self.sitename, self.prodSourceLabel)
-            if self.truepilot:
-                pargs += ' "-p" "25443" "-w" "https://pandaserver.cern.ch"'
-            else:
-                pargs += ' "-F" "Nordugrid-ATLAS" "-d" "{HOME}" "-j" "false" "-z" "true" "-b" "2" "-t" "false"'
+            pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
         self.xrsl['arguments'] = '(arguments = %s)' % pargs
 
@@ -268,7 +260,7 @@ class aCTPanda2Xrsl:
             self.pandajob = re.sub(r'--DBRelease%3D%22all%3Acurrent%22', '--DBRelease%3D%22100.0.2%22', self.pandajob)
 
     def setInputsES(self, inf):
-        
+
         for f, s, i in zip (self.jobdesc['inFiles'][0].split(","), self.jobdesc['scopeIn'][0].split(","), self.jobdesc['prodDBlockToken'][0].split(",")):
             if i == 'None':
                 # Rucio file
@@ -297,51 +289,33 @@ class aCTPanda2Xrsl:
         x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if self.truepilot:
-            if self.prodSourceLabel == 'ptest':
-                x += '(runpilot3-wrapper.sh "%s")' % '/data/user/atlact1/act-prod/runpilot2-wrapper.sh'
-            else:
-                x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
+            x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
             self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
             return
-        
-        if self.eventranges:
-            x += '(runpilot3-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/runpilot3-wrapper-es.sh")'      
-        else:
-            x += '(runpilot3-wrapper.sh "%s")' % self.wrapper
 
-        if self.prodSourceLabel == 'rc_test':
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-rc.tar.gz")'
-        elif self.prodSourceLabel == 'ptest':
-            x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-dev.tar.gz")'
-        elif self.sitename in ['LRZ-LMU_MUC1_MCORE', 'LRZ-LMU_MUC_MCORE1', 'IN2P3-CC_HPC_IDRIS_MCORE']:
-            #x += '(pilotcode.tar.gz "http://wguan-wisc.web.cern.ch;cache=check/wguan-wisc/wguan-pilot-dev-HPC_arc.tar.gz")'
-            x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
-        elif self.sitename in self.rtesites:
-            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-RTE.tar.gz")'
-        #elif 'BOINC' in self.sitename or (self.sitename.startswith('ANALY') and not self.truepilot) or ('MPPMU' in self.sitename):
-            # Use official pilot for BOINC and ND analy queues
-            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
+        # Wrapper
+        if self.eventranges: # TO FIX
+            x += '(runpilot2-wrapper.sh "http://aipanda404.cern.ch;cache=check/data/releases/runpilot3-wrapper-es.sh")'
         else:
-            # Use no kill pilot to avoid pilot killing too much at end of job
-            # Paul's version using PILOT_NOKILL
-            #x += '(pilotcode.tar.gz "http://project-atlas-gmsb.web.cern.ch;cache=check/project-atlas-gmsb/pilotcode-PICARD-72.12-NORDUGRID.tar.gz")'
-            x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-NOKILL.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode-PICARD.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/pilotcode-PICARD-AF.tar.gz")'
-            #x += '(pilotcode.tar.gz "http://dcameron.web.cern.ch;cache=check/dcameron/dev/pilotcode-DC.tar.gz")'
+            x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
+
+        # Pilot tarball
+        if self.prodSourceLabel.startswith('rc_'):
+            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturlrc
+        else:
+            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get agis files from cvmfs or over network
-        if re.match('BEIJING-.*_MCORE', self.sitename):
-            x += '(agis_schedconf.agis.%s.json "http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/?json&preset=schedconf.all&panda_queue=%s")' % (self.sitename,self.sitename)
+        if self.agisjsons:
             x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_ddmblacklisting.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmblacklisting.json")'
-            x += '(agis_schedconf.cvmfs.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+            x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
 
+        # Panda queue configuration
         if self.eventranges:
             x += '(ARCpilot-test.tar.gz "http://aipanda404.cern.ch;cache=check/data/releases/ARCpilot-es.tar.gz")'
         x += '(queuedata.json "http://pandaserver.cern.ch:25085;cache=check/cache/schedconfig/%s.all.json")' % self.schedconfig
 
+        # Input files
         if 'inFiles' in self.jobdesc:
             inf = {}
             if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
@@ -388,7 +362,7 @@ class aCTPanda2Xrsl:
             # some files are double:
             for k, v in inf.items():
                 x += "(" + k + " " + '"' + v + '"' + ")"
-        
+
             if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
@@ -397,7 +371,7 @@ class aCTPanda2Xrsl:
                 with open(tmpjsonfile, 'w') as f:
                     json.dump(jsondata, f)
                 x += '("eventranges.json" "%s")' %  tmpjsonfile
-            
+
         self.xrsl['inputfiles'] = "(inputfiles =  %s )" % x
 
     def setLog(self):
@@ -416,17 +390,15 @@ class aCTPanda2Xrsl:
 
     def setOutputs(self):
 
-        # dynamic outputs
-
-        output = '("jobSmallFiles.tgz" "")'
-        output += '("@output.list" "")'
-        # needed for SCEAPI
-        # generated output file list"
-        output += '("output.list" "")'
-        self.xrsl['outputs'] = "(outputfiles = %s )" % output
-
         if self.truepilot:
             self.xrsl['outputs'] = ""
+        else:
+            # json with final heartbeat
+            output = '("heartbeat.json" "")'
+            # dynamic outputs
+            output += '("@output.list" "")'
+            self.xrsl['outputs'] = "(outputfiles = %s )" % output
+
 
     def setPriority(self):
 

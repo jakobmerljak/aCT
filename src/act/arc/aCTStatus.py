@@ -150,7 +150,10 @@ class aCTStatus(aCTProcess):
                      updatedjob.State == arc.JobState.OTHER:
                     # unexpected
                     arcstate = 'failed'
-                    
+
+                # Walltime reported by ARC 6 is multiplied by cores
+                if arc.ARC_VERSION_MAJOR >= 6 and updatedjob.RequestedSlots > 0:
+                    updatedjob.UsedTotalWallTime = arc.Period(updatedjob.UsedTotalWallTime.GetPeriod() / updatedjob.RequestedSlots)
                 # Fix crazy wallclock and CPU times
                 if updatedjob.UsedTotalWallTime > arc.Time() - arc.Time(int(created.strftime("%s"))):
                     fixedwalltime = arc.Time() - arc.Time(int(created.strftime("%s")))
@@ -187,23 +190,24 @@ class aCTStatus(aCTProcess):
         check jobs with tstate too long ago and set them tocancel
         maxtimestate can be set in arc config file for any state in arc.JobState,
         e.g. maxtimerunning, maxtimequeuing
+        Also mark as cancelled jobs stuck in cancelling for more than one hour
         '''
-        
+
         # Loop over possible states
         # Note: MySQL is case-insensitive. Need to watch out with other DBs
         for jobstate in [state.lower() for state in dir(arc.JobState) if re.match('^[A-Z][A-Z]', state)]:
             maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate])
             if not maxtime:
                 continue
-            
+
             # be careful not to cancel jobs that are stuck in cleaning
             select = "state='%s' and %s" % (jobstate, self.db.timeStampLessThan("tstate", maxtime))
             jobs = self.db.getArcJobsInfo(select, columns=['id', 'JobID', 'appjobid', 'arcstate'])
-            
+
             for job in jobs:
-                if job['arcstate'] == 'toclean' or job['arcstate'] == 'cancelling':
-                    # delete jobs stuck in toclean/cancelling
-                    self.log.info("%s: Job stuck in toclean/cancelling for too long, deleting" % (job['appjobid']))
+                if job['arcstate'] == 'toclean':
+                    # delete jobs stuck in toclean
+                    self.log.info("%s: Job stuck in toclean for too long, deleting" % (job['appjobid']))
                     self.db.deleteArcJob(job['id'])
                     continue
 
@@ -214,6 +218,13 @@ class aCTStatus(aCTProcess):
                 else:
                     # Otherwise mark cancelled
                     self.db.updateArcJob(job['id'], {'arcstate': 'cancelled', 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()})
+
+        jobs = self.db.getArcJobsInfo("arcstate='cancelling' and " \
+                                      "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tstate", 3600),
+                                      ['id', 'appjobid'])
+        for job in jobs:
+            self.log.info("%s: Job stuck in cancelling for more than 1 hour, marking cancelled" % job['appjobid'])
+            self.db.updateArcJob(job['id'], {'arcstate': 'cancelled', 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()})
 
 
     def process(self):

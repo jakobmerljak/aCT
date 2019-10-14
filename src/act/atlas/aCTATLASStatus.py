@@ -295,9 +295,8 @@ class aCTATLASStatus(aCTATLASProcess):
                     lns.append(l)
             log+=''.join(lns[:nlines])
             # copy logfiles to failedlogs dir
-            failedlogsd = self.arcconf.get(["tmp","dir"])+"/failedlogs"
             try:
-                f=open(os.path.join(failedlogsd, str(pandaid)+".log"),"w")
+                f=open(os.path.join(self.tmpdir, "failedlogs", str(pandaid)+".log"),"w")
                 f.write(log)
                 f.close()
             except:
@@ -309,7 +308,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
     def processFailed(self, arcjobs):
         """
-        process jobs failed for other reasons than athena (log_extracts was not created by pilot)
+        process jobs for which pilot failed (batch exit code is non-zero)
         """
         if not arcjobs:
             return
@@ -331,7 +330,7 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
-            localdir = os.path.join(self.arcconf.get(['tmp','dir']), sessionid)
+            localdir = os.path.join(self.tmpdir, sessionid)
             gmlogerrors = os.path.join(localdir, "gmlog", "errors")
             arcjoblog = os.path.join(outd, "%s.log" % aj['appjobid'])
             if not os.path.exists(arcjoblog):
@@ -359,10 +358,8 @@ class aCTATLASStatus(aCTATLASProcess):
                 smeta = json.loads(str(aj['metadata']))
             except:
                 smeta = None
-            
-            # set update, pickle from pilot is not available
-            # some values might not be properly set
-            # TODO synchronize error codes with the rest of production
+
+            # fill info for the final heartbeat
             pupdate = aCTPandaJob()
             pupdate.jobId = aj['appjobid']
             pupdate.state = 'failed'
@@ -405,18 +402,17 @@ class aCTATLASStatus(aCTATLASProcess):
             if aj['EndTime']:
                 pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
                 pupdate.endTime = aj['EndTime'].isoformat(' ')
-            # save the pickle file to be used by aCTAutopilot panda update
+            # save the heartbeat file to be used by aCTAutopilot panda update
             try:
                 if smeta and smeta.get('harvesteraccesspoint'):
-                    picklefile = os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json')
-                    pupdate.writeToJsonFile(picklefile)
+                    hbfile = os.path.join(smeta['harvesteraccesspoint'], 'jobReport.json')
                 else:
-                    picklefile = os.path.join(self.arcconf.get(['tmp','dir']), "pickle", str(aj['pandaid'])+".pickle")
-                    pupdate.writeToFile(picklefile)
+                    hbfile = os.path.join(self.tmpdir, "heartbeats", str(aj['pandaid'])+".json")
+                pupdate.writeToFile(hbfile)
             except Exception as e:
-                self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], picklefile, str(e)))
+                self.log.warning("%s: Failed to write file %s: %s" % (aj['appjobid'], hbfile, str(e)))
 
-    
+
     def updateFailedJobs(self):
         """
         Query jobs in arcstate failed, set to tofetch
@@ -549,7 +545,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
             if job['JobID'] and job['JobID'].rfind('/') != -1:
                 sessionid = job['JobID'][job['JobID'].rfind('/'):]
-                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                localdir = self.tmpdir + sessionid
                 shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()
@@ -563,7 +559,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbarc.updateArcJobLazy(job['id'], cleandesc)
             if job['JobID'] and job['JobID'].rfind('/') != -1:
                 sessionid = job['JobID'][job['JobID'].rfind('/'):]
-                localdir = str(self.arcconf.get(['tmp', 'dir'])) + sessionid
+                localdir = self.tmpdir + sessionid
                 shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()

@@ -27,6 +27,7 @@ class aCTAGISFetcher(aCTATLASProcess):
                 mtime = os.stat(filename).st_mtime
                 if datetime.fromtimestamp(mtime) < datetime.now() - timedelta(hours=1):
                     self.log.critical("AGIS info has not been updated since more than 1 hour ago")
+                    self.criticallog.critical("AGIS info has not been updated since more than 1 hour ago")
             except:
                 # file may not have been created yet
                 pass

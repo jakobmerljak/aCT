@@ -104,8 +104,8 @@ class aCTStatus(aCTProcess):
                 updatedjob = hist
                 jobstatus = updatedjob['JobStatus']
 
-            self.log.debug('%s: Status %d (%s)' % (appjobid, jobstatus, self.condorjobstatemap[jobstatus]))
-            
+            self.log.debug('%s: Job %d: Status %d (%s)' % (appjobid, clusterid, jobstatus, self.condorjobstatemap[jobstatus]))
+
             if jobstatus == 1 and 'GridResourceUnavailableTime' in updatedjob:
                 # Job could not be submitted due to remote CE being down
                 self.log.warning('%s: Could not submit to remote CE, will retry' % appjobid)

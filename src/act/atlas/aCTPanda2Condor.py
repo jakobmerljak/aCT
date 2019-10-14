@@ -22,7 +22,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                 proxies_map[job['proxyid']] = self.dbarc.getProxyPath(job['proxyid'])
 
             parser = aCTPanda2ClassAd(job['pandajob'], job['id'], job['siteName'], self.sites[job['siteName']], proxies_map[job['proxyid']],
-                                   self.arcconf.get(["tmp", "dir"]), self.conf, job['metadata'], self.log)
+                                   self.tmpdir, self.conf, job['metadata'], self.log)
 
             self.log.info("site %s maxwalltime %s", job['siteName'],self.sites[job['siteName']]['maxwalltime'] )
 

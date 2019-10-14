@@ -16,7 +16,7 @@ class aCTValidatorCondor(aCTATLASProcess):
         Remove temporary files needed for this job
         '''
 
-        pandainputdir = os.path.join(self.arcconf.get(["tmp", "dir"]), 'inputfiles', str(pandaid))
+        pandainputdir = os.path.join(self.tmpdir, 'inputfiles', str(pandaid))
         shutil.rmtree(pandainputdir, ignore_errors=True)
 
 
