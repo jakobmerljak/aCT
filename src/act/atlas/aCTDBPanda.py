@@ -46,6 +46,7 @@ class aCTDBPanda(aCTDB):
            - eventranges: event ranges for event service jobs
            - corecount: Number of cores used by job
            - metadata: Generic json metadata sent by the client
+           - error: Error string from a failed job
            
         pandaarchive:
           - Selected fields from above list:
@@ -76,6 +77,7 @@ class aCTDBPanda(aCTDB):
         eventranges mediumtext,
         corecount integer,
         metadata BLOB,
+        error mediumtext,
         UNIQUE (pandaid)
     )
 """
