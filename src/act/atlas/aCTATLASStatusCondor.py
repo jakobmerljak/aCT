@@ -1,13 +1,12 @@
 import datetime
 
 from act.atlas.aCTATLASProcess import aCTATLASProcess
-from act.atlas.aCTAGISParser import aCTAGISParser
 
 class aCTATLASStatusCondor(aCTATLASProcess):
     '''
     Checks the status of condor jobs and reports back to pandajobs
     '''
-    
+
     def __init__(self):
         aCTATLASProcess.__init__(self, ceflavour=['HTCONDOR-CE', 'CREAM-CE'])
 
@@ -21,9 +20,9 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         """
 
         sites = "','".join([s for s,a in self.sites.iteritems() if a['status'] == 'offline'])
-        
+
         if sites:
-            
+
             jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in ('%s')" % sites,
                                         ['pandaid', 'condorjobid', 'siteName', 'id'])
 
@@ -31,27 +30,28 @@ class aCTATLASStatusCondor(aCTATLASProcess):
                 continue
                 self.log.info("Cancelling starting job for %d for offline site %s" % (job['pandaid'], job['siteName']))
                 select = 'id=%s' % job['id']
-                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed',
+                                                     'error': 'Starting job was killed because queue went offline'})
                 if job['condorjobid']:
                     self.dbcondor.updateCondorJob(job['condorjobid'], {'condorstate': 'tocancel'})
-            
+
             self.dbpanda.Commit()
-        
+
         # Get jobs killed by panda
         jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and sitename in %s" % self.sitesselect,
                                     ['pandaid', 'condorjobid', 'pandastatus', 'id'])
         if not jobs:
             return
-        
+
         for job in jobs:
             self.log.info("Cancelling Condor job for %d", job['pandaid'])
             select = 'id=%s' % job['id']
-            
+
             # Check if condorjobid is set before cancelling the job
             if not job['condorjobid']:
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
                 continue
-            
+
             # Put timings in the DB
             condorselect = "condorjobid='%s' and condorjobs.id=pandajobs.condorjobid and siteName in %s" % (job['condorjobid'], self.sitesselect)
             condorjobs = self.dbcondor.getCondorJobsInfo(condorselect, tables='condorjobs,pandajobs')
@@ -59,17 +59,18 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             if condorjobs:
                 desc['endTime'] = condorjobs[0]['CompletionDate'] if condorjobs[0]['CompletionDate'] else datetime.datetime.utcnow()
                 desc['startTime'] = condorjobs[0]['JobCurrentStartDate'] if condorjobs[0]['JobCurrentStartDate'] else datetime.datetime.utcnow()
-            
+
             # Check if job was manually killed
             if job['pandastatus'] is not None:
                 self.log.info('%s: Manually killed, marking cancelled' % job['pandaid'])
                 desc['pandastatus'] = None
+                desc['error'] = 'Job was killed in aCT'
             desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
 
             # Finally cancel the condor job                
             self.dbcondor.updateCondorJob(job['condorjobid'], {'condorstate': 'tocancel'})
-        
+
         self.dbpanda.Commit()
 
     def getStartTime(self, endtime, walltime):
@@ -80,8 +81,8 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         if not endtime:
             return datetime.datetime.utcnow() - datetime.timedelta(0, walltime)
         return endtime-datetime.timedelta(0, walltime)
-           
-           
+
+
     def updateStartingJobs(self):
         """
         Check for sent jobs that have been submitted to Condor and update
@@ -108,7 +109,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
-        
+
     def updateRunningJobs(self):
         """
         Check for new running jobs and update pandajobs with
@@ -144,7 +145,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
-        
+
     def updateFinishedJobs(self):
         """
         Check for new finished jobs, update pandajobs with
@@ -163,7 +164,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
         columns = ["condorjobs.id", "condorjobs.JobCurrentStartDate", "condorjobs.CompletionDate",
                    "condorjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate = self.dbcondor.getCondorJobsInfo(select, tables="condorjobs,pandajobs", columns=columns)
-        
+
         if len(jobstoupdate) == 0:
             return
         else:
@@ -183,7 +184,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
-    
+
     def updateFailedJobs(self):
         """
         Query jobs in condorstate failed, set to tofetch
@@ -200,7 +201,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
                 desc = {"condorstate":"tofetch", "tcondorstate": self.dbcondor.getTimeStamp()}
                 self.dbcondor.updateCondorJobsLazy(desc, select)
             self.dbcondor.Commit()
-        
+
         # Look for failed final states
         select = "(condorstate='donefailed' or condorstate='cancelled' or condorstate='lost')"
         select += " and actpandastatus!='toclean' and actpandastatus!='toresubmit'"
@@ -211,7 +212,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
 
         if len(jobstoupdate) == 0:
             return
-        
+
         failedjobs = [job for job in jobstoupdate if job['condorstate']=='donefailed']
         if len(failedjobs) != 0:
             self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
@@ -285,7 +286,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             self.dbcondor.updateCondorJobLazy(job['id'], cleandesc)
         if jobs:
             self.dbcondor.Commit()
-            
+
         select = "condorstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
                  "and pandajobs.condorjobid = condorjobs.id and pandajobs.sitename in %s" % self.sitesselect
         cleandesc = {"condorstate":"toclean", "tcondorstate": self.dbcondor.getTimeStamp()}
@@ -300,7 +301,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
     def process(self):
         """
         Main loop
-        """        
+        """
         self.log.info("Running")
         self.setSites()
         # Check for jobs that panda told us to kill and cancel them in Condor

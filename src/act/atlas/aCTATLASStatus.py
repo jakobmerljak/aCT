@@ -1,7 +1,6 @@
 # Handler for filling pandajobs information from arcjobs information. Also
 # deals with post-processing of jobs and error handling.
 
-import time
 import datetime
 import json
 import re
@@ -10,7 +9,6 @@ import shutil
 from urlparse import urlparse
 
 from act.common import aCTSignal
-from act.common import aCTUtils
 
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.atlas.aCTPandaJob import aCTPandaJob
@@ -40,7 +38,8 @@ class aCTATLASStatus(aCTATLASProcess):
             for job in jobs:
                 self.log.info("Cancelling starting job for %d for offline site %s" % (job['pandaid'], job['siteName']))
                 select = 'id=%s' % job['id']
-                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed'})
+                self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'failed', 'pandastatus': 'failed',
+                                                     'error': 'Starting job was killed because queue went offline'})
                 if job['arcjobid']:
                     self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
             
@@ -64,7 +63,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
             columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster',
-                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'Error', 'sendhb', 'pandajobs.created']
+                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'arcjobs.Error', 'sendhb', 'pandajobs.created']
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
@@ -78,6 +77,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 # Skip validator since there is no metadata.xml
                 desc['actpandastatus'] = 'failed'
                 desc['pandastatus'] = 'failed'
+                desc['error'] = 'Job was killed in aCT'
                 if self.sites[job['siteName']]['truepilot']:
                     desc['sendhb'] = 0
             else:
@@ -351,7 +351,7 @@ class aCTATLASStatus(aCTATLASProcess):
                     shutil.copy(os.path.join(localdir, pilotlog),
                                 os.path.join(outd, '%s.out' % aj['appjobid']))
                     os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
-                except Exception, e:
+                except Exception as e:
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
 
             try:
@@ -381,23 +381,8 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.cpuConsumptionUnit = 'seconds'
             pupdate.cpuConversionFactor = 1
             pupdate.pilotTiming = "0|0|%s|0" % aj['UsedTotalWallTime']
-            pupdate.exeErrorCode = aj['ExitCode']
-            pupdate.exeErrorDiag = aj['Error']
-            pupdate.pilotErrorCode = 1008
-            codes = []
-            codes.append("Job timeout")
-            codes.append("qmaster enforced h_rt limit")
-            codes.append("job killed: wall")
-            codes.append("Job exceeded time limit")
-            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
-                pupdate.pilotErrorCode = 1213
-            codes=[]
-            codes.append("Job probably exceeded memory limit")
-            codes.append("job killed: vmem")
-            codes.append("pvmem exceeded")
-            if [errcode for errcode in codes if re.search(errcode, aj['Error'])]:
-                pupdate.pilotErrorCode = 1212
-            pupdate.pilotErrorDiag = aj['Error']
+            pupdate.errorCode = 9000
+            pupdate.errorDiag = aj['Error']
             # set start/endtime
             if aj['EndTime']:
                 pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
@@ -436,7 +421,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus in ('sent', 'starting', 'running')"
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
-        columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'Error', 'arcjobs.EndTime',
+        columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'arcjobs.Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
                    'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata', 'cluster']
 
@@ -478,6 +463,7 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 desc['startTime'] = datetime.datetime.utcnow()
                 desc['endTime'] = datetime.datetime.utcnow()
+                desc['error'] = aj['Error']
                 self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
@@ -491,6 +477,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 desc['sendhb'] = 0
                 desc['pandastatus'] = 'transferring'
                 desc['actpandastatus'] = 'toclean'
+                desc['error'] = 'Job was lost from ARC CE'
             else:
                 self.log.info("%s: Resubmitting lost job %d %s %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID'],aj['Error']))
                 desc['pandastatus'] = 'starting'
@@ -508,6 +495,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 desc['sendhb'] = 0
                 desc['pandastatus'] = 'transferring'
                 desc['actpandastatus'] = 'toclean'
+                desc['error'] = aj['Error']
             else:
                 self.log.info("%s: Resubmitting cancelled job %d %s" % (aj['appjobid'], aj['arcjobid'],aj['JobID']))
                 desc["pandastatus"] = "starting"
@@ -568,33 +556,28 @@ class aCTATLASStatus(aCTATLASProcess):
     def process(self):
         """
         Main loop
-        """        
-        try:
-            self.log.info("Running")
-            self.setSites()
-            # Check for jobs that panda told us to kill and cancel them in ARC
-            self.checkJobstoKill()
-            # Check status of arcjobs
-            # Query jobs that were submitted since last time
-            self.updateStartingJobs()
-            # Query jobs in running arcstate with tarcstate sooner than last run
-            self.updateRunningJobs()
-            # Query jobs in arcstate done and update pandajobs
-            # Set to toclean
-            self.updateFinishedJobs()
-            # Query jobs in arcstate failed, set to tofetch
-            # Query jobs in arcstate done, donefailed, cancelled and lost, set to toclean.
-            # If they should be resubmitted, set arcjobid to null in pandajobs
-            # If not do post-processing and fill status in pandajobs
-            self.updateFailedJobs()
-            # Clean up jobs left behind in arcjobs table
-            self.cleanupLeftovers()
-            
-        except aCTSignal.ExceptInterrupt,x:
-            print x
-            return
+        """
+        self.log.info("Running")
+        self.setSites()
+        # Check for jobs that panda told us to kill and cancel them in ARC
+        self.checkJobstoKill()
+        # Check status of arcjobs
+        # Query jobs that were submitted since last time
+        self.updateStartingJobs()
+        # Query jobs in running arcstate with tarcstate sooner than last run
+        self.updateRunningJobs()
+        # Query jobs in arcstate done and update pandajobs
+        # Set to toclean
+        self.updateFinishedJobs()
+        # Query jobs in arcstate failed, set to tofetch
+        # Query jobs in arcstate done, donefailed, cancelled and lost, set to toclean.
+        # If they should be resubmitted, set arcjobid to null in pandajobs
+        # If not do post-processing and fill status in pandajobs
+        self.updateFailedJobs()
+        # Clean up jobs left behind in arcjobs table
+        self.cleanupLeftovers()
 
-        
+
 if __name__ == '__main__':
     aas=aCTATLASStatus()
     aas.run()
