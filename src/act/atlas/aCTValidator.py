@@ -525,7 +525,9 @@ class aCTValidator(aCTATLASProcess):
 
         # For truepilot jobs, don't try to clean outputs (too dangerous), just clean arc job
         for job in jobstoupdate[:]:
-            if self.sites[job['siteName']]['truepilot']:
+            # Cleaning a bad storage can block the validator, so skip cleaning in all cases
+            if True:
+            #if self.sites[job['siteName']]['truepilot']:
                 self.log.info("%s: Skip cleanup of output files" % job['pandaid'])
                 # set arcjobs state toclean
                 self.dbarc.updateArcJob(job["arcjobid"], cleandesc)
