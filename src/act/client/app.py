@@ -25,7 +25,7 @@ import io
 from OpenSSL.crypto import load_certificate, load_privatekey
 from OpenSSL.crypto import X509Store, X509StoreContext
 from OpenSSL.crypto import FILETYPE_PEM
-from six import u, b, binary_type, PY3
+import six
 
 
 from flask import Flask, request, send_file, jsonify
@@ -286,16 +286,20 @@ def createProxyCSR():
     """
     Create and return CSR for delegated proxy.
     """
-    issuer_pem = request.form['cert']
-    issuer_cert = x509.load_pem_x509_certificate(six.b(issuer_pem), default_backend())
+    
+    ## Commented since imports are missing
+    return None
 
-    delegatee_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=1024,
-        backend=default_backend()
-    )
+    #issuer_pem = request.form['cert']
+    #issuer_cert = x509.load_pem_x509_certificate(six.b(issuer_pem), default_backend())
 
-    csr = x509proxy.create_proxy_csr(issuer_cert, delegatee_key)
+    #delegatee_key = rsa.generate_private_key(
+    #    public_exponent=65537,
+    #    key_size=1024,
+    #    backend=default_backend()
+    #)
+
+    #csr = x509proxy.create_proxy_csr(issuer_cert, delegatee_key)
 
 
 @app.route('/proxies', methods=['PUT'])

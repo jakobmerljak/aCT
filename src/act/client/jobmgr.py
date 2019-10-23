@@ -82,7 +82,7 @@ class JobManager(object):
             NoSuchProxyError: Proxy does not exist in database.
         """
         if not self.arcdb.getProxy(proxyid):
-            raise NoSuchProxyError(proxyid)
+            raise NoSuchProxyError(proxyid, None)
 
     def getClientColumns(self):
         """Return a list of column names from client engine's table."""

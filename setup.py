@@ -18,7 +18,8 @@ setup(name='aCT',
 
         'pyopenssl',
         'flask',
-        'gunicorn'
+        'gunicorn',
+        'sqlalchemy'
       ],
       entry_points={
         'console_scripts': [

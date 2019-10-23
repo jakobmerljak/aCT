@@ -23,7 +23,7 @@ def getProxyIdFromProxy(proxyPath):
     """
     manager = proxymgr.ProxyManager()
     try:
-        proxyid = manager.getProxyIdForProxyFile(proxyPath)
+        return manager.getProxyIdForProxyFile(proxyPath)
     except NoSuchProxyError as e:
         print "error: no proxy for DN=\"{}\" and attributes=\"{}\" "\
                 "found in database; use actproxy".format(e.dn, e.attribute)
