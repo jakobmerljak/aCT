@@ -27,17 +27,18 @@ class aCTProcessManager:
         self.condorsubmitter = 'act/condor/aCTSubmitter'
         # dictionary of processes:aCTProcessHandler of which to run a single instance
         # TODO: app-specific processes in conf file instead of hard-coded
-        self.processes_single = {'act/atlas/aCTAutopilot':None, 
-                                 'act/atlas/aCTAutopilotSent':None,
-                                 'act/atlas/aCTPandaGetJobs':None,
-                                 'act/atlas/aCTPanda2Arc':None,
-                                 'act/atlas/aCTPanda2Condor':None,
-                                 'act/common/aCTProxyHandler':None,
-                                 'act/atlas/aCTATLASStatus':None,
-                                 'act/atlas/aCTATLASStatusCondor':None,
-                                 'act/atlas/aCTValidator':None,
-                                 'act/atlas/aCTValidatorCondor':None,
-                                 'act/atlas/aCTAGISFetcher':None
+        self.processes_single = {#'act/atlas/aCTAutopilot':None, 
+                                 #'act/atlas/aCTAutopilotSent':None,
+                                 #'act/atlas/aCTPandaGetJobs':None,
+                                 #'act/atlas/aCTPanda2Arc':None,
+                                 #'act/atlas/aCTPanda2Condor':None,
+                                 #'act/common/aCTProxyHandler':None,
+                                 #'act/atlas/aCTATLASStatus':None,
+                                 #'act/atlas/aCTATLASStatusCondor':None,
+                                 #'act/atlas/aCTValidator':None,
+                                 #'act/atlas/aCTValidatorCondor':None,
+                                 #'act/atlas/aCTAGISFetcher':None,
+                                 'act/client/client2arc':None
                                  }
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
