@@ -14,7 +14,12 @@ setup(name='aCT',
         'mysql-connector==2.1.*',   # connection to MySQL database
         'htcondor',                 # bindings to use HTCondor to submit jobs
         'pylint',                   # for travis automatic tests
-        'requests'                  # for APF mon calls
+        'requests',                 # for APF mon calls
+
+        'pyopenssl',
+        'flask',
+        'gunicorn',
+        'sqlalchemy'
       ],
       entry_points={
         'console_scripts': [
@@ -22,7 +27,17 @@ setup(name='aCT',
             'actmain = act.common.aCTMain:main',
             'actreport = act.common.aCTReport:main',
             'actcriticalmonitor = act.common.aCTCriticalMonitor:main',
-            'actheartbeatwatchdog = act.atlas.aCTHeartbeatWatchdog:main'
+            'actheartbeatwatchdog = act.atlas.aCTHeartbeatWatchdog:main',
+
+            'actbulksub = act.client.actbulksub:main',
+            'actclean   = act.client.actclean:main',
+            'actfetch   = act.client.actfetch:main',
+            'actget     = act.client.actget:main',
+            'actkill    = act.client.actkill:main',
+            'actproxy   = act.client.actproxy:main',
+            'actresub   = act.client.actresub:main',
+            'actstat    = act.client.actstat:main',
+            'actsub     = act.client.actsub:main'
         ]
       },
       data_files=[
