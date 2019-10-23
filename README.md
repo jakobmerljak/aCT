@@ -79,3 +79,6 @@ Several tools exist to help administer aCT
 - `actheartbeatwatchdog`: checks the database for jobs that have not sent heartbeats for a given time and manually send the heartbeat
 - `actcriticalmonitor`: checks logs for critical error messages in the last hour - can be run in a cron to send emails
 
+# Client tools
+
+__Experimental__ client tools exist which allow job management through simple command line tools (`actsub`, `actstat`, etc). These tools allow aCT to be used as a generic job submission engine, independent from the ATLAS part.
