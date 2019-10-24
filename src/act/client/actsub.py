@@ -53,17 +53,23 @@ def main():
     # get ID given proxy
     proxyid = clicommon.getProxyIdFromProxy(args.proxy)
 
-    # get and check job description, check sites
+    # check site
     try:
-        jobdesc = readXRSL(args.xRSL)
-        jobmgr.checkJobDesc(jobdesc)
         jobmgr.checkSite(args.site) # use default path for sites.json
-    except jobmgr.InvalidJobDescriptionError:
-        print 'error: invalid job description'
-        sys.exit(6)
     except jobmgr.NoSuchSiteError as e:
         print 'error: site \'{}\' is not configured'.format(args.site)
         sys.exit(4)
+    except Exception as e:
+        print 'error: could not read site config: {}'.format(str(e))
+        sys.exit(11) # TODO: refactor error handling
+
+    # get and check job description
+    try:
+        jobdesc = readXRSL(args.xRSL)
+        jobmgr.checkJobDesc(jobdesc)
+    except jobmgr.InvalidJobDescriptionError:
+        print 'error: invalid job description'
+        sys.exit(6)
     except IOError:
         print 'error: could not read xRSL file'
         sys.exit(7)
