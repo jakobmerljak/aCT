@@ -7,7 +7,7 @@ Returns:
     1: No proxy found.
     4: Site is not configured.
     6: Invalid job description.
-    7: Error with xRSL file.
+    7: Error reading xRSL file.
 """
 
 

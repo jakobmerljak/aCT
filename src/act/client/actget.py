@@ -7,7 +7,7 @@ Returns:
     1: No proxy found.
     2: One of the elements in job list is not a range.
     3: One of the elements in job list is not a valid ID.
-    5: tmp directory  not configured.
+    5: tmp directory not configured.
 """
 
 
