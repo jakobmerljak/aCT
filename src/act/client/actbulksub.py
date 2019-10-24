@@ -61,6 +61,9 @@ def main():
     except NoSuchSiteError as e:
         print "error: site '{}' is not configured".format(args.site)
         sys.exit(4)
+    except Exception as e:
+        print 'error: could not read site config: {}'.format(str(e))
+        sys.exit(11) # TODO: refactor error handling
 
     # check descriptions and submit jobs
     arcconf = aCTConfig.aCTConfigARC()
