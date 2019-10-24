@@ -35,6 +35,9 @@ def main():
             help='show more information')
     parser.add_argument('-p', '--proxy', default=None,
             help='custom path to proxy certificate')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging

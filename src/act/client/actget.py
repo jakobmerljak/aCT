@@ -61,6 +61,9 @@ def main():
             help='custom path to proxy certificate')
     parser.add_argument('-n', '--no-clean', action='store_true',
             help='do not clean jobs')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging

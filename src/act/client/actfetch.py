@@ -39,6 +39,9 @@ def main():
             help='custom path to proxy certificate')
     parser.add_argument('-r', '--refetch', action='store_true',
             help='refetch packages')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging

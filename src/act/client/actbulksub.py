@@ -39,6 +39,9 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_true',
             help='show more information')
     parser.add_argument('xRSL', nargs='+', help='path(s) to xRSL file(s)')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging

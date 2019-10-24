@@ -43,6 +43,9 @@ def main():
             help='columns from client table that should be fetched')
     parser.add_argument('--get-cols', action='store_true',
             help='print all available column names')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging

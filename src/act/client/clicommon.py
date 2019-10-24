@@ -34,3 +34,10 @@ def getProxyIdFromProxy(proxyPath):
         sys.exit(2)
 
 
+def showHelpOnCommandOnly(argparser):
+    """Show help if command is called without parameters."""
+    if len(sys.argv) == 1:
+        argparser.print_help()
+        sys.exit(0)
+
+
