@@ -27,6 +27,8 @@ from act.client.errors import InvalidJobIDError
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(description='Fetch failed jobs')
+    parser.add_argument('-a', '--all', action='store_true',
+            help='all jobs that match other criteria')
     parser.add_argument('-j', '--jobs', default='',
             help='comma separated list of IDs or ranges')
     parser.add_argument('-f', '--find',
@@ -37,6 +39,9 @@ def main():
             help='custom path to proxy certificate')
     parser.add_argument('-r', '--refetch', action='store_true',
             help='refetch packages')
+
+    clicommon.showHelpOnCommandOnly(parser)
+
     args = parser.parse_args()
 
     # logging
@@ -46,8 +51,10 @@ def main():
     else:
         logging.basicConfig(format=logFormat, level=logging.DEBUG, filename=os.devnull)
 
-    jobs = []
-    if args.jobs:
+    # create a list of jobs to work on
+    if args.all:
+        jobs = [] # empty means all jobs
+    elif args.jobs:
         try:
             jobs = jobmgr.getIDsFromList(args.jobs)
         except InvalidJobRangeError as e:
@@ -56,6 +63,9 @@ def main():
         except InvalidJobIDError as e:
             print "error: ID '{}' is not a valid ID".format(e.jobid)
             sys.exit(3)
+    else:
+        print "error: no jobs specified (use -a or -j)"
+        sys.exit(10)
 
     # get proxy ID given proxy
     proxyid = clicommon.getProxyIdFromProxy(args.proxy)
