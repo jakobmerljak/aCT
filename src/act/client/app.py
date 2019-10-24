@@ -282,27 +282,6 @@ def getResults():
 
 
 @app.route('/proxies', methods=['PUT'])
-def createProxyCSR():
-    """
-    Create and return CSR for delegated proxy.
-    """
-    
-    ## Commented since imports are missing
-    return None
-
-    #issuer_pem = request.form['cert']
-    #issuer_cert = x509.load_pem_x509_certificate(six.b(issuer_pem), default_backend())
-
-    #delegatee_key = rsa.generate_private_key(
-    #    public_exponent=65537,
-    #    key_size=1024,
-    #    backend=default_backend()
-    #)
-
-    #csr = x509proxy.create_proxy_csr(issuer_cert, delegatee_key)
-
-
-@app.route('/proxies', methods=['PUT'])
 def submitProxy():
     """
     Submit a proxy certificate of a user.
