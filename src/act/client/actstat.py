@@ -25,6 +25,8 @@ from act.client.errors import InvalidJobIDError
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(description='Get job info from aCT')
+    parser.add_argument('-a', '--all', action='store_true',
+            help='all jobs that match other criteria')
     parser.add_argument('-j', '--jobs', default='',
             help='ID/range(id1-id2;id1<id2)/comma separated list of IDs/ranges')
     parser.add_argument('-f', '--find', default='',
@@ -66,8 +68,9 @@ def main():
         sys.exit(0)
 
     # create a list of jobs to work on
-    jobs = []
-    if args.jobs:
+    if args.all:
+        jobs = [] # empty means all jobs
+    elif args.jobs:
         try:
             jobs = jobmgr.getIDsFromList(args.jobs)
         except InvalidJobRangeError as e:
@@ -76,6 +79,9 @@ def main():
         except InvalidJobIDError as e:
             print "error: ID '{}' is not a valid ID".format(e.jobid)
             sys.exit(3)
+    else:
+        print "error: no jobs specified (use -a or -j)"
+        sys.exit(10)
 
     # create column lists
     if not args.client_cols:
