@@ -397,7 +397,7 @@ class JobManager(object):
             Number of jobs assigned to be killed.
         """
         # wrong state filter, return immediately
-        if state_filter not in ('', 'submitted', 'running', 'tosubmit'):
+        if state_filter not in ('', 'submitted', 'running', 'tosubmit', 'submitting'):
             return 0 # zero killed jobs
         where = ' c.proxyid = %s AND '
         where_params = [proxyid]
@@ -406,7 +406,7 @@ class JobManager(object):
             where_params.append(state_filter)
         else:
             # otherwise, get all jobs that can be "getted"
-            where += " (a.arcstate IN ( 'submitted', 'running', '', 'tosubmit' ) OR a.arcstate IS NULL) AND "
+            where += " (a.arcstate IN ( 'submitted', 'running', '', 'tosubmit', 'submitting' ) OR a.arcstate IS NULL) AND "
         where, where_params = self._addNameFilter(name_filter, where, where_params)
         where, where_params = self._addIDFilter(jobids, where, where_params)
         where = where.rstrip('AND ')
