@@ -1,6 +1,3 @@
 {
-	"sites": 
-		{
-			"default": ["https://pikolit.ijs.si"]
-		}
+	"default": ["https://pikolit.ijs.si/batch"]
 }

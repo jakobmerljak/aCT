@@ -12,13 +12,13 @@ import signal
 import sys
 import traceback
 import time
-import json
 
-import clientdb
 import act.arc.aCTDBArc as aCTDBArc
 import act.common.aCTConfig as aCTConfig
 import act.common.aCTLogger as aCTLogger
 import act.common.aCTSignal as aCTSignal
+import act.client.config as config
+import act.client.clientdb as clientdb
 
 
 class Client2Arc(object):
@@ -155,21 +155,13 @@ class Client2Arc(object):
             limit=num
         )
         for job in jobs:
-            # get path to sites config
-            if 'ACTCONFIGARC' in os.environ:
-                binpath = os.path.dirname(os.environ['ACTCONFIGARC'])
-                confpath = os.path.join(binpath, 'sites.json')
-            else:
-                confpath = '/etc/act/sites.json'
-
             # get cluster list from config
+            clusterlist = ""
+            sites = config.readSites()
             clusterlist = ''
-            with open(confpath, 'r') as f:
-                sites = json.loads(f.read())
-                clusterlist = ''
-                for site in sites['sites'][job['siteName']]:
-                    clusterlist += site + ','
-                clusterlist = clusterlist.rstrip(',')
+            for cluster in sites[job['siteName']]:
+                clusterlist += cluster + ','
+            clusterlist = clusterlist.rstrip(',')
 
             # get job description, needed for setting priority
             jobdesc = self.arcdb.getArcJobDescription(job['jobdesc'])

@@ -5,7 +5,6 @@ This is a module that provides job management functionality.
 
 import logging
 import shutil
-import json
 import os
 import sys
 
@@ -13,6 +12,7 @@ import arc
 import act.arc.aCTDBArc as aCTDBArc
 import act.common.aCTConfig as aCTConfig
 import act.client.clientdb as clientdb
+import act.client.config as config
 from act.client.errors import *
 
 
@@ -664,24 +664,16 @@ def checkSite(siteName, confpath='/etc/act/sites.json'):
     Raises:
         NoSuchSiteError: Site is not in configuration.
     """
-    #conf = aCTConfig.aCTConfig()
-    #if siteName in conf.get(['sites']):
-    #    return
-    #else:
-    #    NoSuchSiteError(siteName)
-    if 'ACTCONFIGARC' in os.environ:
-        binpath = os.path.dirname(os.environ['ACTCONFIGARC'])
-        confpath = os.path.join(binpath, 'sites.json') # HARDCODED
     try:
-        with open(confpath, 'r') as f:
-            sites = json.loads(f.read())
-            for site in sites['sites'].keys():
-                if site == siteName:
-                    return
-            raise NoSuchSiteError(siteName)
-    except IOError, ValueError:
+        sites = config.readSites()
+        for site in sites:
+            if site == siteName:
+                return
+    except Exception:
         logger.exception('Problem reading configuration')
         raise
+
+    raise NoSuchSiteError(siteName)
 
 
 def getIDsFromList(listStr):
