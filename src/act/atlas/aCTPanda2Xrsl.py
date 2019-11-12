@@ -243,11 +243,13 @@ class aCTPanda2Xrsl:
     def setArguments(self):
 
         pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
-        if self.prodSourceLabel.startswith('rc_'):
+        if self.prodSourceLabel == 'rc_alrb':
+            pargs += ' "-i" "ALRB"'
+        elif self.prodSourceLabel.startswith('rc_'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
             pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
-                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_') else self.piloturl)
+                      % (self.piloturlrc if self.prodSourceLabel == 'rc_test' else self.piloturl)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
@@ -270,8 +272,9 @@ class aCTPanda2Xrsl:
                 if i in self.osmap:
                     lfn = '/'.join([self.osmap[i], f])
                 else:
+                    lfn = 's3://unknown/%s' % f
                     # TODO this exception is ignored by panda2arc
-                    raise Exception("No OS defined in AGIS for bucket id %d" % i)
+                    #raise Exception("No OS defined in AGIS for bucket id %d" % i)
             inf[f] = lfn
 
     def setInputs(self):
