@@ -451,6 +451,7 @@ class aCTATLASStatus(aCTATLASProcess):
             desc["actpandastatus"] = "toclean" # to clean up any output
             desc["endTime"] = aj["EndTime"]
             desc["startTime"] = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime'])
+            desc['error'] = aj['Error']
             # True pilot job may have gone straight to failed, turn off aCT heartbeats if necessary
             if self.sites[aj['siteName']]['truepilot'] and aj["sendhb"] == 1:
                 self.log.info("%s: Job finished so stop sending heartbeats", aj['appjobid'])
@@ -463,7 +464,6 @@ class aCTATLASStatus(aCTATLASProcess):
             except:
                 desc['startTime'] = datetime.datetime.utcnow()
                 desc['endTime'] = datetime.datetime.utcnow()
-                desc['error'] = aj['Error']
                 self.dbpanda.updateJobsLazy(select, desc)
 
         for aj in lostjobs:
