@@ -148,6 +148,7 @@ class aCTStatus(aCTProcess):
             jobdesc['condorstate'] = condorstate
             jobdesc['tcondorstate'] = self.dbcondor.getTimeStamp()
             jobdesc['tstate'] = self.dbcondor.getTimeStamp()
+            jobdesc['CompletionDate'] = self.dbcondor.getTimeStamp(jobdesc.get('CompletionDate', 0))
             self.log.debug(str(jobdesc))
             self.dbcondor.updateCondorJob(job['id'], jobdesc)
                 
