@@ -245,11 +245,11 @@ class aCTPanda2Xrsl:
         pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
         if self.prodSourceLabel == 'rc_alrb':
             pargs += ' "-i" "ALRB"'
-        elif self.prodSourceLabel.startswith('rc_'):
+        elif self.prodSourceLabel.startswith('rc_test'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
             pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
-                      % (self.piloturlrc if self.prodSourceLabel == 'rc_test' else self.piloturl)
+                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_test') else self.piloturl)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
@@ -303,7 +303,7 @@ class aCTPanda2Xrsl:
             x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
 
         # Pilot tarball
-        if self.prodSourceLabel.startswith('rc_'):
+        if self.prodSourceLabel.startswith('rc_test'):
             x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturlrc
         else:
             x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
