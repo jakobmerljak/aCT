@@ -62,18 +62,19 @@ class aCTATLASStatus(aCTATLASProcess):
             
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
-            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster',
+            columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster', 'metadata',
                        'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'arcjobs.Error', 'sendhb', 'pandajobs.created']
+
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
             if arcjobs:
                 desc['endTime'] = datetime.datetime.utcnow()
                 desc['startTime'] = datetime.datetime.utcnow()
-            
+
+            self.processFailed(arcjobs)
             # Check if job was manually killed
             if job['pandastatus'] is not None:
                 self.log.info('%s: Manually killed, will report failure to panda' % job['pandaid'])
-                self.processFailed(arcjobs)
                 # Skip validator since there is no metadata.xml
                 desc['actpandastatus'] = 'failed'
                 desc['pandastatus'] = 'failed'
@@ -84,7 +85,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
 
-            # Finally cancel the arc job                
+            # Finally cancel the arc job
             self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
         
         self.dbpanda.Commit()
@@ -385,8 +386,11 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.errorDiag = aj['Error']
             # set start/endtime
             if aj['EndTime']:
-                pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).isoformat(' ')
-                pupdate.endTime = aj['EndTime'].isoformat(' ')
+                pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).strftime('%Y-%m-%d %H:%M:%S')
+                pupdate.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                pupdate.startTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+                pupdate.endTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             # save the heartbeat file to be used by aCTAutopilot panda update
             try:
                 if smeta and smeta.get('harvesteraccesspoint'):

@@ -76,8 +76,8 @@ class aCTValidator(aCTATLASProcess):
             jobinfo.computingElement = arc.URL(str(aj['cluster'])).Host()
             if aj['EndTime']:
                 # datetime cannot be serialised to json so use string (for harvester)
-                jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).isoformat(' ')
-                jobinfo.endTime = aj['EndTime'].isoformat(' ')
+                jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).strftime('%Y-%m-%d %H:%M:%S')
+                jobinfo.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
             else:
                 self.log.warning('%s: no endtime found' % aj['appjobid'])
             if len(aj["ExecutionNode"]) > 255:
