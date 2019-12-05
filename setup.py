@@ -18,7 +18,7 @@ setup(name='aCT',
 
         'pyopenssl',
         'flask',
-        'gunicorn',
+        'gunicorn==19.*',           # Python 2 is not supported in >= 20.*
         'sqlalchemy'
       ],
       entry_points={
