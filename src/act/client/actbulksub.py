@@ -16,7 +16,6 @@ import os
 
 import act.client.jobmgr as jobmgr
 import act.client.clientdb as clientdb
-import act.client.proxymgr as proxymgr
 import act.common.aCTConfig as aCTConfig
 import act.client.clicommon as clicommon
 from act.client.errors import NoSuchSiteError
