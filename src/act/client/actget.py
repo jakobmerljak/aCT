@@ -18,7 +18,6 @@ import os
 import logging
 
 import act.client.jobmgr as jobmgr
-import act.client.proxymgr as proxymgr
 import act.client.clicommon as clicommon
 from act.client.errors import TargetDirExistsError
 from act.client.errors import InvalidJobRangeError

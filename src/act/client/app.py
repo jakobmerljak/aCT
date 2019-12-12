@@ -22,13 +22,12 @@ import shutil
 import io
 
 # TODO: switch to cryptography library
-from OpenSSL.crypto import load_certificate, load_privatekey
+from OpenSSL.crypto import load_certificate
 from OpenSSL.crypto import X509Store, X509StoreContext
 from OpenSSL.crypto import FILETYPE_PEM
-import six
 
 
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file
 app = Flask(__name__)
 
 

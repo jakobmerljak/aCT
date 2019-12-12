@@ -8,7 +8,6 @@ import arc
 import logging
 
 from act.db.aCTDB import aCTDB
-from errors import *
 
 
 class ClientDB(aCTDB):
