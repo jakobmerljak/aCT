@@ -93,7 +93,7 @@ class NoSuchProxyError(Exception):
         self.attribute = attribute
 
 
-class NoProxyFile(Exception):
+class NoProxyFileError(Exception):
     """Error when given path is not a proxy file."""
 
     def __init__(self, path):

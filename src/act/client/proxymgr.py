@@ -9,7 +9,7 @@ import datetime
 
 import act.common.aCTProxy as aCTProxy
 import act.arc.aCTDBArc as aCTDBArc
-from act.client.errors import *
+import act.client.errors as errors
 
 # TODO: Should this be handled on library level? Default proxy path is
 #       managed in actproxy.
@@ -63,7 +63,7 @@ class ProxyManager(object):
         else:
             if not proxyInfo:
                 self.logger.error('No proxy with dn={} and attribute={}'.format(dn, attribute))
-                raise NoSuchProxyError(dn, attribute)
+                raise errors.NoSuchProxyError(dn, attribute)
             else:
                 return proxyInfo
 
@@ -78,7 +78,7 @@ class ProxyManager(object):
             A tuple with proxy string, dn and expiry time.
         """
         if not os.path.isfile(proxyPath):
-            raise NoProxyFile(proxyPath)
+            raise errors.NoProxyFileError(proxyPath)
         try:
             return self.actproxy._readProxyFromFile(proxyPath)
         except: # probably some file reading error

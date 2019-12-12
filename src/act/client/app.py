@@ -14,7 +14,7 @@ functions.
 import act.client.jobmgr as jobmgr
 import act.client.proxymgr as proxymgr
 import act.client.clientdb as clientdb
-from act.client.errors import *
+import act.client.errors as errors
 
 import json
 import os
@@ -59,7 +59,7 @@ def stat():
     """
     try:
         proxyid = getProxyId()
-    except NoSuchProxyError:
+    except errors.NoSuchProxyError:
         return 'Wrong or no client certificate', 401
 
     try:
@@ -104,7 +104,7 @@ def clean():
     """
     try:
         proxyid = getProxyId()
-    except NoSuchProxyError:
+    except errors.NoSuchProxyError:
         return 'Wrong or no client certificate', 401
 
     try:
@@ -141,7 +141,7 @@ def patch():
     """
     try:
         proxyid = getProxyId()
-    except NoSuchProxyError:
+    except errors.NoSuchProxyError:
         return 'Wrong or no client certificate', 401
 
     try:
@@ -192,7 +192,7 @@ def submit():
     """
     try:
         proxyid = getProxyId()
-    except NoSuchProxyError:
+    except errors.NoSuchProxyError:
         return 'Wrong or no client certificate', 401
 
     jmgr = jobmgr.JobManager()
@@ -242,7 +242,7 @@ def getResults():
     """
     try:
         proxyid = getProxyId()
-    except NoSuchProxyError:
+    except errors.NoSuchProxyError:
         return 'Wrong or no client certificate', 401
 
     try:
