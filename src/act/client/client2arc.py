@@ -6,9 +6,7 @@ It is managed by another process, defined in
 :mod:`act.common.aCTProcessManager`.
 """
 
-import logging
 import os
-import signal
 import sys
 import traceback
 import time

@@ -6,7 +6,6 @@ This is a module that provides job management functionality.
 import logging
 import shutil
 import os
-import sys
 
 import arc
 import act.arc.aCTDBArc as aCTDBArc

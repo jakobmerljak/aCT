@@ -18,11 +18,8 @@ import logging
 
 import act.client.jobmgr as jobmgr
 import act.client.clientdb as clientdb
-import act.client.proxymgr as proxymgr
 import act.client.clicommon as clicommon
 import act.common.aCTConfig as aCTConfig
-from act.client.errors import InvalidJobDescriptionError
-from act.client.errors import NoSuchSiteError
 
 
 def readXRSL(filepath):
