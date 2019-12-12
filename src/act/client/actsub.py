@@ -21,8 +21,7 @@ import act.client.clientdb as clientdb
 import act.client.proxymgr as proxymgr
 import act.client.clicommon as clicommon
 import act.common.aCTConfig as aCTConfig
-from act.client.errors import InvalidJobDescriptionError
-from act.client.errors import NoSuchSiteError
+import act.client.errors as errors
 
 
 def readXRSL(filepath):
@@ -59,7 +58,7 @@ def main():
     # check site
     try:
         jobmgr.checkSite(args.site) # use default path for sites.json
-    except jobmgr.NoSuchSiteError as e:
+    except errors.NoSuchSiteError as e:
         print 'error: site \'{}\' is not configured'.format(args.site)
         sys.exit(4)
     except Exception as e:
@@ -70,7 +69,7 @@ def main():
     try:
         jobdesc = readXRSL(args.xRSL)
         jobmgr.checkJobDesc(jobdesc)
-    except jobmgr.InvalidJobDescriptionError:
+    except errors.InvalidJobDescriptionError:
         print 'error: invalid job description'
         sys.exit(6)
     except IOError:

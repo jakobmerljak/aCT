@@ -207,9 +207,9 @@ def submit():
     try:
         jobmgr.checkJobDesc(jobdesc)
         jobmgr.checkSite(site)
-    except jobmgr.InvalidJobDescriptionError as e:
+    except errors.InvalidJobDescriptionError as e:
         return 'Invalid job description', 400
-    except jobmgr.NoSuchSiteError as e:
+    except errors.NoSuchSiteError as e:
         return 'Invalid site', 400
     else:
         clidb = clientdb.ClientDB()
