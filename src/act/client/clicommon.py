@@ -6,7 +6,7 @@ import sys
 
 import act.client.proxymgr as proxymgr
 from act.client.errors import NoSuchProxyError
-from act.client.errors import NoProxyFile
+from act.client.errors import NoProxyFileError
 
 
 def getProxyIdFromProxy(proxyPath):
@@ -19,7 +19,7 @@ def getProxyIdFromProxy(proxyPath):
     Raises:
         NoSuchProxyError: Proxy with DN and attributes of the proxy given
             in proxy path is not in the database.
-        NoProxyFile: No proxy on given path.
+        NoProxyFileError: No proxy on given path.
     """
     manager = proxymgr.ProxyManager()
     try:
@@ -29,7 +29,7 @@ def getProxyIdFromProxy(proxyPath):
                 "found in database; use actproxy".format(e.dn, e.attribute)
         sys.exit(1)
 
-    except NoProxyFile as e:
+    except NoProxyFileError as e:
         print "error: path \"{}\" is not a proxy file; use arcproxy".format(e.path)
         sys.exit(2)
 

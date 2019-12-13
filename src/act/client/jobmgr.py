@@ -12,7 +12,7 @@ import act.arc.aCTDBArc as aCTDBArc
 import act.common.aCTConfig as aCTConfig
 import act.client.clientdb as clientdb
 import act.client.config as config
-from act.client.errors import *
+import act.client.errors as errors
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class JobManager(object):
             NoSuchProxyError: Proxy does not exist in database.
         """
         if not self.arcdb.getProxy(proxyid):
-            raise NoSuchProxyError(proxyid, None)
+            raise errors.NoSuchProxyError(proxyid, None)
 
     def getClientColumns(self):
         """Return a list of column names from client engine's table."""
@@ -156,7 +156,7 @@ class JobManager(object):
                     # just log this problem, user doesn't need results anyway
                     self.logger.exception('Could not clean job results in {}'.format(
                         jobdir))
-                except NoJobDirectoryError as e:
+                except errors.NoJobDirectoryError as e:
                     # just log this problem, user doesn't need results anyway
                     self.logger.exception('Could not clean job results in {}'.format(
                         e.jobdir))
@@ -295,7 +295,7 @@ class JobManager(object):
                     # just log this problem, user doesn't need results anyway
                     self.logger.exception('Could not clean job results in {}'.format(
                         jobdir))
-                except NoJobDirectoryError as e:
+                except errors.NoJobDirectoryError as e:
                     # just log this problem, user doesn't need results anyway
                     self.logger.exception('Could not clean job results in {}'.format(
                         e.jobdir))
@@ -363,7 +363,7 @@ class JobManager(object):
         for job in jobs:
             try:
                 srcdir = self.getACTJobDir(job['a_JobID'])
-            except NoJobDirectoryError:
+            except errors.NoJobDirectoryError:
                 srcdir = None
             results.arcIDs.append(job['a_id'])
             results.clientIDs.append(int(job['c_id']))
@@ -568,10 +568,10 @@ class JobManager(object):
                 return actJobDir
             else:
                 self.logger.error('Could not find job directory: {}'.format(actJobDir))
-                raise NoJobDirectoryError(actJobDir)
+                raise errors.NoJobDirectoryError(actJobDir)
         else:
             self.logger.error('tmp directory is not in config')
-            raise TmpConfigurationError()
+            raise errors.TmpConfigurationError()
 
     def _createMysqlIntList(self, integers):
         """
@@ -647,7 +647,7 @@ def checkJobDesc(jobdesc):
     jobdescs = arc.JobDescriptionList()
     if not arc.JobDescription_Parse(str(jobdesc), jobdescs):
         logger.error('Job description is not valid')
-        raise InvalidJobDescriptionError()
+        raise errors.InvalidJobDescriptionError()
 
 
 def checkSite(siteName, confpath='/etc/act/sites.json'):
@@ -672,7 +672,7 @@ def checkSite(siteName, confpath='/etc/act/sites.json'):
         logger.exception('Problem reading configuration')
         raise
 
-    raise NoSuchSiteError(siteName)
+    raise errors.NoSuchSiteError(siteName)
 
 
 def getIDsFromList(listStr):
@@ -707,21 +707,21 @@ def getIDsFromList(listStr):
             try:
                 firstIx, lastIx = group.split('-')
             except ValueError: # if there is more than one dash
-                raise InvalidJobRangeError(group)
+                raise errors.InvalidJobRangeError(group)
             try:
                 firstIx = int(firstIx)
             except ValueError:
-                raise InvalidJobIDError(firstIx)
+                raise errors.InvalidJobIDError(firstIx)
             try:
                 lastIx = int(lastIx)
             except ValueError:
-                raise InvalidJobIDError(lastIx)
+                raise errors.InvalidJobIDError(lastIx)
             ids.extend(range(int(firstIx), int(lastIx) + 1))
         else:
             try:
                 ids.append(int(group))
             except ValueError:
-                raise InvalidJobIDError(group)
+                raise errors.InvalidJobIDError(group)
     return ids
 
 
