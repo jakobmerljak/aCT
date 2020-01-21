@@ -325,11 +325,12 @@ class aCTReport:
             states = ["to_submit","submitted", "running"]
             rtot = defaultdict(int)
 
-            for site, resources in workers.items():
-                for resource, jobs in resources.items():
-                    rep['%s-%s' % (site, resource)] = jobs
-                    for state, count in jobs.items():
-                        rtot[state] += count
+            for site, prodsourcelabels in workers.items():
+                for prodsourcelabel, resources in prodsourcelabels.items():
+                    for resource, jobs in resources.items():
+                        rep['%s-%s-%s' % (site, prodsourcelabel, resource)] = jobs
+                        for state, count in jobs.items():
+                            rtot[state] += count
 
             self.log("All Harvester jobs: %d" % sum([v for k,v in rtot.items()]))
             self.log( "%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
