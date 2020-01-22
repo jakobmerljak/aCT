@@ -193,32 +193,33 @@ class aCTSubmitter(aCTProcess):
 
         # Apply fair-share
         if self.cluster:
-            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['fairshare'])
+            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['fairshare', 'proxyid'])
         else:
-            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['fairshare'])
+            fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['fairshare', 'proxyid'])
             
         if not fairshares:
             self.log.info('Nothing to submit')
             return 0
         
-        fairshares = list(set([p['fairshare'] for p in fairshares]))
+        # split by proxy for GU queues
+        fairshares = list(set([(p['fairshare'], p['proxyid']) for p in fairshares]))
         # For EMI-ES proxy bug - see below
         shuffle(fairshares)
         count = 0
 
-        for fairshare in fairshares:
+        for fairshare, proxyid in fairshares:
 
             try:
                 # catch any exceptions here to avoid leaving lock
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' limit 10".format(self.cluster, fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' and proxyid='{2}' limit 10".format(self.cluster, fairshare, proxyid),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0}' limit 10".format(fairshare),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0} and proxyid={1}' limit 10".format(fairshare, proxyid),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
@@ -241,7 +242,7 @@ class aCTSubmitter(aCTProcess):
             if len(jobs) == 0:
                 #self.log.debug("No jobs to submit")
                 continue
-            self.log.info("Submitting %d jobs for fairshare %s" % (len(jobs), fairshare))
+            self.log.info("Submitting %d jobs for fairshare %s and proxyid %d" % (len(jobs), fairshare, proxyid))
 
             # max waiting priority
             try:
@@ -271,9 +272,9 @@ class aCTSubmitter(aCTProcess):
                     # Specify explicitly EGIIS
                     infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
     
-            # Set UserConfig credential for each proxy. Assumes that any proxy
-            # in the fairshare can query the CE infosys
-            self.uc.CredentialString(str(self.db.getProxy(jobs[0]['proxyid'])))
+            # Set UserConfig credential for querying infosys
+            proxystring = str(self.db.getProxy(proxyid))
+            self.uc.CredentialString(proxystring)
             global usercred
             usercred = self.uc
             # retriever contains a list of CE endpoints
@@ -363,9 +364,7 @@ class aCTSubmitter(aCTProcess):
                 if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
                     self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                     continue
-                # TODO: might not work if proxies are different within a share
-                # since same uc object is shared among threads
-                tasks.append((j['id'], j['appjobid'], jobdescstr, str(self.db.getProxy(j['proxyid'])), int(self.conf.get(['atlasgiis','timeout'])) ))
+                tasks.append((j['id'], j['appjobid'], jobdescstr, proxystring, int(self.conf.get(['atlasgiis','timeout'])) ))
                 count=count+1
 
             npools=1
