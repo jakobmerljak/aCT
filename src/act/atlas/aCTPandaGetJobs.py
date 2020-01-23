@@ -58,10 +58,12 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
             proxyfile = actp.path(dn, attribute=attr)
             # pilot role is mapped to analysis type
+            psl = 'managed'
             if role == 'pilot':
                 role = 'analysis'
+                psl = 'user'
             self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
-            self.proxymap[role] = proxyid
+            self.proxymap[psl] = proxyid
 
         # queue interval
         self.queuestamp=0
@@ -106,7 +108,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 self.log.debug('%s: activated rc_test %d, rest %d' % (site, n_rc_test, n_rest))
 
     def getPanda(self, sitename):
-        return self.pandas[self.sites[sitename]['type']]
+        return self.pandas.get(self.sites[sitename]['type'], self.pandas.get('production'))
 
 
     def getJobs(self, num):
@@ -137,9 +139,11 @@ class aCTPandaGetJobs(aCTATLASProcess):
                 continue
             
             prodsourcelabel = None
-            if attrs['status'] == 'test' and attrs['type'] == 'production':
+            if attrs['status'] == 'test' and attrs['type'] in ['production', 'unified']:
                 self.log.info("Site %s is in test, will set prodSourceLabel to prod_test" % site)
                 prodsourcelabel = 'prod_test'
+            elif attrs['type'] == 'unified':
+                prodsourcelabel = 'unified'
             
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
@@ -226,7 +230,8 @@ class aCTPandaGetJobs(aCTATLASProcess):
                         n['pandastatus'] = 'sent'
                         n['actpandastatus'] = 'sent'
                     n['siteName'] = site
-                    n['proxyid'] = self.proxymap[attrs['type']]
+                    n['proxyid'] = self.proxymap.get(prodsrclabel, self.proxymap.get('managed'))
+                    n['prodSourceLabel'] = prodsrclabel
                     n['eventranges'] = eventranges
                     if pandaid != 0:
                         try:

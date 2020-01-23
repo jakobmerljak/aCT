@@ -180,7 +180,7 @@ class aCTPanda2Xrsl:
             #self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE-LCG)"
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)"
             return
-        if self.siteinfo['type'] == 'analysis' and 'BOINC' not in self.sitename:
+        if self.prodSourceLabel == 'user' and 'BOINC' not in self.sitename:
             self.xrsl['rtes'] = "(runtimeenvironment = ENV/PROXY)(runtimeenvironment = APPS/HEP/ATLAS-SITE)"
             return
         if self.sitename not in self.rtesites:
@@ -230,7 +230,7 @@ class aCTPanda2Xrsl:
         for rte in atlasrtes[-1:]:
             self.xrsl['rtes'] += "(runtimeenvironment = APPS/HEP/ATLAS-" + rte + ")"
 
-        if self.siteinfo['type'] == 'analysis':
+        if self.prodSourceLabel == 'user':
             self.xrsl['rtes'] += "(runtimeenvironment = ENV/PROXY)"
 
         self.atlasrelease = ",".join(atlasrtes)

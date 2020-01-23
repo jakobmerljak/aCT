@@ -69,7 +69,7 @@ class aCTAutopilotSent(aCTATLASProcess):
 
 
     def getPanda(self, sitename):
-        return self.pandas[self.sites[sitename]['type']]
+        return self.pandas.get(self.sites[sitename]['type'], self.pandas.get('production'))
 
 
     def updatePandaHeartbeat(self,pstatus):
