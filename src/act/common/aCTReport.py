@@ -320,34 +320,26 @@ class aCTReport:
             self.dbProxy = DBProxy()
 
             workers = self.dbProxy.get_worker_stats_bulk(None)
-            rep = {}
+            rep = defaultdict(dict)
 
-            states = ["to_submit","submitted", "running"]
             rtot = defaultdict(int)
 
             for site, prodsourcelabels in workers.items():
                 for prodsourcelabel, resources in prodsourcelabels.items():
                     for resource, jobs in resources.items():
-                        rep['%s-%s-%s' % (site, prodsourcelabel, resource)] = jobs
+                        rep['%s-%s' % (site, resource)][prodsourcelabel] = jobs
                         for state, count in jobs.items():
                             rtot[state] += count
-
-            self.log("All Harvester jobs: %d" % sum([v for k,v in rtot.items()]))
-            self.log( "%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
+            self.log("All Harvester jobs: %d       prodSourceLabel: submitted/running" % sum([v for k,v in rtot.items()]))
             for k in sorted(rep.keys()):
                 log="%28s:" % k[:28]
-                for s in states:
+                for psl, jobs in rep[k].items():
                     try:
-                        log += '%10s' % str(rep[k][s])
+                        log += '%10s: %d/%d ' % (psl, jobs['submitted'], jobs['running'])
                     except KeyError:
                         log += '%10s' % '-'
                 self.log(log)
-            log = "%28s:" % "Totals"
-            for s in states:
-                try:
-                    log += '%10s' % str(rtot[s])
-                except:
-                    log += '%10s' % '-'
+            log = "%28s:  submitted: %d  running: %d" % ("Totals", rtot['submitted'], rtot['running'])
             self.log(log+'\n\n')
         except:
             pass
