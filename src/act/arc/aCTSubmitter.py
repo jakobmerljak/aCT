@@ -203,7 +203,7 @@ class aCTSubmitter(aCTProcess):
         
         # split by proxy for GU queues
         fairshares = list(set([(p['fairshare'], p['proxyid']) for p in fairshares]))
-        # For EMI-ES proxy bug - see below
+        # For proxy bug - see below
         shuffle(fairshares)
         count = 0
 
@@ -419,6 +419,9 @@ class aCTSubmitter(aCTProcess):
             self.log.info("threads finished")
             # commit transaction to release row locks
             self.db.Commit()
+
+            # still proxy bug
+            raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
