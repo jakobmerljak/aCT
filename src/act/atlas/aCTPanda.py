@@ -76,6 +76,7 @@ class aCTPanda:
         elif status == '0':
             pid = urldesc['PandaID'][0]
             self.log.info('New Panda job with ID %s' % pid)
+            prodSourceLabel = urldesc['prodSourceLabel'][0]
             if getEventRanges and 'eventService' in urldesc and urldesc['eventService'][0] == 'True':
                 node = {}
                 node['pandaID'] = urldesc['PandaID'][0]

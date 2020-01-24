@@ -62,6 +62,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             if role == 'pilot':
                 role = 'analysis'
                 psl = 'user'
+                self.proxymap['panda'] = proxyid
             self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
             self.proxymap[psl] = proxyid
 
