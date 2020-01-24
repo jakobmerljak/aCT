@@ -88,7 +88,7 @@ class aCTPanda2Xrsl:
 
     def setDisk(self):
 
-        if self.sitename not in ['UIO_MCORE', 'ANALY_UIO']:
+        if self.sitename not in ['DE-TARDIS']:
             return
         # Space for data created by the job
         if 'maxDiskCount' in self.jobdesc:
@@ -126,7 +126,7 @@ class aCTPanda2Xrsl:
         walltime = walltime * 1.5
 
         # JEDI analysis hack
-        walltime = max(120, walltime)
+        walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
 
         cputime = self.getNCores() * walltime
@@ -329,7 +329,7 @@ class aCTPanda2Xrsl:
                                                                 self.jobdesc['realDatasetsIn'][0].split(","),
                                                                 self.jobdesc['GUID'][0].split(","),
                                                                 self.jobdesc['prodDBlockToken'][0].split(","),
-                                                                self.jobdesc['ddmEndPointIn'][0].split(",")):
+                                                                [None]*len(self.jobdesc['inFiles'][0].split(",")) if not self.jobdesc.get('ddmEndPointIn') else self.jobdesc['ddmEndPointIn'][0].split(",")):
 
                 # Skip files which use direct I/O: site has it enabled, token is
                 # not 'local', file is root file and --useLocalIO is not used
@@ -433,6 +433,8 @@ class aCTPanda2Xrsl:
                 self.xrsl['priority'] = ""
             if self.sitename == 'ANALY_wuppertalprod':
                 self.xrsl['priority'] = ""
+            if self.sitename == 'BOINC_MCORE':
+                self.xrsl['priority'] = '("priority" = 28)'
 
     def setEnvironment(self):
 
