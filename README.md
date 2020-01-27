@@ -33,7 +33,7 @@ ARC python bindings are not available in pip so must be installed as a system pa
 ```
 $ virtualenv aCT
 $ source aCT/bin/activate
-$ pip install git+https://github.com/ATLASControlTower/aCT
+$ pip install git+https://github.com/ARCControlTower/aCT
 ```
 
 Then one of two workarounds must be done to use ARC modules in the virtualenv, either create symlinks inside the virtualenv, eg
