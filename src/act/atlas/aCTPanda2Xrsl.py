@@ -142,7 +142,7 @@ class aCTPanda2Xrsl:
 
         if 'minRamCount' in self.jobdesc:
             memory = int(self.jobdesc['minRamCount'][0])
-        elif not self.sitename.startswith('ANALY'):
+        elif not self.prodSourceLabel in ('user', 'panda'):
             memory = 4000
         else:
             memory = 2000
@@ -167,6 +167,9 @@ class aCTPanda2Xrsl:
                 memory = 2000
             else:
                 memory = memory / self.getNCores()
+        else:
+            # Min 2GB for single core
+            memory = min(memory, 2000)
 
         if self.sitename == 'MPPMU_MCORE' and memory < 2000:
             memory = 2000
