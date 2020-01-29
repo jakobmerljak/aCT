@@ -103,7 +103,7 @@ class aCTAutopilot(aCTATLASProcess):
 
 
     def getPanda(self, sitename):
-        return self.pandas[self.sites[sitename]['type']]
+        return self.pandas.get(self.sites[sitename]['type'], self.pandas.get('production'))
 
 
     def updatePandaHeartbeat(self,pstatus):
@@ -237,7 +237,7 @@ class aCTAutopilot(aCTATLASProcess):
                 jobsbyproxy[self.sites[j['siteName']]['type']] = [jd]
 
         for sitetype, jobs in jobsbyproxy.items():
-            t = PandaBulkThr(self.pandas[sitetype].updateStatuses, [j['jobId'] for j in jobs], jobs)
+            t = PandaBulkThr(self.pandas.get(sitetype, self.pandas.get('production')).updateStatuses, [j['jobId'] for j in jobs], jobs)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
 
