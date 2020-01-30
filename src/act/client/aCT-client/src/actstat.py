@@ -82,7 +82,7 @@ if r.status_code == 200:
     # be nicely formatted.
     colsizes = {}
     for job in json_resp:
-        for key, value in list(job.items()):
+        for key, value in job.items():
             # All keys have a letter and underscore prepended, which is not
             # used when printing
             colsize = max(len(str(key[2:])), len(str(value)))

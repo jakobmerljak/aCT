@@ -120,7 +120,7 @@ def main():
     # be nicely formatted.
     colsizes = {}
     for job in jobdicts:
-        for key, value in list(job.items()):
+        for key, value in job.items():
             # All keys have a letter and underscore prepended, which is not
             # used when printing
             colsize = max(len(str(key[2:])), len(str(value)))
@@ -137,7 +137,7 @@ def main():
         print('{:<{width}}'.format(col, width=colsizes['a_' + col]), end=' ')
     print()
     line = ''
-    for value in list(colsizes.values()):
+    for value in colsizes.values():
         line += '-' * value
     line += '-' * (len(colsizes) - 1)
     print(line)

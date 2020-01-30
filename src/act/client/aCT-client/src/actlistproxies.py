@@ -42,7 +42,7 @@ except Exception as e:
 if r.status_code == 200:
     json_r = json.loads(r.text)
     for proxy in json_r:
-        for key, value in list(proxy.items()):
+        for key, value in proxy.items():
             print('{}:{} '.format(key, value), end=' ')
         print()
 else:

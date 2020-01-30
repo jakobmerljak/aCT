@@ -327,12 +327,12 @@ class ClientDB(aCTDB):
             lazy: A boolean that determines whether transaction should be
                 commited after operation.
         """
-        if not self._checkColumns('clientjobs', list(patch.keys())):
+        if not self._checkColumns('clientjobs', patch.keys()):
             raise Exception("Invalid job attribute")
 
         query = 'UPDATE clientjobs SET '
         params = []
-        for key in list(patch.keys()):
+        for key in patch.keys():
             query += '{} = %s, '.format(key)
             params.append(patch[key])
         query = query.rstrip(', ')

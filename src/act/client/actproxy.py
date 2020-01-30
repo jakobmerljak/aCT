@@ -19,7 +19,7 @@ from act.client.errors import NoProxyFileError
 
 def printProxyInfo(proxyInfo):
     """Print proxy info from aCT table."""
-    for key, value in list(proxyInfo.items()):
+    for key, value in proxyInfo.items():
         print('{:<12}: {}'.format(key, value))
 
 
