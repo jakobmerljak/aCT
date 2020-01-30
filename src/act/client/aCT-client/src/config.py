@@ -61,7 +61,7 @@ def set_defaults(conf_dict):
 def expand_paths(conf_dict):
     """Expand home directories (~) in path parameters of config dictionary."""
     for param in PATH_PARAMS:
-        if param in list(conf_dict.keys()):
+        if param in conf_dict:
             conf_dict[param] = os.path.expanduser(conf_dict[param])
 
 

@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+# TODO: Add CLI switch for no header for simpler processing
 
 """
 Get job information from aCT.
@@ -128,7 +130,7 @@ def main():
             except KeyError:
                 colsizes[key] = colsize
 
-# Print table header
+    # Print table header
     for col in clicols:
         print('{:<{width}}'.format(col, width=colsizes['c_' + col]), end=' ')
     for col in arccols:
@@ -137,7 +139,7 @@ def main():
     line = ''
     for value in list(colsizes.values()):
         line += '-' * value
-    line += '-' * (len(list(colsizes.values())) - 1)
+    line += '-' * (len(colsizes) - 1)
     print(line)
 
     # Print jobs
