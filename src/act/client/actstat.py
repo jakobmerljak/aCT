@@ -146,23 +146,17 @@ def main():
     for job in jobdicts:
         for col in clicols:
             fullKey = 'c_' + col
-            try:
-                if job[fullKey].strip() == '':
-                    txt = "''"
-                else:
-                    txt = job[fullKey]
-            except:
-                txt = job[fullKey]
+            txt = job.get(fullKey)
+            # just in case the value is a bunch of whitespace
+            if not txt or txt.strip() == '': # short circuit important!
+                txt = "''"
             print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
         for col in arccols:
             fullKey = 'a_' + col
-            try:
-                if job[fullKey].strip() == '':
-                    txt = "''"
-                else:
-                    txt = job[fullKey]
-            except:
-                txt = job[fullKey]
+            txt = job.get(fullKey)
+            # just in case the value is a bunch of whitespace
+            if not txt or txt.strip() == '': # short circuit important!
+                txt = "''"
             print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
         print()
 
