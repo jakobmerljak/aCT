@@ -169,7 +169,7 @@ class aCTPanda2Xrsl:
                 memory = memory / self.getNCores()
         else:
             # Min 2GB for single core
-            memory = min(memory, 2000)
+            memory = max(memory, 2000)
 
         if self.sitename == 'MPPMU_MCORE' and memory < 2000:
             memory = 2000
