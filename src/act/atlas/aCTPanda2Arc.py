@@ -101,7 +101,7 @@ class aCTPanda2Arc(aCTATLASProcess):
     def sendTraces(self, traces, proxypath):
         for trace in traces:
             try:
-                conn = httplib.HTTPSConnection('rucio-lb-prod.cern.ch:443', key_file=proxypath, cert_file=proxypath)
+                conn = httplib.HTTPSConnection('rucio-lb-prod.cern.ch:443', key_file=proxypath, cert_file=proxypath, timeout=5)
                 rdata = json.dumps(trace)
                 headers = {"Content-type": "application/json"}
                 conn.request("POST", "/traces/", rdata, headers)
