@@ -63,7 +63,7 @@ class aCTATLASStatus(aCTATLASProcess):
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
             columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster', 'metadata',
-                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'arcjobs.Error', 'sendhb', 'pandajobs.created']
+                       'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'ExitCode', 'arcjobs.Error', 'sendhb', 'pandajobs.created', 'corecount']
 
             arcjobs = self.dbarc.getArcJobsInfo(arcselect, columns=columns, tables='arcjobs,pandajobs')
             desc = {}
@@ -381,6 +381,7 @@ class aCTATLASStatus(aCTATLASProcess):
             pupdate.cpuConsumptionTime = aj['UsedTotalCPUTime']
             pupdate.cpuConsumptionUnit = 'seconds'
             pupdate.cpuConversionFactor = 1
+            pupdate.coreCount = aj['corecount'] or 1
             pupdate.pilotTiming = "0|0|%s|0" % aj['UsedTotalWallTime']
             pupdate.errorCode = 9000
             pupdate.errorDiag = aj['Error']
@@ -388,8 +389,15 @@ class aCTATLASStatus(aCTATLASProcess):
             if aj['EndTime']:
                 pupdate.startTime = self.getStartTime(aj['EndTime'], aj['UsedTotalWallTime']).strftime('%Y-%m-%d %H:%M:%S')
                 pupdate.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
+                # Sanity check for efficiency > 100%
+                cputimepercore = pupdate.cpuConsumptionTime / pupdate.coreCount
+                if aj['UsedTotalWallTime'] < cputimepercore:
+                    self.log.warning('%s: Adjusting reported walltime %d to CPU time %d' %
+                                      (aj['appjobid'], aj['UsedTotalWallTime'], cputimepercore))
+                    pupdate.startTime = (aj['EndTime'] - datetime.timedelta(0, cputimepercore)).strftime('%Y-%m-%d %H:%M:%S')
             else:
-                pupdate.startTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+                # Set walltime to cputime per core
+                pupdate.startTime = self.getStartTime(datetime.datetime.utcnow(), aj['UsedTotalCPUTime'] / pupdate.coreCount).strftime('%Y-%m-%d %H:%M:%S')
                 pupdate.endTime = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             # save the heartbeat file to be used by aCTAutopilot panda update
             try:
@@ -427,7 +435,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.arcjobid = arcjobs.id and siteName in %s limit 100000" % self.sitesselect
         columns = ['arcstate', 'arcjobid', 'appjobid', 'JobID', 'arcjobs.Error', 'arcjobs.EndTime',
                    'siteName', 'ExecutionNode', 'pandaid', 'UsedTotalCPUTime', 'pandajobs.created',
-                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata', 'cluster']
+                   'UsedTotalWallTime', 'ExitCode', 'sendhb', 'stdout', 'metadata', 'cluster', 'corecount']
 
         jobstoupdate=self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
 

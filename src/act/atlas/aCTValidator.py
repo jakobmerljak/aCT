@@ -78,6 +78,12 @@ class aCTValidator(aCTATLASProcess):
                 # datetime cannot be serialised to json so use string (for harvester)
                 jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).strftime('%Y-%m-%d %H:%M:%S')
                 jobinfo.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
+                # Sanity check for efficiency > 100%
+                cputimepercore = getattr(jobinfo, 'cpuConsumptionTime', 0) / getattr(jobinfo, 'coreCount', 1)
+                if aj['UsedTotalWallTime'] < cputimepercore:
+                    self.log.warning('%s: Adjusting reported walltime %d to CPU time %d' %
+                                      (aj['appjobid'], aj['UsedTotalWallTime'], cputimepercore))
+                    jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, cputimepercore)).strftime('%Y-%m-%d %H:%M:%S')
             else:
                 self.log.warning('%s: no endtime found' % aj['appjobid'])
             if len(aj["ExecutionNode"]) > 255:
