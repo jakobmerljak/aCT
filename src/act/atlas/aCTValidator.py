@@ -74,18 +74,24 @@ class aCTValidator(aCTATLASProcess):
 
             # update heartbeat and dump to tmp/heartbeats
             jobinfo.computingElement = arc.URL(str(aj['cluster'])).Host()
-            if aj['EndTime']:
-                # datetime cannot be serialised to json so use string (for harvester)
-                jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).strftime('%Y-%m-%d %H:%M:%S')
-                jobinfo.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
-                # Sanity check for efficiency > 100%
-                cputimepercore = getattr(jobinfo, 'cpuConsumptionTime', 0) / getattr(jobinfo, 'coreCount', 1)
-                if aj['UsedTotalWallTime'] < cputimepercore:
-                    self.log.warning('%s: Adjusting reported walltime %d to CPU time %d' %
-                                      (aj['appjobid'], aj['UsedTotalWallTime'], cputimepercore))
-                    jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, cputimepercore)).strftime('%Y-%m-%d %H:%M:%S')
+            if hasattr(jobinfo, 'startTime') and hasattr(jobinfo, 'endTime'):
+                # take values from the pilot
+                jobinfo.startTime = datetime.datetime.utcfromtimestamp(jobinfo.startTime).strftime('%Y-%m-%d %H:%M:%S')
+                jobinfo.endTime = datetime.datetime.utcfromtimestamp(jobinfo.endTime).strftime('%Y-%m-%d %H:%M:%S')
             else:
-                self.log.warning('%s: no endtime found' % aj['appjobid'])
+                # Use ARC values
+                if aj['EndTime']:
+                    # datetime cannot be serialised to json so use string (for harvester)
+                    jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, aj['UsedTotalWallTime'])).strftime('%Y-%m-%d %H:%M:%S')
+                    jobinfo.endTime = aj['EndTime'].strftime('%Y-%m-%d %H:%M:%S')
+                    # Sanity check for efficiency > 100%
+                    cputimepercore = getattr(jobinfo, 'cpuConsumptionTime', 0) / getattr(jobinfo, 'coreCount', 1)
+                    if aj['UsedTotalWallTime'] < cputimepercore:
+                        self.log.warning('%s: Adjusting reported walltime %d to CPU time %d' %
+                                          (aj['appjobid'], aj['UsedTotalWallTime'], cputimepercore))
+                        jobinfo.startTime = (aj['EndTime'] - datetime.timedelta(0, cputimepercore)).strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    self.log.warning('%s: no endtime found' % aj['appjobid'])
             if len(aj["ExecutionNode"]) > 255:
                 jobinfo.node = aj["ExecutionNode"][:254]
                 self.log.warning("%s: Truncating wn hostname from %s to %s" % (aj['appjobid'], aj['ExecutionNode'], jobinfo.node))
