@@ -35,7 +35,7 @@ class aCTFetcher(aCTProcess):
     def fetchAll(self, jobs):
         
         # Get all outputs using Job Supervisor
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor = arc.JobSupervisor(self.uc, list(jobs.values()))
         job_supervisor.Update()
         dirs = arc.StringList()
         job_supervisor.Retrieve(self.tmpdir, False, False, dirs)
@@ -67,7 +67,7 @@ class aCTFetcher(aCTProcess):
         
         # construct datapoint object, initialising connection. Use the same
         # object until base URL changes. TODO group by base URL.
-        datapoint = aCTUtils.DataPoint(jobs.values()[0].JobID, self.uc)
+        datapoint = aCTUtils.DataPoint(list(jobs.values())[0].JobID, self.uc)
         dp = datapoint.h
         dm = arc.DataMover()
         dm.retry(False)
@@ -77,7 +77,7 @@ class aCTFetcher(aCTProcess):
         notfetched = []
         notfetchedretry = []
         
-        for (id, job) in jobs.items():
+        for (id, job) in list(jobs.items()):
             if id not in downloadfiles:
                 continue
             jobid = job.JobID
@@ -107,7 +107,7 @@ class aCTFetcher(aCTProcess):
                 localfiledir = localfile[:localfile.rfind('/')]
                 # create required local dirs
                 try:
-                    os.makedirs(localfiledir, 0755)
+                    os.makedirs(localfiledir, 0o755)
                 except OSError as e:
                     if e.errno != errno.EEXIST or not os.path.isdir(localfiledir):
                         self.log.warning('Failed to create directory %s: %s', localfiledir, os.strerror(e.errno))
@@ -141,10 +141,10 @@ class aCTFetcher(aCTProcess):
         
         if not jobstofetch:
             return
-        self.log.info("Fetching %i jobs" % sum(len(v) for v in jobstofetch.values()))
+        self.log.info("Fetching %i jobs" % sum(len(v) for v in list(jobstofetch.values())))
         
         fetched = []; notfetched = []; notfetchedretry = []
-        for proxyid, jobs in jobstofetch.items():
+        for proxyid, jobs in list(jobstofetch.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
             
             # Clean the download dir just in case something was left from previous attempt
@@ -167,7 +167,7 @@ class aCTFetcher(aCTProcess):
             notfetchedretry.extend(r)
 
             nthreads=10
-            jobkeys=jobs_downloadsome.keys()
+            jobkeys=list(jobs_downloadsome.keys())
             # split job list in nthreads sublists
             jl=[jobkeys[i:i + nthreads] for i in range(0, len(jobkeys), nthreads)]
 
@@ -195,7 +195,7 @@ class aCTFetcher(aCTProcess):
             time.sleep(300)
             return
         
-        for proxyid, jobs in jobstofetch.items():
+        for proxyid, jobs in list(jobstofetch.items()):
             for (id, appjobid, job, created) in jobs:
                 if job.JobID in notfetchedretry:
                     self.log.warning("%s: Could not get output from job %s" % (appjobid, job.JobID))

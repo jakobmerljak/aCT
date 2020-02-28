@@ -70,7 +70,7 @@ class aCTStatus(aCTProcess):
         condorstatuses = {}
         while True:
             try:
-                stat = status.next()
+                stat = next(status)
                 condorstatuses[stat['ClusterId']] = stat
             except StopIteration:
                 break
@@ -94,7 +94,7 @@ class aCTStatus(aCTProcess):
                 self.log.debug('%s: Job not in condor queue, checking history' % appjobid)
                 history = self.schedd.history('ClusterID=?=%d' % clusterid, qattrs, 1)
                 try:
-                    hist = history.next()
+                    hist = next(history)
                 except StopIteration:
                     self.log.warning('%s: Job id %d not found!' % (appjobid, clusterid))
                     continue
@@ -142,7 +142,7 @@ class aCTStatus(aCTProcess):
                 condorstate = 'holding'
             
             # Filter out fields added by condor that we are not interested in
-            jobdesc = dict([(k,v) for (k,v) in updatedjob.items() if k in attrs and v != classad.Value.Undefined])
+            jobdesc = dict([(k,v) for (k,v) in list(updatedjob.items()) if k in attrs and v != classad.Value.Undefined])
             # Undefined is 2 in condor which means JobStatus running is ignored
             jobdesc['JobStatus'] = updatedjob['JobStatus']
             jobdesc['condorstate'] = condorstate
@@ -183,7 +183,7 @@ class aCTStatus(aCTProcess):
         
         # Loop over possible states
         # Note: MySQL is case-insensitive. Need to watch out with other DBs
-        for jobstateid, jobstate in self.condorjobstatemap.items():
+        for jobstateid, jobstate in list(self.condorjobstatemap.items()):
             maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate.lower()])
             if not maxtime:
                 continue

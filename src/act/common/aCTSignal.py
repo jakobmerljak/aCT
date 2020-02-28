@@ -4,7 +4,7 @@ class ExceptInterrupt(Exception):
     def __init__(self,signal):
         self.signal=signal
     def __call__(self):
-        print "called"
+        print("called")
     def __str__(self):
         return str("Interrupt Exception: signal %d" % self.signal)
 
@@ -23,11 +23,11 @@ if __name__ == '__main__':
         try:
             raise Exception("low except")
         except:
-            print "b"
+            print("b")
             time.sleep(10)
             pass
 
-    except ExceptInterrupt,x:
-        print x
+    except ExceptInterrupt as x:
+        print(x)
 
-    print "A"
+    print("A")

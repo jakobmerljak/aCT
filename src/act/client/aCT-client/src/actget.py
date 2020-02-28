@@ -40,7 +40,7 @@ request_url += '?id=' + args.id
 try:
     r = requests.get(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'], stream=True)
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
@@ -57,10 +57,10 @@ if r.status_code == 200:
             zip_ref.extractall(dirname)
         os.remove(filename)
     except Exception as e:
-        print 'error getting results: {}'.format(str(e))
+        print('error getting results: {}'.format(str(e)))
         sys.exit(2)
 
-    print '{} - results stored in {}'.format(r.status_code, dirname)
+    print('{} - results stored in {}'.format(r.status_code, dirname))
 
     # clean the job
     request_url = conf_dict['server'] + ':' + str(conf_dict['port']) + '/jobs'
@@ -69,12 +69,12 @@ if r.status_code == 200:
     try:
         r = requests.delete(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
     except Exception as e:
-        print 'requests error: {}'.format(str(e))
+        print('requests error: {}'.format(str(e)))
         sys.exit(5)
 
     if r.status_code != 200:
-        print 'error cleaning job: {}'.format(r.text)
+        print('error cleaning job: {}'.format(r.text))
         sys.exit(4)
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)

@@ -19,8 +19,8 @@ from act.client.errors import NoProxyFileError
 
 def printProxyInfo(proxyInfo):
     """Print proxy info from aCT table."""
-    for key, value in proxyInfo.items():
-        print '{:<12}: {}'.format(key, value)
+    for key, value in list(proxyInfo.items()):
+        print('{:<12}: {}'.format(key, value))
 
 
 def main():
@@ -48,9 +48,9 @@ def main():
     try:
         manager.updateProxy(proxyPath)
     except NoProxyFileError as e:
-        print "error: path \"{}\" is not a proxy file; use arcproxy".format(e.path)
+        print("error: path \"{}\" is not a proxy file; use arcproxy".format(e.path))
     except Exception as e:
-        print 'error: {}'.format(str(e))
+        print('error: {}'.format(str(e)))
         sys.exit(8)
 
 

@@ -220,9 +220,9 @@ class ClientDB(aCTDB):
         desc['downloadfiles'] = downloadfiles
         desc['priority'] = priority
         desc['fairshare'] = fairshare
-        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
-            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in list(desc.keys())]) + " ) " + " values " + \
+            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(list(desc.keys())) ]) + " ) "
+        c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -279,13 +279,13 @@ class ClientDB(aCTDB):
         # create query
         query = 'SELECT {} FROM clientjobs '.format(
             self._column_list2str(columns))
-        if 'where' in kwargs.keys():
+        if 'where' in list(kwargs.keys()):
             query += ' WHERE {} '.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in kwargs.keys():
+        if 'order_by' in list(kwargs.keys()):
             query += ' ORDER BY {} '.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in kwargs.keys():
+        if 'limit' in list(kwargs.keys()):
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
@@ -325,12 +325,12 @@ class ClientDB(aCTDB):
             lazy: A boolean that determines whether transaction should be
                 commited after operation.
         """
-        if self._checkColumns('clientjobs', patch.keys()) == False:
+        if self._checkColumns('clientjobs', list(patch.keys())) == False:
             raise Exception("Invalid job attribute")
 
         query = 'UPDATE clientjobs SET '
         params = []
-        for key in patch.keys():
+        for key in list(patch.keys()):
             query += '{} = %s, '.format(key)
             params.append(patch[key])
         query = query.rstrip(', ')
@@ -391,13 +391,13 @@ class ClientDB(aCTDB):
 
         params = []
         # select job
-        if 'where' in kwargs.keys():
+        if 'where' in list(kwargs.keys()):
             query += ' WHERE {}'.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in kwargs.keys():
+        if 'order_by' in list(kwargs.keys()):
             query += ' ORDER BY {}'.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in kwargs.keys():
+        if 'limit' in list(kwargs.keys()):
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
@@ -459,13 +459,13 @@ class ClientDB(aCTDB):
 
         params = []
         # select job
-        if 'where' in kwargs.keys():
+        if 'where' in list(kwargs.keys()):
             query += ' WHERE {}'.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in kwargs.keys():
+        if 'order_by' in list(kwargs.keys()):
             query += ' ORDER BY {}'.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in kwargs.keys():
+        if 'limit' in list(kwargs.keys()):
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 

@@ -57,13 +57,13 @@ def main():
         try:
             jobs = jobmgr.getIDsFromList(args.jobs)
         except InvalidJobRangeError as e:
-            print "error: range '{}' is not a valid range".format(e.jobRange)
+            print("error: range '{}' is not a valid range".format(e.jobRange))
             sys.exit(2)
         except InvalidJobIDError as e:
-            print "error: ID '{}' is not a valid ID".format(e.jobid)
+            print("error: ID '{}' is not a valid ID".format(e.jobid))
             sys.exit(3)
     else:
-        print "error: no jobs specified (use -a or -j)"
+        print("error: no jobs specified (use -a or -j)")
         sys.exit(10)
 
     # get proxy ID given proxy
@@ -73,10 +73,10 @@ def main():
     manager = jobmgr.JobManager()
     if args.refetch:
         numFetching = manager.refetchJobs(proxyid, jobs, args.find)
-        print 'Will refetch {} jobs'.format(numFetching)
+        print('Will refetch {} jobs'.format(numFetching))
     else:
         numFetching = manager.fetchJobs(proxyid, jobs, args.find)
-        print 'Will fetch {} jobs'.format(numFetching)
+        print('Will fetch {} jobs'.format(numFetching))
 
 
 if __name__ == '__main__':

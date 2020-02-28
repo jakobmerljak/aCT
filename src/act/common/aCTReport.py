@@ -41,11 +41,10 @@ class aCTReport:
         if self.actconfs != ['']:
             return # don't print processes for combined report
         actprocscmd = 'ps ax -ww -o pid,etime,args'
-        p = subprocess.Popen(actprocscmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
-
-        if err:
-            self.log('Error: could not run ps command: %s' % err)
+        try:
+            out = subprocess.run(actprocscmd.split(), check=True, encoding='utf-8', stdout=subprocess.PIPE).stdout
+        except subprocess.CalledProcessError as e:
+            self.log('Error: could not run ps command: %s' % e.stderr)
             return
 
         # Group processes by cluster
@@ -134,7 +133,7 @@ class aCTReport:
                     if state == "running":
                         rtot["slots"]=corecount 
         
-        self.log("All Panda jobs: %d" % sum([v for k,v in rtot.items() if k != 'slots']))
+        self.log("All Panda jobs: %d" % sum([v for k,v in list(rtot.items()) if k != 'slots']))
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         for k in sorted(rep.keys()):
@@ -194,11 +193,11 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
-        self.log("All ARC jobs: %d" % sum([v for k,v in rtot.items()]))
+        self.log("All ARC jobs: %d" % sum([v for k,v in list(rtot.items())]))
         self.log("%39s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         #for k in sorted(rep.keys()):
-        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in list(rep.keys())]):
             k='.'.join(list(reversed(y)))
             log="%38s:" % k[:38]
             for s in states:
@@ -258,10 +257,10 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
-        self.log("All Condor jobs: %d" % sum([v for k,v in rtot.items()]))
+        self.log("All Condor jobs: %d" % sum([v for k,v in list(rtot.items())]))
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap])))
         #for k in sorted(rep.keys()):
-        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in list(rep.keys())]):
             k='.'.join(list(reversed(y)))
             log="%28s:" % k[:28]
             for s in range(8):
@@ -303,7 +302,7 @@ class aCTReport:
                 else:
                     clustercount[host] = 1
 
-            for cluster, count in clustercount.items():
+            for cluster, count in list(clustercount.items()):
                 self.log('%s %s' % (count, cluster))
             self.log()
 
@@ -324,16 +323,16 @@ class aCTReport:
 
             rtot = defaultdict(int)
 
-            for site, prodsourcelabels in workers.items():
-                for prodsourcelabel, resources in prodsourcelabels.items():
-                    for resource, jobs in resources.items():
+            for site, prodsourcelabels in list(workers.items()):
+                for prodsourcelabel, resources in list(prodsourcelabels.items()):
+                    for resource, jobs in list(resources.items()):
                         rep['%s-%s' % (site, resource)][prodsourcelabel] = jobs
-                        for state, count in jobs.items():
+                        for state, count in list(jobs.items()):
                             rtot[state] += count
-            self.log("All Harvester jobs: %d       prodSourceLabel: submitted/running" % sum([v for k,v in rtot.items()]))
+            self.log("All Harvester jobs: %d       prodSourceLabel: submitted/running" % sum([v for k,v in list(rtot.items())]))
             for k in sorted(rep.keys()):
                 log="%28s:" % k[:28]
-                for psl, jobs in rep[k].items():
+                for psl, jobs in list(rep[k].items()):
                     try:
                         log += '%10s: %d/%d ' % (psl, jobs['submitted'], jobs['running'])
                     except KeyError:

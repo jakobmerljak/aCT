@@ -71,7 +71,7 @@ class Client2Arc(object):
                 self.arcconf.parse()
                 self.process()
                 time.sleep(10) # TODO: HARDCODED
-        except aCTSignal.ExceptInterrupt,x:
+        except aCTSignal.ExceptInterrupt as x:
             self.log.info('Received interrupt {}, exiting'.format(str(x)))
         except:
             self.log.critical('*** Unexpected exception! ***')

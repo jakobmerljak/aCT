@@ -6,7 +6,7 @@ def sleep(t):
     for i in range(0,t):
         time.sleep(1)
 
-def setFilePermissionsRecursive(path, dirmod=0755, filemod=0644):
+def setFilePermissionsRecursive(path, dirmod=0o755, filemod=0o644):
     for root,dirs,files in os.walk(path):
         for d in dirs:
             os.chmod(os.path.join(root,d), dirmod)

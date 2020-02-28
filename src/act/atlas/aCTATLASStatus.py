@@ -6,7 +6,7 @@ import json
 import re
 import os
 import shutil
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from act.common import aCTSignal
 
@@ -27,7 +27,7 @@ class aCTATLASStatus(aCTATLASProcess):
           and report failed back to panda
         """
 
-        offlinesites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
+        offlinesites = [s for s,a in self.sites.items() if a['status'] == 'offline']
         
         if offlinesites:
             
@@ -327,7 +327,7 @@ class aCTATLASStatus(aCTATLASProcess):
             outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
             # Make sure the path to outd exists
             try:
-                os.makedirs(outd, 0755)
+                os.makedirs(outd, 0o755)
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
@@ -337,7 +337,7 @@ class aCTATLASStatus(aCTATLASProcess):
             if not os.path.exists(arcjoblog):
                 try:
                     shutil.copy(gmlogerrors, arcjoblog)
-                    os.chmod(arcjoblog, 0644)
+                    os.chmod(arcjoblog, 0o644)
                 except:
                     self.log.error("Failed to copy %s" % gmlogerrors) 
 
@@ -351,7 +351,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 try:
                     shutil.copy(os.path.join(localdir, pilotlog),
                                 os.path.join(outd, '%s.out' % aj['appjobid']))
-                    os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
+                    os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0o644)
                 except Exception as e:
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
 

@@ -16,8 +16,8 @@ class aCTCleaner(aCTProcess):
         if not jobstoclean:
             return
 
-        self.log.info("Cleaning %i jobs", sum(len(v) for v in jobstoclean.values()))
-        for proxyid, jobs in jobstoclean.items():
+        self.log.info("Cleaning %i jobs", sum(len(v) for v in list(jobstoclean.values())))
+        for proxyid, jobs in list(jobstoclean.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
 
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])

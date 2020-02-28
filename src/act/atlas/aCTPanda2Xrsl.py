@@ -52,7 +52,7 @@ class aCTPanda2Xrsl:
         self.atlasrelease = None
         self.monitorurl = atlasconf.get(["monitor", "apfmon"])
         # ES merge jobs need unique guids because pilot uses them as dict keys
-        if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+        if not self.truepilot and 'eventServiceMerge' in self.jobdesc and self.jobdesc['eventServiceMerge'][0] == 'True':
             if self.pandajob.startswith('GUID'):
                 esjobdesc = self.pandajob[self.pandajob.find('&'):]
             else:
@@ -324,7 +324,7 @@ class aCTPanda2Xrsl:
         # Input files
         if 'inFiles' in self.jobdesc:
             inf = {}
-            if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+            if 'eventServiceMerge' in self.jobdesc and self.jobdesc['eventServiceMerge'][0] == 'True':
                 self.setInputsES(inf)
 
             for filename, scope, dsn, guid, token, ddmin in zip(self.jobdesc['inFiles'][0].split(","),
@@ -366,10 +366,10 @@ class aCTPanda2Xrsl:
                                     'eventType': eventType})
 
             # some files are double:
-            for k, v in inf.items():
+            for k, v in list(inf.items()):
                 x += "(" + k + " " + '"' + v + '"' + ")"
 
-            if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
+            if 'eventService' in self.jobdesc and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
                 tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
@@ -460,7 +460,7 @@ class aCTPanda2Xrsl:
             environment['FACTORYQUEUE'] = self.sitename
 
         environment['PILOT_NOKILL'] = 'YES'
-        self.xrsl['environment'] = '(environment = %s)' % ''.join(['("%s" "%s")' % (k,v) for (k,v) in environment.items()])
+        self.xrsl['environment'] = '(environment = %s)' % ''.join(['("%s" "%s")' % (k,v) for (k,v) in list(environment.items())])
 
     def parse(self):
         self.setTime()
@@ -479,7 +479,7 @@ class aCTPanda2Xrsl:
 
     def getXrsl(self):
         x = "&"
-        for k in self.xrsl.keys():
+        for k in list(self.xrsl.keys()):
             x += self.xrsl[k] + "\n"
         return x
 
@@ -496,4 +496,4 @@ if __name__ == '__main__':
     pandadbjob = {'pandajob': pandajob, 'siteName': 'ANALY_SiGNET_DIRECT', 'eventranges': None, 'metadata': {}, 'created': datetime.utcnow()}
     a = aCTPanda2Xrsl(pandadbjob, siteinfo, {}, '/tmp', conf, log)
     a.parse()
-    print a.getXrsl()
+    print(a.getXrsl())

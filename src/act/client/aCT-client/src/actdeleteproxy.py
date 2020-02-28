@@ -26,7 +26,7 @@ parser.add_argument('--id', default=None,
 args = parser.parse_args()
 
 if not args.id:
-    print 'error: no proxy id given'
+    print('error: no proxy id given')
     sys.exit(1)
 
 conf_dict['proxy']  = args.proxy
@@ -42,13 +42,13 @@ request_url += '?id=' + args.id
 try:
     r = requests.delete(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
-    print 'Deleted {} proxies'.format(r.text)
+    print('Deleted {} proxies'.format(r.text))
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)
 
 

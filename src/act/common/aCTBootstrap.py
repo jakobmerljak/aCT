@@ -13,13 +13,13 @@ def bootstrap_conf():
     try:
         arcconf = aCTConfigARC()
     except Exception as e:
-        print 'Error processing ARC config file: %s' % str(e)
+        print('Error processing ARC config file: %s' % str(e))
         sys.exit(1)
 
     try:
         atlasconf = aCTConfigATLAS()
     except Exception as e:
-        print 'Error processing ATLAS config file: %s' % str(e)
+        print('Error processing ATLAS config file: %s' % str(e))
         sys.exit(1)
 
 

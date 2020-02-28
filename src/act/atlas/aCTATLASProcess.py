@@ -58,7 +58,7 @@ class aCTATLASProcess:
         self.sites = self.agisparser.getSites(flavour=self.flavour)
         self.osmap = self.agisparser.getOSMap()
         # For DB queries
-        self.sitesselect =  "('%s')" % "','".join(self.sites.keys())
+        self.sitesselect =  "('%s')" % "','".join(list(self.sites.keys()))
 
     def process(self):
         '''
@@ -85,7 +85,7 @@ class aCTATLASProcess:
                 #if time.time()-self.starttime > ip and ip != 0 :
                 #    self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                 #    return
-        except aCTSignal.ExceptInterrupt,x:
+        except aCTSignal.ExceptInterrupt as x:
             self.log.info("Received interrupt %s, exiting", str(x))
         except:
             self.log.critical("*** Unexpected exception! ***")

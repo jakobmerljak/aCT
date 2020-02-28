@@ -99,7 +99,7 @@ class aCTDBArc(aCTDB):
             appjobid VARCHAR(255),
             priority SMALLINT,
             fairshare VARCHAR(255),
-            """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
+            """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in list(self.jobattrs.items())])+")"
             
         # First check if table already exists
         c = self.db.getCursor()
@@ -107,7 +107,7 @@ class aCTDBArc(aCTDB):
         row = c.fetchone()
         self.Commit()
         if row:
-            answer = raw_input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            answer = input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
                 return True
             c.execute("drop table arcjobs")
@@ -117,7 +117,7 @@ class aCTDBArc(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -136,7 +136,7 @@ class aCTDBArc(aCTDB):
             # add indexes
             c.execute("ALTER TABLE arcjobs ADD INDEX (arcstate)")
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -158,7 +158,7 @@ class aCTDBArc(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -176,7 +176,7 @@ class aCTDBArc(aCTDB):
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
         
         j = self._job2db(job)
-        c.execute("insert into arcjobs (created,tstate,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+str(jobdescid)+"','"+"','".join(j.values())+"')")
+        c.execute("insert into arcjobs (created,tstate,jobdesc"+",".join(list(j.keys()))+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+str(jobdescid)+"','"+"','".join(list(j.values()))+"')")
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -219,9 +219,9 @@ class aCTDBArc(aCTDB):
         desc['downloadfiles'] = downloadfiles
         desc['priority'] = priority
         desc['fairshare'] = fairshare
-        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
-            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in list(desc.keys())]) + " ) " + " values " + \
+            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(list(desc.keys())) ]) + " ) "
+        c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -261,14 +261,14 @@ class aCTDBArc(aCTDB):
             return
 
         desc['modified']=self.getTimeStamp()
-        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
         if job:
-            s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
+            s += "," + ",".join(['%s=%%s' % (k) for k in list(self._job2db(job).keys())])
         s+=" where id="+str(id)
         if job:
-            c.execute(s,desc.values() + self._job2db(job).values() )
+            c.execute(s,list(desc.values()) + list(self._job2db(job).values()) )
         else:
-            c.execute(s,desc.values())
+            c.execute(s,list(desc.values()))
 
     def updateArcJobs(self, desc, select):
         '''
@@ -283,10 +283,10 @@ class aCTDBArc(aCTDB):
         Does not commit after executing update.
         '''
         desc['modified']=self.getTimeStamp()
-        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
         s+=" where "+select
         c=self.db.getCursor()
-        c.execute(s,desc.values())
+        c.execute(s,list(desc.values()))
 
     def getArcJobInfo(self,id,columns=[]):
         '''
@@ -299,7 +299,7 @@ class aCTDBArc(aCTDB):
             return {}
         # mysql SELECT returns list, we want dict
         if not isinstance(row,dict):
-            row=dict(zip([col[0] for col in c.description], row))
+            row=dict(list(zip([col[0] for col in c.description], row)))
         return row
 
     def getArcJobsInfo(self, select, columns=[], tables="arcjobs", lock=False):
@@ -322,13 +322,13 @@ class aCTDBArc(aCTDB):
         Return a dictionary of {proxyid: [(id, appjobid, arc.Job, created), ...]} for jobs matching select
         '''
         c=self.db.getCursor()
-        c.execute("SELECT id, proxyid, appjobid, created, "+",".join(self.jobattrs.keys())+" FROM arcjobs WHERE "+select)
+        c.execute("SELECT id, proxyid, appjobid, created, "+",".join(list(self.jobattrs.keys()))+" FROM arcjobs WHERE "+select)
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
-            rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
+            rows=dict(list(zip([col[0] for col in c.description], list(zip(*[list(row) for row in rows])))))
             for row in rows:
-                d[row[0]] = self._db2job(dict(zip([col[0] for col in c.description], row[1:])))
+                d[row[0]] = self._db2job(dict(list(zip([col[0] for col in c.description], row[1:]))))
         # mysql returns list of dictionaries
         if isinstance(rows, list):
             for row in rows:
@@ -398,7 +398,7 @@ class aCTDBArc(aCTDB):
                 d = eval(dbinfo[attr])
                 if not isinstance(d, dict):
                     continue
-                for (k,v) in d.items():
+                for (k,v) in list(d.items()):
                     m[k] = v
                 setattr(j, attr, m)
                 continue
@@ -429,7 +429,7 @@ class aCTDBArc(aCTDB):
                     d[attr] = re.sub('Z$', '', t)
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
-                tmpdict = dict(zip(ssm.keys(), ssm.values()))
+                tmpdict = dict(list(zip(list(ssm.keys()), list(ssm.values()))))
                 d[attr] = str(tmpdict)[:1000]
             # Force everything to ASCII
             if attr in d:
@@ -443,7 +443,7 @@ class aCTDBArc(aCTDB):
         f.write(proxy)
         f.close()
         # make sure permissions are correct
-        os.chmod(proxypath, 0600)
+        os.chmod(proxypath, 0o600)
         
     def insertProxy(self, proxy, dn, expirytime, attribute='', proxytype='local', myproxyid=''):
         '''
@@ -473,7 +473,7 @@ class aCTDBArc(aCTDB):
         '''
         Update proxy fields specified in desc.
         '''
-        s="UPDATE proxies SET "+",".join(['%s=\'%s\'' % (k, v) for k, v in desc.items()])
+        s="UPDATE proxies SET "+",".join(['%s=\'%s\'' % (k, v) for k, v in list(desc.items())])
         s+=" WHERE id="+str(id)
         c=self.db.getCursor()
         c.execute(s)
@@ -494,7 +494,7 @@ class aCTDBArc(aCTDB):
             if not os.path.isfile(proxypath):
                 self._writeProxyFile(proxypath, self.getProxy(id))
             return proxypath
-        except Exception, x:
+        except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
 
     def getProxy(self, id):
@@ -507,7 +507,7 @@ class aCTDBArc(aCTDB):
         try:
             proxy = row['proxy']
             return proxy
-        except Exception, x:
+        except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
         
     def getProxiesInfo(self, select, columns=[], lock=False, expect_one=False):

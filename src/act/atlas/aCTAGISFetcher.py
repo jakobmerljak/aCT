@@ -3,9 +3,9 @@
 from datetime import datetime, timedelta
 import os
 import time
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
-from aCTATLASProcess import aCTATLASProcess
+from .aCTATLASProcess import aCTATLASProcess
 
 class aCTAGISFetcher(aCTATLASProcess):
                  
@@ -19,8 +19,8 @@ class aCTAGISFetcher(aCTATLASProcess):
 
     def fetchFromAgis(self, url, filename):
         try:
-            response = urllib2.urlopen(url, timeout=60)
-        except urllib2.URLError as e:
+            response = urllib.request.urlopen(url, timeout=60)
+        except urllib.error.URLError as e:
             self.log.warning("Failed to contact AGIS: %s" % str(e))
             # Check if the cached data is getting old, if so raise a critical error
             try:
@@ -45,7 +45,7 @@ class aCTAGISFetcher(aCTATLASProcess):
             with open(tmpfile, 'w') as f:
                 f.write(agisjson)
         except:
-            os.makedirs(tmpfile[:tmpfile.rfind('/')], 0755)
+            os.makedirs(tmpfile[:tmpfile.rfind('/')], 0o755)
             with open(tmpfile, 'w') as f:
                 f.write(agisjson)
 

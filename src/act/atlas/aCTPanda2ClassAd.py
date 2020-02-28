@@ -248,4 +248,4 @@ if __name__ == '__main__':
     conf = aCTConfigATLAS()
     a = aCTPanda2ClassAd(pjob, pjobid, 'ANALY_SiGNET_DIRECT', info, proxy, '/tmp', conf, '{}', l)
     a.parse()
-    print a.getClassAd()
+    print(a.getClassAd())

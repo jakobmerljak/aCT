@@ -58,7 +58,7 @@ class aCTValidator(aCTATLASProcess):
                    'ExecutionNode', 'stdout', 'fairshare', 'pandajobs.created', 'metadata']
         select = "arcjobs.id=%d AND arcjobs.id=pandajobs.arcjobid" % arcjobid
         aj = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,pandajobs')
-        if not aj or not aj[0].has_key('JobID') or not aj[0]['JobID']:
+        if not aj or 'JobID' not in aj[0] or not aj[0]['JobID']:
             self.log.error('No JobID in arcjob %s: %s'%(str(arcjobid), str(aj)))
             return False
         aj = aj[0]
@@ -110,7 +110,7 @@ class aCTValidator(aCTATLASProcess):
         # copy to joblog dir files downloaded for the job: gmlog errors and pilot log
         outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['fairshare'])
         try:
-            os.makedirs(outd, 0755)
+            os.makedirs(outd, 0o755)
         except:
             pass
 
@@ -120,7 +120,7 @@ class aCTValidator(aCTATLASProcess):
         if not os.path.exists(arcjoblog):
             try:
                 shutil.move(gmlogerrors, arcjoblog)
-                os.chmod(arcjoblog, 0644)
+                os.chmod(arcjoblog, 0o644)
             except:
                 self.log.error("Failed to copy %s" % gmlogerrors) 
 
@@ -134,8 +134,8 @@ class aCTValidator(aCTATLASProcess):
             try:
                 shutil.move(os.path.join(localdir, pilotlog),
                             os.path.join(outd, '%s.out' % aj['appjobid']))
-                os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
-            except Exception, e:
+                os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0o644)
+            except Exception as e:
                 self.log.error("Failed to copy file %s: %s" % (os.path.join(localdir,pilotlog), str(e)))
                 return False
 
@@ -163,7 +163,7 @@ class aCTValidator(aCTATLASProcess):
             return {}
 
         surls = {}
-        for attrs in outputfiles.values():
+        for attrs in list(outputfiles.values()):
             try:
                 size = attrs['fsize']
                 adler32 = attrs['adler32']
@@ -173,7 +173,7 @@ class aCTValidator(aCTATLASProcess):
                 self.log.error('%s: %s' % (aj['appjobid'], x))
             else:
                 checksum = "adler32:"+ adler32
-                if not surls.has_key(se):
+                if se not in surls:
                     surls[se]= []
                 surls[se] += [{"surl":surl, "fsize":size, "checksum":checksum, "arcjobid":arcjobid}]
 
@@ -188,14 +188,14 @@ class aCTValidator(aCTATLASProcess):
 
         if self.arcconf.get(['downtime', 'srmdown']) == 'True':
             self.log.info("SRM down, will validate later")
-            return dict((k['arcjobid'], self.retry) for k in surldict.values())
+            return dict((k['arcjobid'], self.retry) for k in list(surldict.values()))
 
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []
         dummylist = []
         bulklimit = 100
-        for surls in surldict.values():
+        for surls in list(surldict.values()):
             count = 0
             for surl in surls:
                 count += 1
@@ -334,7 +334,7 @@ class aCTValidator(aCTATLASProcess):
             localdir = self.tmpdir + sessionid
 
             try:
-                os.makedirs(localdir, 0755)
+                os.makedirs(localdir, 0o755)
             except:
                 pass
 
@@ -390,7 +390,7 @@ class aCTValidator(aCTATLASProcess):
             metadata = os.path.join(self.tmpdir, sessionid, 'metadata-es.xml')
             with open(metadata) as f:
                 processedevents = f.read()
-        except Exception, e:
+        except Exception as e:
             self.log.error("%s: Failed to extract events processed from metadata-es.xml: %s" % (pandaid, str(e)))
             # Safer to mark all events as failed
             desc = {"eventranges": "[]"}
@@ -407,13 +407,13 @@ class aCTValidator(aCTATLASProcess):
                 eventsdone[event.getAttribute('EventRangeID')] = 'finished'
 
         # Check that events done corresponds to events asked
-        for event in eventsdone.keys():
+        for event in list(eventsdone.keys()):
             if event not in [e['eventRangeID'] for e in eventranges]:
                 self.log.warning("%s: Event ID %s was processed but was not in eventranges!" % (pandaid, event))
                 del eventsdone[event]
 
         # Update DB with done events
-        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in eventsdone.items() if v == 'finished']), len([k for k,v in eventsdone.items() if v == 'failed']), len(eventranges)))                
+        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in list(eventsdone.items()) if v == 'finished']), len([k for k,v in list(eventsdone.items()) if v == 'failed']), len(eventranges)))                
         finaleventranges = []
         for e in eventranges:
             if e['eventRangeID'] in eventsdone:
@@ -484,7 +484,7 @@ class aCTValidator(aCTATLASProcess):
 
         # check if surls valid, update pandastatus accordingly
         checkedsurls = self.checkOutputFiles(surls)
-        for id, result in checkedsurls.items():
+        for id, result in list(checkedsurls.items()):
             if result == self.ok:
                 # For ES jobs, modify eventranges to what was produced
                 self.validateEvents(id)
@@ -567,7 +567,7 @@ class aCTValidator(aCTATLASProcess):
 
         for se in surls:
             removedsurls = self.removeOutputFiles(surls[se])
-            for id, result in removedsurls.items():
+            for id, result in list(removedsurls.items()):
                 # If failed, not much we can do except continue
                 if result == self.ok or result == self.failed:
                     # set arcjobs state toclean
@@ -664,7 +664,7 @@ class aCTValidator(aCTATLASProcess):
 
         for se in surls:
             removedsurls = self.removeOutputFiles(surls[se])
-            for id, result in removedsurls.items():
+            for id, result in list(removedsurls.items()):
                 # if manually killed the cleaning is allowed to fail
                 if id in [j['arcjobid'] for j in killedbymanual]:
                     select = "arcjobid='"+str(id)+"'"

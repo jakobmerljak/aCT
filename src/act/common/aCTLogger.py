@@ -1,7 +1,7 @@
 import os
 import errno
 import logging.handlers
-import aCTConfig
+from . import aCTConfig
 
 import arc
 
@@ -62,5 +62,5 @@ if __name__ == '__main__':
     l().info("test")
     import sys
     sys.stdout=l
-    print "test print"
-    print "test print1"
+    print("test print")
+    print("test print1")

@@ -4,10 +4,10 @@ class aCTDBOracle(aCTDBMS):
     """Class for Oracle specific db operations."""
 
     def __init__(self, log, conf):
-        raise Exception, "Oracle class is not implemented yet"
+        raise Exception("Oracle class is not implemented yet")
 
     def getCursor(self):
-        raise Exception, "Oracle class is not implemented yet"
+        raise Exception("Oracle class is not implemented yet")
 
     def timeStampLessThan(self, column, timediff):
         # should be tested...

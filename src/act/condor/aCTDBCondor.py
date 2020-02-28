@@ -82,7 +82,7 @@ class aCTDBCondor(aCTDB):
         row = c.fetchone()
         self.Commit()
         if row:
-            answer = raw_input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            answer = input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
                 return False
             c.execute("drop table condorjobs")
@@ -91,7 +91,7 @@ class aCTDBCondor(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -134,9 +134,9 @@ class aCTDBCondor(aCTDB):
         desc['appjobid'] = appjobid
         desc['priority'] = jobdesc.get('JobPrio', 0)
         desc['fairshare'] = fairshare
-        s="insert into condorjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
-            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        s="insert into condorjobs" + " ( " + ",".join(['%s' % (k) for k in list(desc.keys())]) + " ) " + " values " + \
+            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(list(desc.keys())) ]) + " ) "
+        c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -175,9 +175,9 @@ class aCTDBCondor(aCTDB):
             return
 
         desc['modified'] = self.getTimeStamp()
-        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
         s += " where id="+str(id)
-        c.execute(s, desc.values())
+        c.execute(s, list(desc.values()))
 
     def updateCondorJobs(self, desc, select):
         '''
@@ -193,10 +193,10 @@ class aCTDBCondor(aCTDB):
         statement. Does not commit after executing update.
         '''
         desc['modified'] = self.getTimeStamp()
-        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
+        s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
         s += " where "+select
         c = self.db.getCursor()
-        c.execute(s, desc.values())
+        c.execute(s, list(desc.values()))
 
     def getCondorJobInfo(self, id, columns=[]):
         '''
@@ -209,7 +209,7 @@ class aCTDBCondor(aCTDB):
             return {}
         # mysql SELECT returns list, we want dict
         if not isinstance(row, dict):
-            row = dict(zip([col[0] for col in c.description], row))
+            row = dict(list(zip([col[0] for col in c.description], row)))
         return row
 
     def getCondorJobsInfo(self, select, columns=[], tables="condorjobs", lock=False):

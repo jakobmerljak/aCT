@@ -1,6 +1,6 @@
 import cgi
 import json
-import urllib, urlparse, socket, httplib
+import urllib.request, urllib.parse, urllib.error, urllib.parse, socket, http.client
 import os
 import pickle
 from act.common import aCTConfig
@@ -11,7 +11,7 @@ class aCTPanda:
     def __init__(self,logger, proxyfile):
         self.conf = aCTConfig.aCTConfigATLAS()
         server = self.conf.get(['panda','server'])
-        u = urlparse.urlparse(server)
+        u = urllib.parse.urlparse(server)
         self.hostport = u.netloc
         self.topdir = u.path
         self.proxypath = proxyfile
@@ -23,13 +23,13 @@ class aCTPanda:
     def __HTTPConnect__(self,mode,node):
         urldata = None
         try:
-            conn = httplib.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
-            rdata=urllib.urlencode(node)
+            conn = http.client.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
+            rdata=urllib.parse.urlencode(node)
             conn.request("POST", self.topdir+mode,rdata)
             resp = conn.getresponse()
             urldata = resp.read()
             conn.close()
-        except Exception,x:
+        except Exception as x:
             self.log.error("error in connection: %s" %x)
         return urldata
 
@@ -66,7 +66,7 @@ class aCTPanda:
             return (None,None,None,None)
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return (None,None,None,None)
         status = urldesc['StatusCode'][0]
@@ -101,7 +101,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         self.log.debug('%s: Panda returned %s' % (node['pandaID'], urldesc))
@@ -123,7 +123,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -136,7 +136,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -149,7 +149,7 @@ class aCTPanda:
         urldata=self.__HTTPConnect__('getStatus',node)
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -161,7 +161,7 @@ class aCTPanda:
         node['state']=state
         node['schedulerID']=self.conf.get(['panda','schedulerid'])
         if desc:
-            for key in desc.keys():
+            for key in list(desc.keys()):
                 node[key]=desc[key]
         # protection against bad pickles
         if 'jobId' not in node or not node['jobId']:
@@ -173,7 +173,7 @@ class aCTPanda:
         #self.log.debug('panda returned %s' % str(urldata))
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -188,7 +188,7 @@ class aCTPanda:
         urldata=self.__HTTPConnect__('updateJobsInBulk', {'jobList': json.dumps(jobdata)})
         try:
             urldesc = json.loads(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return {}
         return urldesc
@@ -214,4 +214,4 @@ if __name__ == '__main__':
     logger = aCTLogger('test')
     log = logger()
     p = aCTPanda(log, os.environ['X509_USER_PROXY'])
-    print p.getQueueStatus('UIO_MCORE')
+    print(p.getQueueStatus('UIO_MCORE'))

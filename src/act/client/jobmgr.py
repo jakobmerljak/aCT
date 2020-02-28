@@ -716,7 +716,7 @@ def getIDsFromList(listStr):
                 lastIx = int(lastIx)
             except ValueError:
                 raise errors.InvalidJobIDError(lastIx)
-            ids.extend(range(int(firstIx), int(lastIx) + 1))
+            ids.extend(list(range(int(firstIx), int(lastIx) + 1)))
         else:
             try:
                 ids.append(int(group))

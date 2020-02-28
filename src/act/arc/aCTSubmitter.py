@@ -2,7 +2,7 @@ import re
 import time
 import arc
 from random import shuffle
-from urlparse import urlparse
+from urllib.parse import urlparse
 from threading import Thread
 from act.common.aCTProcess import aCTProcess
 from act.common.aCTSignal import ExceptInterrupt
@@ -78,7 +78,7 @@ class JobConv:
                 d = eval(dbinfo[attr])
                 if not isinstance(d, dict):
                     continue
-                for (k,v) in d.items():
+                for (k,v) in list(d.items()):
                     m[k] = v
                 setattr(j, attr, m)
                 continue
@@ -109,7 +109,7 @@ class JobConv:
                     d[attr] = re.sub('Z$', '', t)
             elif self.jobattrs[attr] == arc.StringStringMap:
                 ssm = getattr(job, attr)
-                tmpdict = dict(zip(ssm.keys(), ssm.values()))
+                tmpdict = dict(list(zip(list(ssm.keys()), list(ssm.values()))))
                 d[attr] = str(tmpdict)[:1000]
             # Force everything to ASCII
                         # Force everything to ASCII
@@ -448,8 +448,8 @@ class aCTSubmitter(aCTProcess):
         if not jobstocancel:
             return
         
-        self.log.info("Cancelling %i jobs" % sum(len(v) for v in jobstocancel.values()))
-        for proxyid, jobs in jobstocancel.items():
+        self.log.info("Cancelling %i jobs" % sum(len(v) for v in list(jobstocancel.values())))
+        for proxyid, jobs in list(jobstocancel.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
                 
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
@@ -492,7 +492,7 @@ class aCTSubmitter(aCTProcess):
         else:
             jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and clusterlist=''")
  
-        for proxyid, jobs in jobstoresubmit.items():
+        for proxyid, jobs in list(jobstoresubmit.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
             
             # Clean up jobs which were submitted
@@ -549,8 +549,8 @@ class aCTSubmitter(aCTProcess):
             self.log.info('SRM down, not rerunning')
             return
 
-        self.log.info("Resuming %i jobs" % sum(len(v) for v in jobstorerun.values()))
-        for proxyid, jobs in jobstorerun.items():
+        self.log.info("Resuming %i jobs" % sum(len(v) for v in list(jobstorerun.values())))
+        for proxyid, jobs in list(jobstorerun.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
     
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])

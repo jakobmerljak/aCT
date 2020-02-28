@@ -1,5 +1,5 @@
 import logging
-import aCTConfig
+from . import aCTConfig
 import datetime, time
 import arc
 import subprocess
@@ -93,7 +93,7 @@ class aCTProxy:
         It's advisable to check that no jobs depend on this proxy before
         calling this function.
         '''
-        if not self.voms_proxies.has_key((dn, attribute)):
+        if (dn, attribute) not in self.voms_proxies:
             self.log.error("Cannot delete voms proxy with dn %s and attribute %s.", dn, attribute)
         (_, _, _, _, proxyid) = self.voms_proxies[(dn, attribute)]
         self.db.deleteProxy(proxyid)
@@ -120,7 +120,7 @@ class aCTProxy:
 
     def renew(self):
         "renews proxies in db. renews all proxies created with createVOMSRole."
-        for (dn, attribute), args in self.voms_proxies.items():
+        for (dn, attribute), args in list(self.voms_proxies.items()):
             tleft = self.timeleft(dn, attribute)
             if tleft <= int(self.conf.get(["voms","minlifetime"])) :
                 self.createVOMSAttribute(*args)
@@ -172,9 +172,9 @@ def test_aCTProxy():
     proxyid = p.createVOMSAttribute(voms, "/atlas/Role=pilot", proxypath, validTime)
     proxyid = p.createVOMSAttribute(voms, "/atlas/Role=production", proxypath, validTime)
     dn = p.db.getProxiesInfo("id="+str(proxyid), ["dn"], expect_one=True)["dn"]
-    print "dn=", dn
-    print "path from dn,attribute lookup matches path from proxyid lookup:", 
-    print p.path(dn=dn, attribute=attribute) == p.path(id=p.getProxyId(dn, attribute))
+    print("dn=", dn)
+    print("path from dn,attribute lookup matches path from proxyid lookup:", end=' ') 
+    print(p.path(dn=dn, attribute=attribute) == p.path(id=p.getProxyId(dn, attribute)))
     time.sleep(30)
     p.renew()
 

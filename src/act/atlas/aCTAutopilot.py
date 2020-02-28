@@ -7,11 +7,11 @@ import re
 import time
 import shutil
 import arc
-import aCTPanda
+from . import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
-from aCTATLASProcess import aCTATLASProcess
-from aCTPandaJob import aCTPandaJob
+from .aCTATLASProcess import aCTATLASProcess
+from .aCTPandaJob import aCTPandaJob
 
 class PandaThr(Thread):
     """
@@ -154,13 +154,13 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
         
         for t in tlist:
-            if t.result == None or not t.result.has_key('StatusCode'):
+            if t.result == None or 'StatusCode' not in t.result:
                 # Strange response from panda, try later
                 continue
             if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
-            if t.result.has_key('command')  and t.result['command'][0] != "NULL":
+            if 'command' in t.result  and t.result['command'][0] != "NULL":
                 self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
             if changed_pstatus:
@@ -176,7 +176,7 @@ class aCTAutopilot(aCTATLASProcess):
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if t.result.has_key('command') and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
+            if 'command' in t.result and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
                 self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None
@@ -236,7 +236,7 @@ class aCTAutopilot(aCTATLASProcess):
             except:
                 jobsbyproxy[self.sites[j['siteName']]['type']] = [jd]
 
-        for sitetype, jobs in jobsbyproxy.items():
+        for sitetype, jobs in list(jobsbyproxy.items()):
             t = PandaBulkThr(self.pandas.get(sitetype, self.pandas.get('production')).updateStatuses, [j['jobId'] for j in jobs], jobs)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
@@ -431,7 +431,7 @@ class aCTAutopilot(aCTATLASProcess):
                         aCTUtils.RunThreadsSplit([t], self.nthreads)
                         # If update fails panda won't see the zip and events
                         # will be rescheduled to another job
-                        if t.result == None or not t.result.has_key('StatusCode'):
+                        if t.result == None or 'StatusCode' not in t.result:
                             # Strange response from panda
                             continue
                         if t.result['StatusCode'][0] == '60':
@@ -474,7 +474,7 @@ class aCTAutopilot(aCTATLASProcess):
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
         for t in tlist:
             # If update fails events will be rescheduled to another job
-            if t.result == None or not t.result.has_key('StatusCode'):
+            if t.result == None or 'StatusCode' not in t.result:
                 # Strange response from panda
                 continue
             if t.result['StatusCode'][0] == '60':
@@ -490,7 +490,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
         
         # Does it matter which proxy is used? Assume no
-        panda = self.pandas.values()[0]
+        panda = list(self.pandas.values())[0]
         pjobs = panda.queryJobInfo()
 
         # panda error if [] possible

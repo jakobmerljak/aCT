@@ -58,10 +58,10 @@ def main():
     try:
         jobmgr.checkSite(args.site) # use default path for sites.json
     except NoSuchSiteError as e:
-        print "error: site '{}' is not configured".format(args.site)
+        print("error: site '{}' is not configured".format(args.site))
         sys.exit(4)
     except Exception as e:
-        print 'error: could not read site config: {}'.format(str(e))
+        print('error: could not read site config: {}'.format(str(e)))
         sys.exit(11) # TODO: refactor error handling
 
     # check descriptions and submit jobs
@@ -72,12 +72,12 @@ def main():
             jobdesc = readXRSL(xrsl)
             jobmgr.checkJobDesc(jobdesc)
         except InvalidJobDescriptionError:
-            print 'error: invalid job description in {}'.format(xrsl)
+            print('error: invalid job description in {}'.format(xrsl))
         except IOError:
-            print 'error: could not read file {}'.format(xrsl)
+            print('error: could not read file {}'.format(xrsl))
         else:
             jobid = clidb.insertJobAndDescription(jobdesc, proxyid, args.site, lazy=True)
-            print 'Successfully inserted job with id {}'.format(jobid)
+            print('Successfully inserted job with id {}'.format(jobid))
     clidb.Commit()
 
 

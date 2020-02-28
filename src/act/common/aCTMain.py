@@ -7,11 +7,11 @@ import subprocess
 import sys
 import tempfile
 import traceback
-import aCTConfig
-import aCTLogger
-import aCTSignal
-import aCTUtils
-import aCTProcessManager
+from . import aCTConfig
+from . import aCTLogger
+from . import aCTSignal
+from . import aCTUtils
+from . import aCTProcessManager
         
 class aCTMain:
     """
@@ -32,7 +32,7 @@ class aCTMain:
         self.makeDirs(os.path.join(tmpdir, 'inputfiles'))
         self.makeDirs(os.path.join(tmpdir, 'eventranges'))
         self.makeDirs(os.path.join(tmpdir, 'failedlogs'))
-        self.makeDirs(self.conf.get(["voms","proxystoredir"]), 0700)
+        self.makeDirs(self.conf.get(["voms","proxystoredir"]), 0o700)
         self.makeDirs(self.conf.get(["logger", "logdir"]))
 
         # logger
@@ -52,7 +52,7 @@ class aCTMain:
         try:
             if self.shouldrun:
                 self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf)
-        except Exception, e:
+        except Exception as e:
             self.log.critical("*** Unexpected exception! ***")
             self.log.critical(traceback.format_exc())
             self.log.critical("*** Process exiting ***")
@@ -66,14 +66,14 @@ class aCTMain:
         try:
             import arc
         except ImportError:
-            print 'Error: failed to import ARC. Are ARC python bindings installed?'
+            print('Error: failed to import ARC. Are ARC python bindings installed?')
             sys.exit(1)
             
         if arc.ARC_VERSION_MAJOR < 4:
-            print 'Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION
+            print('Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION)
             sys.exit(1)
 
-    def makeDirs(self, dir, mode=0755):
+    def makeDirs(self, dir, mode=0o755):
         """
         Make a directory if it doesn't exist already
         """
@@ -92,21 +92,21 @@ class aCTMain:
             with open(pidfile) as f:
                 pid = f.read()
                 if pid:
-                    print "aCT already running (pid %s)" % pid
+                    print("aCT already running (pid %s)" % pid)
                     sys.exit(1)
         except IOError:
             pass
         
             
-        print 'Starting aCT... '
+        print('Starting aCT... ')
         # do double fork
         try:
             pid = os.fork()
             if pid > 0:
                 # exit first parent
                 sys.exit(0)
-        except OSError, e:
-            print "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+        except OSError as e:
+            print("fork #1 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
     
         # decouple from parent environment
@@ -119,8 +119,8 @@ class aCTMain:
             if pid > 0:
                 # exit from second parent
                 sys.exit(0)
-        except OSError, e:
-            print "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+        except OSError as e:
+            print("fork #2 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
     
         # redirect standard file descriptors
@@ -154,7 +154,7 @@ class aCTMain:
             pass
 
         if not pid:
-            print 'aCT already stopped'
+            print('aCT already stopped')
             return 1
 
         try:
@@ -163,7 +163,7 @@ class aCTMain:
             pass
         
         os.remove(pidfile)
-        print 'Stopping aCT... ',
+        print('Stopping aCT... ', end=' ')
         sys.stdout.flush()
         while True:
             try:
@@ -172,7 +172,7 @@ class aCTMain:
             except OSError as err:
                 if err.errno == errno.ESRCH:
                     break
-        print 'stopped'
+        print('stopped')
         return 0
 
 
@@ -189,7 +189,7 @@ class aCTMain:
             self.stop()
             self.start()
         else:
-            print 'Usage: python aCTMain.py [start|stop|restart]'
+            print('Usage: python aCTMain.py [start|stop|restart]')
             sys.exit(1)
                 
                 

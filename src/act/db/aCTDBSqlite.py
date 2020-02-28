@@ -14,8 +14,8 @@ class aCTDBSqlite(aCTDBMS):
         aCTDBMS.__init__(self, log, config)
         try:
             self.conn = sqlite.connect(self.dbname, 1800)
-        except Exception, x:
-            raise Exception, "Could not connect to sqlite: " + str(x)
+        except Exception as x:
+            raise Exception("Could not connect to sqlite: " + str(x))
         self.conn.row_factory = dict_factory
         self.conn.execute('''PRAGMA synchronous=OFF''')
         self.log.info("initialized aCTDBSqlite")

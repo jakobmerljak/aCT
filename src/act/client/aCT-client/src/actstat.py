@@ -60,7 +60,7 @@ if args.id or args.arc or args.client or args.state or args.name:
 try:
     r = requests.get(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if args.arc:
@@ -76,13 +76,13 @@ if r.status_code == 200:
     try:
         json_resp = r.json()
     except ValueError as e:
-        print 'Response error: {}. Response status: {}'.format(e, r.status_code)
+        print('Response error: {}. Response status: {}'.format(e, r.status_code))
         sys.exit(3)
     # For each column, determine biggest sized value so that output can
     # be nicely formatted.
     colsizes = {}
     for job in json_resp:
-        for key, value in job.items():
+        for key, value in list(job.items()):
             # All keys have a letter and underscore prepended, which is not
             # used when printing
             colsize = max(len(str(key[2:])), len(str(value)))
@@ -95,11 +95,11 @@ if r.status_code == 200:
     for job in json_resp:
         for col in clicols:
             fullKey = 'c_' + col 
-            print '{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]),
+            print('{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]), end=' ')
         for col in arccols:
             fullKey = 'a_' + col 
-            print '{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]),
-        print
+            print('{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]), end=' ')
+        print()
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)

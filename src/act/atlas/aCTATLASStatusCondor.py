@@ -19,7 +19,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
           and report failed back to panda
         """
 
-        sites = "','".join([s for s,a in self.sites.iteritems() if a['status'] == 'offline'])
+        sites = "','".join([s for s,a in self.sites.items() if a['status'] == 'offline'])
 
         if sites:
 

@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-import aCTUtils
+from . import aCTUtils
 from act.arc import aCTDBArc
 from act.condor import aCTDBCondor
 
@@ -55,14 +55,14 @@ class aCTProcessManager:
     def __del__(self):
         
         self.log.info('Shutdown')
-        for cluster, procs in self.running.items():
+        for cluster, procs in list(self.running.items()):
             for proc in procs:
                 self.log.info('Terminating %s for %s' % (proc.name, cluster))
                 proc.terminate()
-        for cluster, proc in self.submitters.items():
+        for cluster, proc in list(self.submitters.items()):
             self.log.info('Terminating aCTSubmitter for %s' % cluster)
             proc.terminate()
-        for appproc, proc in self.processes_single.items():
+        for appproc, proc in list(self.processes_single.items()):
             self.log.info('Terminating %s' % appproc)
             proc.terminate()
         
@@ -99,15 +99,15 @@ class aCTProcessManager:
         # All running per-cluster processes
         procs = [p for c in self.running for p in self.running[c]]
         # Submitter processes
-        procs.extend(self.submitters.values())
+        procs.extend(list(self.submitters.values()))
         # Single instance processes
-        procs.extend(self.processes_single.values())
+        procs.extend(list(self.processes_single.values()))
         
         for proc in procs:
             rc = proc.check()
             if rc == None :
                 self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
-            elif proc.cluster and proc.cluster not in activeclusters.keys():
+            elif proc.cluster and proc.cluster not in list(activeclusters.keys()):
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.arcsubmitter:
                     del self.submitters[proc.cluster]
@@ -119,7 +119,7 @@ class aCTProcessManager:
         
         # Check for new processes to start
         for cluster in activeclusters:
-            if cluster and cluster not in self.running.keys():
+            if cluster and cluster not in list(self.running.keys()):
                 self.running[cluster] = []
                 for proc in self.arcprocesses:
                     self.log.info("Starting process %s for %s", proc, cluster)
@@ -162,13 +162,13 @@ class aCTProcessManager:
         # All running per-cluster processes
         procs = [p for c in self.running for p in self.running[c]]
         # Submitter processes
-        procs.extend(self.submitters.values())
+        procs.extend(list(self.submitters.values()))
         
         for proc in procs:
             rc = proc.check()
             if rc == None :
                 self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
-            elif proc.cluster and proc.cluster not in activeclusters.keys():
+            elif proc.cluster and proc.cluster not in list(activeclusters.keys()):
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.condorsubmitter:
                     del self.submitters[proc.cluster]
@@ -180,7 +180,7 @@ class aCTProcessManager:
         
         # Check for new processes to start
         for cluster in activeclusters:
-            if cluster and cluster not in self.running.keys():
+            if cluster and cluster not in list(self.running.keys()):
                 self.running[cluster] = []
                 for proc in self.condorprocesses:
                     self.log.info("Starting process %s for %s", proc, cluster)
@@ -247,12 +247,12 @@ class aCTProcessManager:
             self.terminate()
             if self.child and self.check() == None:
                 try:
-                    print 'checking pid', self.child.pid
+                    print('checking pid', self.child.pid)
                     os.kill(self.child.pid, 0)
                 except OSError: # process already exited
-                    print 'process gone'
+                    print('process gone')
                     return
-                print 'process still running, sleeping'
+                print('process still running, sleeping')
                 aCTUtils.sleep(1)
                 # make sure it is gone
                 self.child.kill()

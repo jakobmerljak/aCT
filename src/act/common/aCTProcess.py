@@ -4,12 +4,12 @@ import re
 import sys
 import arc
 import traceback
-from urlparse import urlparse
+from urllib.parse import urlparse
 
-import aCTLogger
-import aCTConfig
-import aCTUtils
-import aCTSignal
+from . import aCTLogger
+from . import aCTConfig
+from . import aCTUtils
+from . import aCTSignal
 from act.arc import aCTDBArc
 from act.condor.aCTDBCondor import aCTDBCondor
 
@@ -90,7 +90,7 @@ class aCTProcess:
                 if time.time()-self.starttime > ip and ip != 0 :
                     self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                     return
-        except aCTSignal.ExceptInterrupt,x:
+        except aCTSignal.ExceptInterrupt as x:
             self.log.info("Received interrupt %s, exiting", str(x))
         except:
             self.log.critical("*** Unexpected exception! ***")

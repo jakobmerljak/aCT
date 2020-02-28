@@ -11,14 +11,14 @@ setup(name='aCT',
       package_dir = {'': 'src'},
       packages=find_packages('src'),
       install_requires=[
-        'mysql-connector==2.1.*',   # connection to MySQL database
+        'mysql-connector-python',   # connection to MySQL database
         'htcondor',                 # bindings to use HTCondor to submit jobs
         'pylint',                   # for travis automatic tests
         'requests',                 # for APF mon calls
 
         'pyopenssl',
         'flask',
-        'gunicorn==19.*',           # Python 2 is not supported in >= 20.*
+        'gunicorn',           # Python 2 is not supported in >= 20.*
         'sqlalchemy'
       ],
       entry_points={

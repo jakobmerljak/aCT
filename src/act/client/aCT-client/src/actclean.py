@@ -52,13 +52,13 @@ if args.id or args.state or args.name:
 try:
     r = requests.delete(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
-    print 'Cleaned {} jobs'.format(r.text)
+    print('Cleaned {} jobs'.format(r.text))
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)
 
 
