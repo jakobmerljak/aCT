@@ -31,7 +31,7 @@ class aCTStatus(aCTProcess):
         j = arc.Job()
         attrstoreset = [attr for attr in dir(j) if type(getattr(j, attr)) == arc.StringList]
 
-        for jobs in list(jobstoreset.values()):
+        for jobs in jobstoreset.values():
             for job in jobs:
                 for attr in attrstoreset:
                     setattr(job[2], attr, emptylist)
@@ -97,7 +97,7 @@ class aCTStatus(aCTProcess):
         self.resetJobs(jobstocheck)
 
         # Loop over proxies
-        for proxyid, jobs in list(jobstocheck.items()):
+        for proxyid, jobs in jobstocheck.items():
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
 
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])

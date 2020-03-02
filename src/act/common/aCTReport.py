@@ -81,7 +81,7 @@ class aCTReport:
         for cluster in sorted(cluster_procs):
             procs = cluster_procs[cluster]
             procs.sort()
-            self.log('%38s: %s' % (cluster, ' '.join(procs)))
+            self.log(f'{cluster:38s}: {" ".join(procs)}')
         self.log()
 
     def PandaReport(self):
@@ -133,7 +133,7 @@ class aCTReport:
                     if state == "running":
                         rtot["slots"]=corecount
 
-        self.log("All Panda jobs: %d" % sum([v for k,v in list(rtot.items()) if k != 'slots']))
+        self.log(f"All Panda jobs: {sum([v for k,v in rtot.items() if k != 'slots'])}")
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         for k in sorted(rep.keys()):
@@ -193,11 +193,11 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
-        self.log("All ARC jobs: %d" % sum([v for k,v in list(rtot.items())]))
+        self.log("All ARC jobs: %d" % sum([v for k,v in rtot.items()]))
         self.log("%39s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 
         #for k in sorted(rep.keys()):
-        for y in sorted([list(reversed(x.strip().split('.'))) for x in list(rep.keys())]):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
             k='.'.join(list(reversed(y)))
             log="%38s:" % k[:38]
             for s in states:
@@ -257,10 +257,10 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
-        self.log("All Condor jobs: %d" % sum([v for k,v in list(rtot.items())]))
+        self.log("All Condor jobs: %d" % sum([v for k,v in rtot.items()]))
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in condorjobstatemap])))
         #for k in sorted(rep.keys()):
-        for y in sorted([list(reversed(x.strip().split('.'))) for x in list(rep.keys())]):
+        for y in sorted([list(reversed(x.strip().split('.'))) for x in rep.keys()]):
             k='.'.join(list(reversed(y)))
             log="%28s:" % k[:28]
             for s in range(8):
@@ -302,7 +302,7 @@ class aCTReport:
                 else:
                     clustercount[host] = 1
 
-            for cluster, count in list(clustercount.items()):
+            for cluster, count in clustercount.items():
                 self.log('%s %s' % (count, cluster))
             self.log()
 
@@ -323,16 +323,16 @@ class aCTReport:
 
             rtot = defaultdict(int)
 
-            for site, prodsourcelabels in list(workers.items()):
-                for prodsourcelabel, resources in list(prodsourcelabels.items()):
-                    for resource, jobs in list(resources.items()):
+            for site, prodsourcelabels in workers.items():
+                for prodsourcelabel, resources in prodsourcelabels.items():
+                    for resource, jobs in resources.items():
                         rep['%s-%s' % (site, resource)][prodsourcelabel] = jobs
-                        for state, count in list(jobs.items()):
+                        for state, count in jobs.items():
                             rtot[state] += count
-            self.log("All Harvester jobs: %d       prodSourceLabel: submitted/running" % sum([v for k,v in list(rtot.items())]))
+            self.log("All Harvester jobs: %d       prodSourceLabel: submitted/running" % sum([v for k,v in rtot.items()]))
             for k in sorted(rep.keys()):
                 log="%28s:" % k[:28]
-                for psl, jobs in list(rep[k].items()):
+                for psl, jobs in rep[k].items():
                     try:
                         log += '%10s: %d/%d ' % (psl, jobs['submitted'], jobs['running'])
                     except KeyError:

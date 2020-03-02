@@ -163,7 +163,7 @@ class aCTValidator(aCTATLASProcess):
             return {}
 
         surls = {}
-        for attrs in list(outputfiles.values()):
+        for attrs in outputfiles.values():
             try:
                 size = attrs['fsize']
                 adler32 = attrs['adler32']
@@ -188,14 +188,14 @@ class aCTValidator(aCTATLASProcess):
 
         if self.arcconf.get(['downtime', 'srmdown']) == 'True':
             self.log.info("SRM down, will validate later")
-            return dict((k['arcjobid'], self.retry) for k in list(surldict.values()))
+            return dict((k['arcjobid'], self.retry) for k in surldict.values())
 
         result = {}
         datapointlist = arc.DataPointList()
         surllist = []
         dummylist = []
         bulklimit = 100
-        for surls in list(surldict.values()):
+        for surls in surldict.values():
             count = 0
             for surl in surls:
                 count += 1
@@ -484,7 +484,7 @@ class aCTValidator(aCTATLASProcess):
 
         # check if surls valid, update pandastatus accordingly
         checkedsurls = self.checkOutputFiles(surls)
-        for id, result in list(checkedsurls.items()):
+        for id, result in checkedsurls.items():
             if result == self.ok:
                 # For ES jobs, modify eventranges to what was produced
                 self.validateEvents(id)
@@ -664,7 +664,7 @@ class aCTValidator(aCTATLASProcess):
 
         for se in surls:
             removedsurls = self.removeOutputFiles(surls[se])
-            for id, result in list(removedsurls.items()):
+            for id, result in removedsurls.items():
                 # if manually killed the cleaning is allowed to fail
                 if id in [j['arcjobid'] for j in killedbymanual]:
                     select = "arcjobid='"+str(id)+"'"

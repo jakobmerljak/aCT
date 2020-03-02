@@ -163,7 +163,7 @@ class aCTPanda:
         node['state']=state
         node['schedulerID']=self.conf.get(['panda','schedulerid'])
         if desc:
-            for key in list(desc.keys()):
+            for key in desc.keys():
                 node[key]=desc[key]
         # protection against bad pickles
         if 'jobId' not in node or not node['jobId']:

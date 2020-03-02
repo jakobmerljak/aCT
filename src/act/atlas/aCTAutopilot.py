@@ -236,7 +236,7 @@ class aCTAutopilot(aCTATLASProcess):
             except:
                 jobsbyproxy[self.sites[j['siteName']]['type']] = [jd]
 
-        for sitetype, jobs in list(jobsbyproxy.items()):
+        for sitetype, jobs in jobsbyproxy.items():
             t = PandaBulkThr(self.pandas.get(sitetype, self.pandas.get('production')).updateStatuses, [j['jobId'] for j in jobs], jobs)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
@@ -490,7 +490,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
 
         # Does it matter which proxy is used? Assume no
-        panda = list(self.pandas.values())[0]
+        panda = next(iter(self.pandas.values()))
         pjobs = panda.queryJobInfo()
 
         # panda error if [] possible

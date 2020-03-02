@@ -72,7 +72,7 @@ class aCTAGISParser:
         with open(agisfilename) as f:
             agisjson = json.load(f)
         sites = dict([(agisjson[entry]['panda_resource'], dict(list(agisjson[entry].items())+[('schedconfig', entry)])) for entry in agisjson if 'panda_resource' in agisjson[entry]])
-        for sitename, siteinfo in list(sites.items()):
+        for sitename, siteinfo in sites.items():
             siteinfo['push'] = True # TODO configure in AGIS
             if 'schedconfig' not in siteinfo:
                 siteinfo['schedconfig'] = sitename
@@ -178,7 +178,7 @@ class aCTAGISParser:
                 self.log.info('No bucket_id info for %s', ep['name'])
                 continue
             try:
-                protocol = [p for p in list(ep['protocols'].keys()) if p.startswith('s3://')][0]
+                protocol = [p for p in ep['protocols'].keys() if p.startswith('s3://')][0]
             except:
                 self.log.info('No s3 endpoint for %s' % ep['name'])
                 continue
@@ -188,7 +188,7 @@ class aCTAGISParser:
             self.bucketmap[ep['name']] = {'bucket_id': bucket_id, 'type': ep['type']}
 
     def _mergeSiteDicts(self, dict1, dict2):
-        for d in list(dict2.keys()):
+        for d in dict2.keys():
             if d in dict1:
                 dict1[d].update(dict2[d])
             else:
@@ -254,19 +254,19 @@ if __name__ == '__main__':
     log.setLevel("DEBUG")
     out = logging.StreamHandler(sys.stdout)
     log.addHandler(out)
-    agisparser=aCTAGISParser(log)
+    agisparser = aCTAGISParser(log)
     while 1:
         sites = agisparser.getSites()
-        sites = dict([(s,i) for s,i in list(sites.items()) if i['enabled']])
-        pprint.pprint(sites)
-        for s,i in list(sites.items()):
+        sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
+        pprint.pprint(len(sites))
+        for s,i in sites.items():
             try:
                 print(s, i['ddmoses'])
             except:
                 pass
         print(len(sites))
         oses = agisparser.getOSMap()
-        sites = dict([(s,i) for s,i in list(oses.items())])
+        sites = dict([(s,i) for s,i in oses.items()])
         pprint.pprint(sites)
         exit(1)
         time.sleep(10)

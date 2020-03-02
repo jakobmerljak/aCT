@@ -89,9 +89,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
         # If panda query fails safer to assume all queues have jobs
         self.activated.clear()
         # Assume any proxy is ok to query panda
-        queueinfo = list(self.pandas.values())[0].getQueueStatus()
+        queueinfo = next(iter(self.pandas.values())).getQueueStatus()
         if queueinfo:
-            for site in [k for k,v in list(self.sites.items()) if v['enabled']]:
+            for site in [k for k,v in self.sites.items() if v['enabled']]:
                 if site not in queueinfo:
                     self.log.debug("%s: no jobs" % site)
                     self.activated[site] = {'rc_test': 0, 'rest': 0}
@@ -135,7 +135,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             if attrs['maxjobs'] == 0:
                 continue
 
-            if (not self.getjob) and site in self.activated and sum([x for x in list(self.activated[site].values())]) == 0:
+            if (not self.getjob) and site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
                 self.log.info("Site %s: No activated jobs" % site)
                 continue
 
@@ -274,7 +274,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             self.starttime = time.time()
             self.getjob = True
             # Each 5 mins send the list of queues with maxjobs>0 to APFmon
-            self.apfmon.registerLabels([k for (k,v) in list(self.sites.items()) if v['maxjobs'] > 0])
+            self.apfmon.registerLabels([k for (k,v) in self.sites.items() if v['maxjobs'] > 0])
 
         # request new jobs
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))

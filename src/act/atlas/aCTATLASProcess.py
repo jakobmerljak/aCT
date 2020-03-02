@@ -58,7 +58,7 @@ class aCTATLASProcess:
         self.sites = self.agisparser.getSites(flavour=self.flavour)
         self.osmap = self.agisparser.getOSMap()
         # For DB queries
-        self.sitesselect =  "('%s')" % "','".join(list(self.sites.keys()))
+        self.sitesselect =  "('%s')" % "','".join(self.sites.keys())
 
     def process(self):
         '''

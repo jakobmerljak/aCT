@@ -366,8 +366,8 @@ class aCTPanda2Xrsl:
                                     'eventType': eventType})
 
             # some files are double:
-            for k, v in list(inf.items()):
-                x += "(" + k + " " + '"' + v + '"' + ")"
+            for k, v in inf.items():
+                x += f'("{k}" "{v}")'
 
             if 'eventService' in self.jobdesc and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
@@ -460,7 +460,7 @@ class aCTPanda2Xrsl:
             environment['FACTORYQUEUE'] = self.sitename
 
         environment['PILOT_NOKILL'] = 'YES'
-        self.xrsl['environment'] = '(environment = %s)' % ''.join(['("%s" "%s")' % (k,v) for (k,v) in list(environment.items())])
+        self.xrsl['environment'] = '(environment = %s)' % ''.join(['("%s" "%s")' % (k,v) for (k,v) in environment.items()])
 
     def parse(self):
         self.setTime()
@@ -478,10 +478,7 @@ class aCTPanda2Xrsl:
         self.setEnvironment()
 
     def getXrsl(self):
-        x = "&"
-        for k in list(self.xrsl.keys()):
-            x += self.xrsl[k] + "\n"
-        return x
+        return "&" + '\n'.join(self.xrsl.values())
 
 
 if __name__ == '__main__':

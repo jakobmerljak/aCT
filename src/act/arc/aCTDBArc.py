@@ -221,7 +221,7 @@ class aCTDBArc(aCTDB):
         desc['fairshare'] = fairshare
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        c.execute(s, list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -264,10 +264,11 @@ class aCTDBArc(aCTDB):
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
+        print(s)
         if job:
-            c.execute(s, desc.values() + self._job2db(job).values())
+            c.execute(s, list(desc.values()) + list(self._job2db(job).values()))
         else:
-            c.execute(s, desc.values())
+            c.execute(s, list(desc.values()))
 
     def updateArcJobs(self, desc, select):
         '''
@@ -285,7 +286,7 @@ class aCTDBArc(aCTDB):
         s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" where "+select
         c=self.db.getCursor()
-        c.execute(s, desc.values())
+        c.execute(s, list(desc.values()))
 
     def getArcJobInfo(self,id,columns=[]):
         '''

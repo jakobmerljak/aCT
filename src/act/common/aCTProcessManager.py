@@ -55,14 +55,14 @@ class aCTProcessManager:
     def __del__(self):
 
         self.log.info('Shutdown')
-        for cluster, procs in list(self.running.items()):
+        for cluster, procs in self.running.items():
             for proc in procs:
                 self.log.info('Terminating %s for %s' % (proc.name, cluster))
                 proc.terminate()
-        for cluster, proc in list(self.submitters.items()):
+        for cluster, proc in self.submitters.items():
             self.log.info('Terminating aCTSubmitter for %s' % cluster)
             proc.terminate()
-        for appproc, proc in list(self.processes_single.items()):
+        for appproc, proc in self.processes_single.items():
             self.log.info('Terminating %s' % appproc)
             proc.terminate()
 
@@ -107,7 +107,7 @@ class aCTProcessManager:
             rc = proc.check()
             if rc == None :
                 self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
-            elif proc.cluster and proc.cluster not in list(activeclusters.keys()):
+            elif proc.cluster and proc.cluster not in activeclusters.keys():
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.arcsubmitter:
                     del self.submitters[proc.cluster]
@@ -119,7 +119,7 @@ class aCTProcessManager:
 
         # Check for new processes to start
         for cluster in activeclusters:
-            if cluster and cluster not in list(self.running.keys()):
+            if cluster and cluster not in self.running.keys():
                 self.running[cluster] = []
                 for proc in self.arcprocesses:
                     self.log.info("Starting process %s for %s", proc, cluster)
@@ -168,7 +168,7 @@ class aCTProcessManager:
             rc = proc.check()
             if rc == None :
                 self.log.debug("Process %s%s is running", proc.name, ' for %s' % proc.cluster if proc.cluster else '')
-            elif proc.cluster and proc.cluster not in list(activeclusters.keys()):
+            elif proc.cluster and proc.cluster not in activeclusters.keys():
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.condorsubmitter:
                     del self.submitters[proc.cluster]
@@ -180,7 +180,7 @@ class aCTProcessManager:
 
         # Check for new processes to start
         for cluster in activeclusters:
-            if cluster and cluster not in list(self.running.keys()):
+            if cluster and cluster not in self.running.keys():
                 self.running[cluster] = []
                 for proc in self.condorprocesses:
                     self.log.info("Starting process %s for %s", proc, cluster)

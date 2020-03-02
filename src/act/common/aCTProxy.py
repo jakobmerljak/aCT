@@ -120,7 +120,7 @@ class aCTProxy:
 
     def renew(self):
         "renews proxies in db. renews all proxies created with createVOMSRole."
-        for (dn, attribute), args in list(self.voms_proxies.items()):
+        for (dn, attribute), args in self.voms_proxies.items():
             tleft = self.timeleft(dn, attribute)
             if tleft <= int(self.conf.get(["voms","minlifetime"])) :
                 self.createVOMSAttribute(*args)

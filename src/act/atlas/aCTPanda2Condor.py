@@ -62,7 +62,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                     except: pass
                     jdlfile = os.path.join(logdir, '%s.jdl' % job['pandaid'])
                     with open(jdlfile, 'w') as f:
-                        f.write('\n'.join(['%s = %s' % (k,v) for (k,v) in list(classad.items())]))
+                        f.write('\n'.join(['%s = %s' % (k,v) for (k,v) in classad.items()]))
                         self.log.debug('Wrote description to %s' % jdlfile)
 
     def process(self):

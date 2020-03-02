@@ -134,7 +134,7 @@ class aCTDBPanda(aCTDB):
         desc['created']=self.getTimeStamp()
         desc['pandaid']=pandaid
         desc['pandajob']=pandajob
-        s="insert into pandajobs (" + ",".join([k for k in list(desc.keys())]) + ") values (" + ",".join(['%s' for k in list(desc.keys())]) + ")"
+        s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.db.getCursor()
         c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
@@ -143,7 +143,7 @@ class aCTDBPanda(aCTDB):
         return row
 
     def insertJobArchiveLazy(self,desc={}):
-        s="insert into pandaarchive (" + ",".join([k for k in list(desc.keys())]) + ") values (" + ",".join(['%s' for k in list(desc.keys())]) + ")"
+        s="insert into pandaarchive (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.db.getCursor()
         c.execute(s,list(desc.values()))
 
@@ -158,7 +158,7 @@ class aCTDBPanda(aCTDB):
 
     def updateJobLazy(self,pandaid,desc):
         desc['modified']=self.getTimeStamp()
-        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
+        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE pandaid="+str(pandaid)
         c=self.db.getCursor()
         c.execute(s,list(desc.values()))
@@ -169,7 +169,7 @@ class aCTDBPanda(aCTDB):
 
     def updateJobsLazy(self, select, desc):
         desc['modified']=self.getTimeStamp()
-        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in list(desc.keys())])
+        s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE "+select
         c=self.db.getCursor()
         c.execute(s,list(desc.values()))
