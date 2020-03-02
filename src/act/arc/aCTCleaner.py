@@ -30,7 +30,7 @@ class aCTCleaner(aCTProcess):
                 if job.JobID in notcleaned:
                     self.log.error("%s: Could not clean job %s" % (appjobid, job.JobID))
 
-                self.db.deleteArcJob(id)  
+                self.db.deleteArcJob(id)
 
     def process(self):
 

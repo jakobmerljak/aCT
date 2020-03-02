@@ -47,7 +47,7 @@ class aCTDBPanda(aCTDB):
            - corecount: Number of cores used by job
            - metadata: Generic json metadata sent by the client
            - error: Error string from a failed job
-           
+
         pandaarchive:
           - Selected fields from above list:
             - pandaid, siteName, actpandastatus, startTime, endTime
@@ -59,7 +59,7 @@ class aCTDBPanda(aCTDB):
         modified TIMESTAMP,
         created TIMESTAMP,
         pandajob mediumtext,
-        pandaid bigint, 
+        pandaid bigint,
         siteName VARCHAR(255),
         prodSourceLabel VARCHAR(255),
         arcjobid integer,
@@ -108,14 +108,14 @@ class aCTDBPanda(aCTDB):
 
         str="""
         create table pandaarchive (
-        pandaid bigint, 
+        pandaid bigint,
         siteName VARCHAR(255),
         actpandastatus VARCHAR(255),
         startTime TIMESTAMP DEFAULT 0,
         endTime TIMESTAMP
     )
 """
-       
+
         try:
             c.execute("drop table pandaarchive")
         except:
@@ -141,7 +141,7 @@ class aCTDBPanda(aCTDB):
         row = c.fetchone()
         self.Commit()
         return row
-        
+
     def insertJobArchiveLazy(self,desc={}):
         s="insert into pandaarchive (" + ",".join([k for k in list(desc.keys())]) + ") values (" + ",".join(['%s' for k in list(desc.keys())]) + ")"
         c=self.db.getCursor()
@@ -173,7 +173,7 @@ class aCTDBPanda(aCTDB):
         s+=" WHERE "+select
         c=self.db.getCursor()
         c.execute(s,list(desc.values()))
-        
+
     def getJob(self,pandaid,columns=[]):
         c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE pandaid="+str(pandaid))

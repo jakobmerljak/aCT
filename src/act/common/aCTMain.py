@@ -25,7 +25,7 @@ class aCTMain:
 
         # xml config file
         self.conf = aCTConfig.aCTConfigARC()
-   
+
         # Create required directories
         tmpdir = self.conf.get(["tmp", "dir"])
         self.makeDirs(tmpdir)
@@ -38,7 +38,7 @@ class aCTMain:
         # logger
         self.logger = aCTLogger.aCTLogger("aCTMain")
         self.log = self.logger()
-        
+
         # Check if we should run
         self.shouldrun = not os.path.exists(os.path.join(self.conf.get(["actlocation","dir"]), "act.stop"))
         if not self.shouldrun:
@@ -47,7 +47,7 @@ class aCTMain:
         # daemon operations
         if len(args) >= 2:
             self.daemon(args[1])
-         
+
         # process manager
         try:
             if self.shouldrun:
@@ -68,7 +68,7 @@ class aCTMain:
         except ImportError:
             print('Error: failed to import ARC. Are ARC python bindings installed?')
             sys.exit(1)
-            
+
         if arc.ARC_VERSION_MAJOR < 4:
             print('Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION)
             sys.exit(1)
@@ -96,8 +96,8 @@ class aCTMain:
                     sys.exit(1)
         except IOError:
             pass
-        
-            
+
+
         print('Starting aCT... ')
         # do double fork
         try:
@@ -108,11 +108,11 @@ class aCTMain:
         except OSError as e:
             print("fork #1 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
-    
+
         # decouple from parent environment
         os.setsid()
         os.umask(0)
-    
+
         # do second fork
         try:
             pid = os.fork()
@@ -122,7 +122,7 @@ class aCTMain:
         except OSError as e:
             print("fork #2 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
-    
+
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
@@ -161,7 +161,7 @@ class aCTMain:
             os.kill(int(pid), signal.SIGTERM)
         except OSError: # already stopped
             pass
-        
+
         os.remove(pidfile)
         print('Stopping aCT... ', end=' ')
         sys.stdout.flush()
@@ -180,7 +180,7 @@ class aCTMain:
         """
         Start or stop process
         """
-     
+
         if operation == 'start':
             self.start()
         elif operation == 'stop':
@@ -191,13 +191,13 @@ class aCTMain:
         else:
             print('Usage: python aCTMain.py [start|stop|restart]')
             sys.exit(1)
-                
-                
+
+
     def logrotate(self):
         """
         Run logrotate to rotate all logs
         """
-        
+
         logrotateconf = '''
             %s/*.log {
                 daily
@@ -206,11 +206,11 @@ class aCTMain:
                 rotate %s
                 nocreate
                 nocompress
-            }''' % (self.conf.get(["logger", "logdir"]), 
+            }''' % (self.conf.get(["logger", "logdir"]),
                     self.conf.get(["logger", "rotate"]))
         logrotatestatus = os.path.join(self.conf.get(["tmp", "dir"]), "logrotate.status")
-        
-        # Make a temp file with conf and call logrotate    
+
+        # Make a temp file with conf and call logrotate
         with tempfile.NamedTemporaryFile() as temp:
             temp.write(logrotateconf.encode('utf-8'))
             temp.flush()
@@ -220,7 +220,7 @@ class aCTMain:
             except subprocess.CalledProcessError as e:
                 self.log.warning("Failed to run logrotate: %s" % str(e))
 
-                
+
     def run(self):
         """
         Main loop

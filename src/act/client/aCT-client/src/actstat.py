@@ -94,10 +94,10 @@ if r.status_code == 200:
     # Print jobs
     for job in json_resp:
         for col in clicols:
-            fullKey = 'c_' + col 
+            fullKey = 'c_' + col
             print('{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]), end=' ')
         for col in arccols:
-            fullKey = 'a_' + col 
+            fullKey = 'a_' + col
             print('{:<{width}}'.format(job[fullKey], width=colsizes[fullKey]), end=' ')
         print()
 else:

@@ -135,7 +135,7 @@ def Submit(id, appjobid, jobdescstr, ucproxy, timeout):
     uc=usercred
 
     uc.CredentialString(ucproxy)
-    
+
     jobdescs = arc.JobDescriptionList()
     if not jobdescstr or not arc.JobDescription_Parse(jobdescstr, jobdescs):
         log.error("%s: Failed to prepare job description" % appjobid)
@@ -150,11 +150,11 @@ def Submit(id, appjobid, jobdescstr, ucproxy, timeout):
 
         # Adding an entity performs matchmaking and brokering
         targetsorter.addEntity(target)
-    
+
     if len(targetsorter.getMatchingTargets()) == 0:
         log.error("%s: no clusters satisfied job description requirements" % appjobid)
         return None
-        
+
     targetsorter.reset() # required to reset iterator, otherwise we get a seg fault
     selectedtarget = targetsorter.getCurrentTarget()
     # Job object will contain the submitted job
@@ -196,11 +196,11 @@ class aCTSubmitter(aCTProcess):
             fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['fairshare', 'proxyid'])
         else:
             fairshares = self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist=''", ['fairshare', 'proxyid'])
-            
+
         if not fairshares:
             self.log.info('Nothing to submit')
             return 0
-        
+
         # split by proxy for GU queues
         fairshares = list(set([(p['fairshare'], p['proxyid']) for p in fairshares]))
         # For proxy bug - see below
@@ -250,7 +250,7 @@ class aCTSubmitter(aCTProcess):
             except:
                 maxpriowaiting = 0
             self.log.info("Maximum priority of waiting jobs: %d" % maxpriowaiting)
-    
+
             # Query infosys - either local or index
             if self.cluster:
                 if self.cluster.find('://') != -1:
@@ -271,7 +271,7 @@ class aCTSubmitter(aCTProcess):
                 for g in giises:
                     # Specify explicitly EGIIS
                     infoendpoints.append(arc.Endpoint(str(g), arc.Endpoint.REGISTRY, "org.nordugrid.ldapegiis"))
-    
+
             # Set UserConfig credential for querying infosys
             proxystring = str(self.db.getProxy(proxyid))
             self.uc.CredentialString(proxystring)
@@ -284,7 +284,7 @@ class aCTSubmitter(aCTProcess):
             # parse target.ComputingService.ID for the CE hostname
             # target.ComputingShare.Name is the queue name
             targets = retriever.GetExecutionTargets()
-            
+
             # Filter only sites for this process
             queuelist=[]
             for target in targets:
@@ -294,7 +294,7 @@ class aCTSubmitter(aCTProcess):
                 # If EMI-ES infoendpoint, force EMI-ES submission
                 if infoendpoints[0].InterfaceName == 'org.ogf.glue.emies.resourceinfo' and target.ComputingEndpoint.InterfaceName != 'org.ogf.glue.emies.activitycreation':
                     self.log.debug("Rejecting target interface %s because not EMI-ES" % target.ComputingEndpoint.InterfaceName)
-                    continue                
+                    continue
                 # Check for matching host and queue
                 targethost = re.sub(':arex$', '', re.sub('urn:ogf:ComputingService:', '', target.ComputingService.ID))
                 targetqueue = target.ComputingShare.Name
@@ -345,15 +345,15 @@ class aCTSubmitter(aCTProcess):
                         self.log.debug("Adding target %s:%s" % (targethost, targetqueue))
                     else:
                         self.log.info("%s/%s already at limit of submitted jobs for fairshare %s" % (targethost, targetqueue, fairshare))
-    
+
             # check if any queues are available, if not leave and try again next time
             if not queuelist:
                 self.log.info("No free queues available")
                 self.db.Commit()
                 continue
-    
+
             self.log.info("start submitting")
-    
+
             # Just run one thread for each job in sequence. Strange things happen
             # when trying to create a new UserConfig object for each thread.
             tasks = []
@@ -440,31 +440,31 @@ class aCTSubmitter(aCTProcess):
                                            "tarcstate": self.db.getTimeStamp()})
 
     def processToCancel(self):
-        
+
         if self.cluster:
             jobstocancel = self.db.getArcJobs("arcstate='tocancel' and (cluster='{0}' or clusterlist like '%{0}' or clusterlist like '%{0},%')".format(self.cluster))
         else:
             jobstocancel = self.db.getArcJobs("arcstate='tocancel' and cluster=''")
         if not jobstocancel:
             return
-        
+
         self.log.info("Cancelling %i jobs" % sum(len(v) for v in list(jobstocancel.values())))
         for proxyid, jobs in list(jobstocancel.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
-                
+
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             job_supervisor.Cancel()
-            
+
             notcancelled = job_supervisor.GetIDsNotProcessed()
-    
+
             for (id, appjobid, job, created) in jobs:
 
                 if not job.JobID:
                     # Job not submitted
                     self.log.info("%s: Marking unsubmitted job cancelled" % appjobid)
                     self.db.updateArcJob(id, {"arcstate": "cancelled",
-                                              "tarcstate": self.db.getTimeStamp()})                    
+                                              "tarcstate": self.db.getTimeStamp()})
 
                 elif job.JobID in notcancelled:
                     if job.State == arc.JobState.UNDEFINED:
@@ -486,20 +486,20 @@ class aCTSubmitter(aCTProcess):
                                               "tarcstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
-        
+
         if self.cluster:
             jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and cluster='"+self.cluster+"'")
         else:
             jobstoresubmit = self.db.getArcJobs("arcstate='toresubmit' and clusterlist=''")
- 
+
         for proxyid, jobs in list(jobstoresubmit.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
-            
+
             # Clean up jobs which were submitted
             jobstoclean = [job[2] for job in jobs if job[2].JobID]
-            
+
             if jobstoclean:
-                
+
                 # Put all jobs to cancel, however the supervisor will only cancel
                 # cancellable jobs and remove the rest so there has to be 2 calls
                 # to Clean()
@@ -507,7 +507,7 @@ class aCTSubmitter(aCTProcess):
                 job_supervisor.Update()
                 self.log.info("Cancelling %i jobs" % len(jobstoclean))
                 job_supervisor.Cancel()
-                
+
                 processed = job_supervisor.GetIDsProcessed()
                 notprocessed = job_supervisor.GetIDsNotProcessed()
                 # Clean the successfully cancelled jobs
@@ -516,17 +516,17 @@ class aCTSubmitter(aCTProcess):
                     self.log.info("Cleaning %i jobs" % len(processed))
                     if not job_supervisor.Clean():
                         self.log.warning("Failed to clean some jobs")
-                
+
                 # New job supervisor with the uncancellable jobs
                 if notprocessed:
                     notcancellable = [job for job in jobstoclean if job.JobID in notprocessed]
                     job_supervisor = arc.JobSupervisor(self.uc, notcancellable)
                     job_supervisor.Update()
-                    
+
                     self.log.info("Cleaning %i jobs" % len(notcancellable))
                     if not job_supervisor.Clean():
                         self.log.warning("Failed to clean some jobs")
-            
+
             # Empty job to reset DB info
             j = arc.Job()
             for (id, appjobid, job, created) in jobs:
@@ -535,11 +535,11 @@ class aCTSubmitter(aCTProcess):
                                           "cluster": None}, j)
 
     def processToRerun(self):
-        
+
         if not self.cluster:
             # Rerun only applies to job which have been submitted
             return
-        
+
         jobstorerun = self.db.getArcJobs("arcstate='torerun' and cluster='"+self.cluster+"'")
         if not jobstorerun:
             return
@@ -552,7 +552,7 @@ class aCTSubmitter(aCTProcess):
         self.log.info("Resuming %i jobs" % sum(len(v) for v in list(jobstorerun.values())))
         for proxyid, jobs in list(jobstorerun.items()):
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
-    
+
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             # Renew proxy to be safe
@@ -560,9 +560,9 @@ class aCTSubmitter(aCTProcess):
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             job_supervisor.Resume()
-            
+
             notresumed = job_supervisor.GetIDsNotProcessed()
-    
+
             for (id, appjobid, job, created) in jobs:
                 if job.JobID in notresumed:
                     self.log.error("%s: Could not resume job %s" % (appjobid, job.JobID))
@@ -596,4 +596,4 @@ if __name__ == '__main__':
     asb=aCTSubmitter()
     asb.run()
     asb.finish()
-    
+

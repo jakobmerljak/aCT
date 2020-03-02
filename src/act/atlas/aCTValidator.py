@@ -47,7 +47,7 @@ class aCTValidator(aCTATLASProcess):
 
     def copyFinishedFiles(self, arcjobid, extractmetadata):
         """
-        - if extractmetadata: (normal arc jobs, not true pilot jobs) 
+        - if extractmetadata: (normal arc jobs, not true pilot jobs)
            - store heartbeat file under tmp/pickle or under harvester access
              point if specified
         - copy .job.log file to jobs/date/pandaqueue/pandaid.out
@@ -122,7 +122,7 @@ class aCTValidator(aCTATLASProcess):
                 shutil.move(gmlogerrors, arcjoblog)
                 os.chmod(arcjoblog, 0o644)
             except:
-                self.log.error("Failed to copy %s" % gmlogerrors) 
+                self.log.error("Failed to copy %s" % gmlogerrors)
 
         pilotlog = aj['stdout']
         if not pilotlog and os.path.exists(localdir):
@@ -270,7 +270,7 @@ class aCTValidator(aCTATLASProcess):
                                                  (datapointlist[i].GetURL().str(), surllist[i]['arcjobid']))
                             elif surllist[i]['checksum'] != files[i].GetCheckSum():
                                 self.log.warning("File %s for %s: checksum on storage (%s) differs from expected checksum (%s)" %
-                                                 (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'], 
+                                                 (datapointlist[i].GetURL().str(), surllist[i]['arcjobid'],
                                                   files[i].GetCheckSum(), surllist[i]['checksum']))
                                 result[surllist[i]['arcjobid']] = self.failed
                                 continue
@@ -413,7 +413,7 @@ class aCTValidator(aCTATLASProcess):
                 del eventsdone[event]
 
         # Update DB with done events
-        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in list(eventsdone.items()) if v == 'finished']), len([k for k,v in list(eventsdone.items()) if v == 'failed']), len(eventranges)))                
+        self.log.info("%s: %d events successful, %d failed out of %d" % (pandaid, len([k for k,v in list(eventsdone.items()) if v == 'finished']), len([k for k,v in list(eventsdone.items()) if v == 'failed']), len(eventranges)))
         finaleventranges = []
         for e in eventranges:
             if e['eventRangeID'] in eventsdone:
@@ -429,7 +429,7 @@ class aCTValidator(aCTATLASProcess):
         Check for jobs with actpandastatus tovalidate and pandastatus running
         Check if the output files in pilot heartbeat json are valid.
         If yes, move to actpandastatus to finished, if not, move pandastatus
-        and actpandastatus to failed. 
+        and actpandastatus to failed.
         '''
 
         # get all jobs with pandastatus running and actpandastatus tovalidate
@@ -491,7 +491,7 @@ class aCTValidator(aCTATLASProcess):
 
                 select = "arcjobid='"+str(id)+"'"
                 desc = {"pandastatus": "finished", "actpandastatus": "finished"}
-                self.dbpanda.updateJobsLazy(select, desc) 
+                self.dbpanda.updateJobsLazy(select, desc)
                 if not self.copyFinishedFiles(id, True):
                     # id was gone already
                     continue
@@ -516,7 +516,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         Check for jobs with actpandastatus toclean and pandastatus transferring.
         Delete the output files in pilot heartbeat json
-        Move actpandastatus to failed. 
+        Move actpandastatus to failed.
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
         select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 1000" % self.sitesselect
@@ -589,7 +589,7 @@ class aCTValidator(aCTATLASProcess):
         '''
         Check for jobs with actpandastatus toresubmit and pandastatus starting.
         Delete the output files in pilot heartbeat json
-        Move actpandastatus to starting. 
+        Move actpandastatus to starting.
         '''
 
         # First check for resubmitting jobs with no arcjob id defined
@@ -625,7 +625,7 @@ class aCTValidator(aCTATLASProcess):
 
         # TODO: make data transfer separate from main validator thread
         self.downloadSmallFiles(killedbymanual)
-        # Cancel the jobs manually set toresubmit (TODO: when the jobs eventually go 
+        # Cancel the jobs manually set toresubmit (TODO: when the jobs eventually go
         # to cancelled the arc id will not be in pandajobs any more so they will
         # never be cleaned up)
         for job in killedbymanual:
@@ -683,7 +683,7 @@ class aCTValidator(aCTATLASProcess):
                     # If we couldn't clean outputs the next try of the job will
                     # also fail. Better to return to panda for an increased
                     # attempt no. Setting to toclean and pandastatus=transferring
-                    # means it will be processed by cleanFailedJobs() so don't 
+                    # means it will be processed by cleanFailedJobs() so don't
                     # clean the arc job here
                     select = "arcjobid='"+str(id)+"'"
                     desc = {"actpandastatus": "toclean", "pandastatus": "transferring"}

@@ -13,13 +13,13 @@ class aCTStatus(aCTProcess):
     Class for checking the status of submitted Condor jobs and updating their
     status in the DB.
     '''
-    
+
     def __init__(self):
-        
-        aCTProcess.__init__(self) 
+
+        aCTProcess.__init__(self)
 
         self.schedd = htcondor.Schedd()
-        
+
         self.condorjobstatemap = {0: 'Undefined', # used before real state is known
                                   1: 'Idle',
                                   2: 'Running',
@@ -28,7 +28,7 @@ class aCTStatus(aCTProcess):
                                   5: 'Held',
                                   6: 'Transferring Output',
                                   7: 'Suspended'}
-        
+
         # store the last checkJobs time to avoid overloading of GIIS
         self.checktime=time.time()
 
@@ -37,7 +37,7 @@ class aCTStatus(aCTProcess):
         '''
         Query all running jobs
         '''
-        
+
         # minimum time between checks
         if time.time() < self.checktime + int(self.conf.get(['jobs', 'checkmintime'])):
             self.log.debug("mininterval not reached")
@@ -140,7 +140,7 @@ class aCTStatus(aCTProcess):
                     condorstate = 'failed'
             elif jobstatus in (5, 7):
                 condorstate = 'holding'
-            
+
             # Filter out fields added by condor that we are not interested in
             jobdesc = dict([(k,v) for (k,v) in list(updatedjob.items()) if k in attrs and v != classad.Value.Undefined])
             # Undefined is 2 in condor which means JobStatus running is ignored
@@ -152,9 +152,9 @@ class aCTStatus(aCTProcess):
             jobdesc['JobCurrentStartDate'] = self.dbcondor.getTimeStamp(jobdesc.get('JobCurrentStartDate', 0))
             self.log.debug(str(jobdesc))
             self.dbcondor.updateCondorJob(job['id'], jobdesc)
-                
+
         self.log.info('Done')
-        
+
     def checkLostJobs(self):
         '''
         Move jobs with a long time since status update to lost
@@ -164,7 +164,7 @@ class aCTStatus(aCTProcess):
         jobs=self.dbcondor.getCondorJobsInfo("condorstate in ('submitted', 'running', 'cancelling', 'finished') and " \
                                        "cluster='"+self.cluster+"' and "+self.dbcondor.timeStampLessThan("tcondorstate", 172800),
                                        ['id', 'appjobid', 'ClusterId', 'condorstate'])
-        
+
         for job in jobs:
             if job['condorstate'] == 'cancelling':
                 self.log.warning("%s: Job %s lost from information system, marking as cancelled" % (job['appjobid'], job['ClusterId']))
@@ -180,14 +180,14 @@ class aCTStatus(aCTProcess):
         maxtimestate can be set in arc config file for any condor JobStatus,
         e.g. maxtimeidle, maxtimerunning
         '''
-        
+
         # Loop over possible states
         # Note: MySQL is case-insensitive. Need to watch out with other DBs
         for jobstateid, jobstate in list(self.condorjobstatemap.items()):
             maxtime = self.conf.get(['jobs', 'maxtime%s' % jobstate.lower()])
             if not maxtime:
                 continue
-            
+
             # be careful not to cancel jobs that are stuck in cleaning
             select = "JobStatus='%s' and %s" % (jobstateid, self.dbcondor.timeStampLessThan("tstate", maxtime))
             jobs = self.dbcondor.getCondorJobsInfo(select, columns=['id', 'ClusterId', 'appjobid', 'condorstate'])
@@ -210,8 +210,8 @@ class aCTStatus(aCTProcess):
                 else:
                     # Otherwise delete it
                     self.dbcondor.deleteCondorJob(job['id'])
-        
-    
+
+
     def process(self):
         # check job status
         self.checkJobs()

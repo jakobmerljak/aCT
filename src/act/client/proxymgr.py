@@ -73,7 +73,7 @@ class ProxyManager(object):
 
         Args:
             proxyPath: A string with path to proxy file.
-        
+
         Returns:
             A tuple with proxy string, dn and expiry time.
         """

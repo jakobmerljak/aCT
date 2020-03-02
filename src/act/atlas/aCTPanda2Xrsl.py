@@ -345,7 +345,7 @@ class aCTPanda2Xrsl:
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
                 if self.sitename in []:
-                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename]) 
+                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename])
                 else:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;cache=invariant/replicas", scope, filename])
                 inf[filename] = lfn

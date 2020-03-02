@@ -8,7 +8,7 @@ import urllib.request, urllib.error
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 class aCTAGISFetcher(aCTATLASProcess):
-                 
+
     def __init__(self):
         aCTATLASProcess.__init__(self)
         self.queues = self.conf.get(['agis','server'])
@@ -36,7 +36,7 @@ class aCTAGISFetcher(aCTATLASProcess):
         urldata = response.read().decode('utf-8')
         self.log.debug("Fetched %s" % url)
         return urldata
-    
+
     def storeToFile(self, agisjson, filename):
         if not agisjson:
             return
@@ -55,7 +55,7 @@ class aCTAGISFetcher(aCTATLASProcess):
     def process(self):
         """
         Main loop
-        """        
+        """
         self.log.info("Running")
         # todo: check if agis.json exists and return if too new
         # fetch data from AGIS
@@ -66,7 +66,7 @@ class aCTAGISFetcher(aCTATLASProcess):
         self.storeToFile(osesjson, self.osesfile)
         # temporary hack to avoid too much agis fetching
         time.sleep(600)
-        
+
 if __name__ == '__main__':
     aaf=aCTAGISFetcher()
     aaf.run()

@@ -69,7 +69,7 @@ class aCTDBMySQL(aCTDBMS):
         select="GET_LOCK('"+lock_name+"',"+str(timeout)+")"
         c.execute("SELECT "+select)
         return c.fetchone()[select]
-    
+
     def releaseMutexLock(self, lock_name):
         """
         Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.

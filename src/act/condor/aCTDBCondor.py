@@ -46,7 +46,7 @@ class aCTDBCondor(aCTDB):
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
-        # current time for each change. 
+        # current time for each change.
         create="""
             CREATE TABLE condorjobs (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -75,7 +75,7 @@ class aCTDBCondor(aCTDB):
             CompletionDate TIMESTAMP
             )
             """
-            
+
         # First check if table already exists
         c = self.db.getCursor()
         c.execute("show tables like 'condorjobs'")
@@ -102,7 +102,7 @@ class aCTDBCondor(aCTDB):
         Add a new job description (ClassAd object) for the Condor engine to
         process.
         '''
-        
+
         if not clusterlist:
             self.log.error('%s: clusterlist cannot be empty for condor jobs' % appjobid)
             return None
@@ -115,12 +115,12 @@ class aCTDBCondor(aCTDB):
 
         # todo: find some useful default for proxyid
         c = self.db.getCursor()
-        
+
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdescstr])
         c.execute("SELECT LAST_INSERT_ID()")
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
-        
+
         desc = {}
         desc['created'] = self.getTimeStamp()
         desc['condorstate'] = "tosubmit"
@@ -141,7 +141,7 @@ class aCTDBCondor(aCTDB):
         row = c.fetchone()
         self.Commit()
         return row
-        
+
 
     def deleteCondorJob(self, id):
         '''
@@ -201,7 +201,7 @@ class aCTDBCondor(aCTDB):
     def getCondorJobInfo(self, id, columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
-        ''' 
+        '''
         c = self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM condorjobs WHERE id="+str(id))
         row = c.fetchone()
@@ -238,7 +238,7 @@ class aCTDBCondor(aCTDB):
         if not row:
             return None
         return row['jobdescription']
-    
+
     def getActiveClusters(self):
         '''
         Return a list and count of clusters

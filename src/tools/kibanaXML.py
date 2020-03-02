@@ -41,7 +41,7 @@ class xml_doc:
         tmp_dict['desc'] = desc
         tmp_dict['value'] = value
         self.data.append( tmp_dict )
-    
+
     def add_intervention(self, start, length, message) :
         tmp_dict = {}
         tmp_dict['start'] = start

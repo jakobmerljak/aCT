@@ -7,7 +7,7 @@ from act.common.aCTProcess import aCTProcess
 
 class aCTFetcher(aCTProcess):
     '''
-    Moves finished/failed jobs to the next state 
+    Moves finished/failed jobs to the next state
     '''
 
     def fetchJobs(self, condorstate, nextcondorstate):

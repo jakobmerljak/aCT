@@ -82,7 +82,7 @@ class aCTAutopilotSent(aCTATLASProcess):
         if not jobs:
             return
 
-        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs])))
 
         changed_pstatus = False
         if pstatus == 'sent':
@@ -117,7 +117,7 @@ class aCTAutopilotSent(aCTATLASProcess):
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
-        
+
         for t in tlist:
             if t.result == None or 'StatusCode' not in t.result:
                 # Strange response from panda, try later

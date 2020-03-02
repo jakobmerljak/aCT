@@ -19,9 +19,9 @@ class aCTProcess:
     Base class for all aCT processes. Sets up logging, configuration and ARC
     environment and provides basic start and stop functionality.
     '''
-    
+
     def __init__(self):
-        
+
         # Get agent name from /path/to/aCTAgent.py
         self.name = os.path.basename(sys.argv[0])[:-3]
         self.cluster = ''
@@ -30,7 +30,7 @@ class aCTProcess:
             self.cluster = sys.argv[1]
             url = urlparse(self.cluster)
             clusterhost = url.netloc.split(':')[0] if url.netloc else url.path
-        
+
         # logger
         logname = '%s-%s' % (self.name, clusterhost) if clusterhost else self.name
         self.logger=aCTLogger.aCTLogger(logname, cluster=self.cluster)
@@ -45,7 +45,7 @@ class aCTProcess:
         # TODO: subclasses for arc and condor with respective DBs defined there
         self.db=aCTDBArc.aCTDBArc(self.log)
         self.dbcondor=aCTDBCondor(self.log)
-        
+
         # ARC Configuration
         # Credentials will be set by ARC agents for each job or set of jobs
         # but for now set default credential in config to keep ARC happy

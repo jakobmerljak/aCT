@@ -66,14 +66,14 @@ class aCTAGISParser:
             siteinfo['enabled'] = True
             sites[sitename] = siteinfo
         self.log.info("Parsed sites from config: %s" % str(list(sites.keys())))
-        return sites 
+        return sites
 
     def _parseAgisJson(self, agisfilename, pilotmgr, pilotver):
         with open(agisfilename) as f:
             agisjson = json.load(f)
         sites = dict([(agisjson[entry]['panda_resource'], dict(list(agisjson[entry].items())+[('schedconfig', entry)])) for entry in agisjson if 'panda_resource' in agisjson[entry]])
         for sitename, siteinfo in list(sites.items()):
-            siteinfo['push'] = True # TODO configure in AGIS 
+            siteinfo['push'] = True # TODO configure in AGIS
             if 'schedconfig' not in siteinfo:
                 siteinfo['schedconfig'] = sitename
             if (pilotmgr == 'all' or siteinfo['pilot_manager'] == pilotmgr) and \
@@ -122,7 +122,7 @@ class aCTAGISParser:
                 if maxwalltime <= 0:
                     maxwalltime = 60*24*7
                 else:
-                    maxwalltime = min(maxwalltime, 60*24*7) 
+                    maxwalltime = min(maxwalltime, 60*24*7)
                 siteinfo['maxwalltime'] = maxwalltime
             else:
                 siteinfo['maxwalltime'] = min(int(siteinfo['maxtime'])/60, 60*24*7)
@@ -135,7 +135,7 @@ class aCTAGISParser:
                 if maxcputime <= 0:
                     maxcputime = 60*24*7
                 else:
-                    maxcputime = min(maxcputime, 60*24*7) 
+                    maxcputime = min(maxcputime, 60*24*7)
                 siteinfo['maxcputime'] = maxcputime
             else:
                 siteinfo['maxcputime'] = min(int(siteinfo['maxcputime']), 60*24*7)
@@ -210,7 +210,7 @@ class aCTAGISParser:
                 agismtime = os.stat(agisfile).st_mtime
                 break
             except:
-                i += 1 
+                i += 1
                 if i > 2:
                     self.log.critical("Couldn't get AGIS json")
                     return {}

@@ -47,7 +47,7 @@ def getPandaDone():
 
 def getPandaDoneFailed():
     return str(pandadb.getNJobs("actpandastatus='donefailed'"))
-    
+
 def getAvailability():
 
     # Check autopilot is running

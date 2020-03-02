@@ -68,7 +68,7 @@ class aCTATLASStatusCondor(aCTATLASProcess):
             desc['actpandastatus'] = 'cancelled'
             self.dbpanda.updateJobsLazy(select, desc)
 
-            # Finally cancel the condor job                
+            # Finally cancel the condor job
             self.dbcondor.updateCondorJob(job['condorjobid'], {'condorstate': 'tocancel'})
 
         self.dbpanda.Commit()

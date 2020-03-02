@@ -69,7 +69,7 @@ class ClientDB(aCTDB):
         except:
             self.log.exception('Error creating clientjobs table')
             raise
-        
+
         return True
 
     def deleteTables(self):

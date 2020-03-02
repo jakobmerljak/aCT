@@ -53,7 +53,7 @@ class JobManager(object):
         clidb: An object that is interface to client engine's table.
         tmpdir: A string with path to tmp directory.
     """
-    
+
     def __init__(self):
         """Initialize object's attributes."""
         self.logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class JobManager(object):
         # TODO: if and when sites from arc config are used, move everything
         # that uses arc config to this class
         self.tmpdir = arcconf.get(['tmp', 'dir'])
-    
+
     def checkProxy(self, proxyid):
         """
         Check if proxy exists in database.
@@ -92,7 +92,7 @@ class JobManager(object):
         """Return a list of column names from ARC engine's table."""
         # TODO: hardcoded
         return self.clidb.getColumns('arcjobs')
-    
+
     def cleanJobs(self, proxyid, jobids=[], state_filter='', name_filter=''):
         """
         Clean given jobs that match optional filters.

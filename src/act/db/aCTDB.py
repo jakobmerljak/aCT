@@ -20,7 +20,7 @@ class aCTDB(object):
         else:
             s="*"
         return s
-    
+
     def getTimeStamp(self, seconds=None):
         if seconds:
             return datetime.datetime.utcfromtimestamp(seconds).isoformat()

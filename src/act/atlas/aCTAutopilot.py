@@ -63,7 +63,7 @@ class aCTAutopilot(aCTATLASProcess):
 
     def __init__(self):
         aCTATLASProcess.__init__(self)
-        
+
         # Get DN from configured proxy file
         uc = arc.UserConfig()
         uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
@@ -76,7 +76,7 @@ class aCTAutopilot(aCTATLASProcess):
         # Map the site type to a proxy id in proxies table
         # In future for analysis the id will change once the job is picked up
         self.proxymap = {}
-        
+
         actp = aCTProxy.aCTProxy(self.log)
         for role in self.arcconf.getList(['voms', 'roles', 'item']):
             attr = '/atlas/Role='+role
@@ -90,7 +90,7 @@ class aCTAutopilot(aCTATLASProcess):
                 role = 'analysis'
             self.pandas[role] = aCTPanda.aCTPanda(self.log, proxyfile)
             self.proxymap[role] = proxyid
-            
+
         # queue interval
         self.queuestamp=0
         self.nthreads=int(self.conf.get(["panda","threads"]))
@@ -114,8 +114,8 @@ class aCTAutopilot(aCTATLASProcess):
         jobs=self.dbpanda.getJobs("pandastatus='"+pstatus+"' and sendhb=1 and ("+self.dbpanda.timeStampLessThan("theartbeat", self.conf.get(['panda','heartbeattime']))+" or modified > theartbeat) limit 1000", columns)
         if not jobs:
             return
-        
-        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
+
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs])))
 
         changed_pstatus = False
         if pstatus == 'sent':
@@ -152,7 +152,7 @@ class aCTAutopilot(aCTATLASProcess):
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
-        
+
         for t in tlist:
             if t.result == None or 'StatusCode' not in t.result:
                 # Strange response from panda, try later
@@ -195,7 +195,7 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
 
-        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs])))
 
         changed_pstatus = False
         if pstatus == 'sent':
@@ -287,7 +287,7 @@ class aCTAutopilot(aCTATLASProcess):
         if not jobs:
             return
 
-        self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs]))) 
+        self.log.info("Updating panda for %d finished jobs (%s)" % (len(jobs), ','.join([str(j['pandaid']) for j in jobs])))
 
         self.updateEvents(jobs)
         tlist = []
@@ -307,7 +307,7 @@ class aCTAutopilot(aCTATLASProcess):
                     jd['endTime'] = datetime.datetime.utcnow()
                 self.dbpanda.updateJob(j['pandaid'], jd)
                 continue
-            
+
             # Cancelled jobs have no heartbeat info
             if j['actpandastatus'] == 'cancelled':
                 jobinfo = aCTPandaJob(jobinfo = {'jobId': j['pandaid'], 'state': 'failed'})
@@ -323,7 +323,7 @@ class aCTAutopilot(aCTATLASProcess):
                 except Exception as x:
                     self.log.error('%s: %s' % (j['pandaid'], x))
                     # Send some basic info back to panda
-                    info = {'jobId': j['pandaid'], 'state': j['pandastatus']} 
+                    info = {'jobId': j['pandaid'], 'state': j['pandastatus']}
                     jobinfo = aCTPandaJob(jobinfo=info)
                     jobinfo.errorCode = 9000
                     jobinfo.errorDiag = 'Job failed for unknown reason'
@@ -333,7 +333,7 @@ class aCTAutopilot(aCTATLASProcess):
             self.log.debug('%s: final heartbeat: %s' % (j['pandaid'], jobinfo.dictionary()))
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],j['pandastatus'],jobinfo.dictionary())
             tlist.append(t)
-        
+
         aCTUtils.RunThreadsSplit(tlist, self.nthreads)
 
         for t in tlist:
@@ -461,7 +461,7 @@ class aCTAutopilot(aCTATLASProcess):
 
                 self.log.info('%s: updating %i event ranges: %s' % (j['pandaid'], len(eventrangestoupdate), eventrangestoupdate))
                 if harvesteraccesspoint:
-                    self.log.info('%s: Dumping processed event ranges to %s' % 
+                    self.log.info('%s: Dumping processed event ranges to %s' %
                                  (j['pandaid'], os.path.join(harvesteraccesspoint, 'worker_updateevents.json')))
                     harvesterdict = {j['pandaid']: eventrangestoupdate}
                     with open(os.path.join(harvesteraccesspoint, 'worker_updateevents.json'), 'w') as f:
@@ -488,7 +488,7 @@ class aCTAutopilot(aCTATLASProcess):
         """
         Sanity checks when restarting aCT. Check for nonexistent jobs... TODO
         """
-        
+
         # Does it matter which proxy is used? Assume no
         panda = list(self.pandas.values())[0]
         pjobs = panda.queryJobInfo()
@@ -497,7 +497,7 @@ class aCTAutopilot(aCTATLASProcess):
         if len(pjobs) == 0:
             self.log.info('No panda jobs found')
             return
-        
+
         pjids=[]
         for j in pjobs:
             if j['jobStatus'] == 'sent' or j['jobStatus'] == 'running' or j['jobStatus'] == 'transferring' or j['jobStatus'] == 'starting' :
@@ -529,13 +529,13 @@ class aCTAutopilot(aCTATLASProcess):
                 count+=1
                 panda.updateStatus(j['PandaID'],'failed')
         self.log.info("missing jobs: %d removed" % count)
-            
-            
+
+
     def updateArchive(self):
         """
         Move old jobs older than 1 day to archive table
         """
-        
+
         # modified column is reported in local time so may not be exactly one day
         select = self.dbpanda.timeStampLessThan('modified', 60*60*24)
         select += ' and (actpandastatus="done" or actpandastatus="donefailed" or actpandastatus="donecancelled")'
@@ -543,7 +543,7 @@ class aCTAutopilot(aCTATLASProcess):
         jobs = self.dbpanda.getJobs(select, columns)
         if not jobs:
             return
-        
+
         self.log.info('Archiving %d jobs' % len(jobs))
         for job in jobs:
             self.log.debug('Archiving panda job %d' % job['pandaid'])
@@ -556,13 +556,13 @@ class aCTAutopilot(aCTATLASProcess):
             else:
                 job['starttime'] = self.dbpanda.getTimeStamp()
                 job['endtime'] = self.dbpanda.getTimeStamp()
-            
+
             # archive table doesn't have modified
             jobarchive = job.copy()
             del jobarchive['modified']
             self.dbpanda.insertJobArchiveLazy(jobarchive)
             self.dbpanda.deleteJob(job['pandaid']) # commit is called here
-        
+
 
     def process(self):
         """
@@ -571,22 +571,22 @@ class aCTAutopilot(aCTATLASProcess):
         self.setSites()
 
         # Getting new jobs is now done in aCTPandaGetJobs
-        
+
         # Update all jobs currently in the system
         self.updatePandaHeartbeatBulk('starting')
         self.updatePandaHeartbeat('running')
         self.updatePandaHeartbeat('transferring')
-        
+
         # Update jobs which finished
         self.updatePandaFinishedPilot()
-        
+
         # Move old jobs to archive - every hour
         if time.time()-self.starttime > 3600:
             self.log.info("Checking for jobs to archive")
             self.updateArchive()
             self.starttime = time.time()
 
-        
+
 if __name__ == '__main__':
     am=aCTAutopilot()
     am.run()

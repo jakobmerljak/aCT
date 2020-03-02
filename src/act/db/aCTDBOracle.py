@@ -26,7 +26,7 @@ class aCTDBOracle(aCTDBMS):
         """
         # don't know how to do mutex in oracle
         return None
-    
+
     def releaseMutexLock(self, lock_name):
         """
         Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.

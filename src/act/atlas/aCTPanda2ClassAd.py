@@ -50,9 +50,9 @@ class aCTPanda2ClassAd:
         self.logdir = os.path.join(atlasconf.get(['joblog','dir']), today, sitename)
         try: os.makedirs(self.logdir)
         except: pass
-        
+
         self.logurl = '%s/%s/%s' % (atlasconf.get(['joblog', 'urlprefix']), today, sitename)
-        
+
         # APFmon
         self.monitorurl = atlasconf.get(["monitor", "apfmon"])
 
@@ -129,7 +129,7 @@ class aCTPanda2ClassAd:
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
         self.memory = memory
-        
+
         self.classad['+maxMemory'] = str(memory)
 
     def setExecutable(self):
@@ -192,7 +192,7 @@ class aCTPanda2ClassAd:
         # Set schedulerID and job log URL
         environment.append('PANDA_JSID=%s' % self.schedulerid)
         environment.append('GTAG=%s/%s.out' % (self.logurl, self.pandaid))
-        
+
         # Vars for APFMon
         environment.append('APFCID=%s' % self.pandajobid)
         # harvester prepends "harvester-" to the schedulerid but APFMon uses the original one
@@ -202,13 +202,13 @@ class aCTPanda2ClassAd:
         environment.append('FACTORYQUEUE=%s' % self.sitename)
 
         self.classad['Environment2'] = '"%s"' % ' '.join(environment)
-        
+
 
     def setProxy(self):
         self.classad['X509UserProxy'] = self.proxy
 
     def setAttrs(self):
-        
+
         # Set CREAM attributes. Times are in minutes.
         if len([e for e in self.siteinfo['endpoints'] if e.startswith('cream')]) > 0:
             creamattrs = 'CpuNumber=%d;WholeNodes=false;SMPGranularity=%d;' % (self.ncores, self.ncores)

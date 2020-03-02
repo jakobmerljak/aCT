@@ -110,7 +110,7 @@ class aCTReport:
                 try:
                     rep[site][state]+=1
                     if state == "running":
-                        rep[site]["slots"]+=1*corecount 
+                        rep[site]["slots"]+=1*corecount
                 except:
                     try:
                         rep[site][state]=1
@@ -123,16 +123,16 @@ class aCTReport:
                         rep[site]={}
                         rep[site][state]=1
                         if state == "running":
-                            rep[site]["slots"]=corecount 
+                            rep[site]["slots"]=corecount
                 try:
                     rtot[state]+=1
                     if state == "running":
-                        rtot["slots"]+=1*corecount 
+                        rtot["slots"]+=1*corecount
                 except:
                     rtot[state]=1
                     if state == "running":
-                        rtot["slots"]=corecount 
-        
+                        rtot["slots"]=corecount
+
         self.log("All Panda jobs: %d" % sum([v for k,v in list(rtot.items()) if k != 'slots']))
         self.log("%29s %s" % (' ', ' '.join(['%9s' % s for s in states])))
 

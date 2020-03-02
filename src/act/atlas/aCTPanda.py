@@ -50,7 +50,7 @@ class aCTPanda:
             return None
 
         return data
-    
+
     def getJob(self,siteName,prodSourceLabel=None,getEventRanges=True):
         node={}
         node['siteName']=siteName
@@ -69,7 +69,7 @@ class aCTPanda:
         except Exception as x:
             self.log.error(x)
             return (None,None,None,None)
-        
+
         self.log.info('panda returned %s' % urldesc)
         status = urldesc['StatusCode'][0]
         if status == '20':
@@ -83,13 +83,13 @@ class aCTPanda:
                 node = {}
                 node['pandaID'] = urldesc['PandaID'][0]
                 node['jobsetID'] = urldesc['jobsetID'][0]
-                node['taskID'] = urldesc['taskID'][0] 
+                node['taskID'] = urldesc['taskID'][0]
                 node['nRanges'] = 500 # TODO: configurable?
                 if siteName == 'BOINC-ES':
                     node['nRanges'] = 100
                 eventranges = self.getEventRanges(node)
         elif status == '60':
-            self.log.error('Failed to contact Panda, proxy may have expired')             
+            self.log.error('Failed to contact Panda, proxy may have expired')
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         self.log.debug("%s %s" % (pid,urldesc))
@@ -111,7 +111,7 @@ class aCTPanda:
         if status == '0':
             return urldesc['eventRanges'][0]
         if status == '60':
-            self.log.error('Failed to contact Panda, proxy may have expired')             
+            self.log.error('Failed to contact Panda, proxy may have expired')
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         return None
@@ -155,7 +155,7 @@ class aCTPanda:
             self.log.error(x)
             return None
         return urldesc
-        
+
 
     def updateStatus(self,pandaId,state,desc={}):
         node={}
@@ -211,7 +211,7 @@ class aCTPanda:
 
 
 if __name__ == '__main__':
-    
+
     from act.common.aCTLogger import aCTLogger
     logger = aCTLogger('test')
     log = logger()

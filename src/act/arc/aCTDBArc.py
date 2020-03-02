@@ -82,7 +82,7 @@ class aCTDBArc(aCTDB):
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
-        # current time for each change. 
+        # current time for each change.
         create="""CREATE TABLE arcjobs (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             modified TIMESTAMP,
@@ -290,7 +290,7 @@ class aCTDBArc(aCTDB):
     def getArcJobInfo(self,id,columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
-        ''' 
+        '''
         c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE id="+str(id))
         row=c.fetchone()

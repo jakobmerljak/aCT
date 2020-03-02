@@ -102,7 +102,7 @@ class Client2Arc(object):
                     submitted += state['COUNT(arcstate)']
             #self.log.debug('{} jobs running for proxyid {}'.format(running, proxyid))
             #self.log.debug('{} jobs submitted for proxyid {}'.format(submitted, proxyid))
-            
+
             if submitted < max(0.2 * running, 100): # TODO: HARDCODED
                 self.insertNewJobs(proxyid, 20)
 
@@ -115,7 +115,7 @@ class Client2Arc(object):
 
         Returns:
             A list of dictionaries where every dictionary has a state name
-            and number of jobs in that state. State name is mapped by 
+            and number of jobs in that state. State name is mapped by
             'arcstate', number of jobs by 'COUNT(arcstate). For example:
 
             [{'arcstate': 'toclean', 'COUNT(arcstate)': 10},
@@ -127,7 +127,7 @@ class Client2Arc(object):
                 'SELECT arcstate,COUNT(arcstate) \
                 FROM arcjobs \
                 WHERE {} \
-                GROUP BY arcstate'.format(select) 
+                GROUP BY arcstate'.format(select)
             )
         except:
             # possible double log

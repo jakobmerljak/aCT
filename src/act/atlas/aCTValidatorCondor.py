@@ -25,7 +25,7 @@ class aCTValidatorCondor(aCTATLASProcess):
         Check for jobs with actpandastatus tovalidate and pandastatus transferring
         and move to actpandastatus to finished
         '''
-        
+
         # get all jobs with pandastatus running and actpandastatus tovalidate
         select = "(pandastatus='transferring' and actpandastatus='tovalidate') and siteName in %s limit 100000" % self.sitesselect
         columns = ["condorjobid", "pandaid"]
@@ -34,7 +34,7 @@ class aCTValidatorCondor(aCTATLASProcess):
         if len(jobstoupdate) == 0:
             # nothing to do
             return
-        
+
         # Skip validation for the true pilot jobs, just copy logs, set to done and clean condor job
         for job in jobstoupdate:
             self.log.info('%s: Skip validation' % job['pandaid'])
@@ -47,12 +47,12 @@ class aCTValidatorCondor(aCTATLASProcess):
             self.cleanFinishedJob(job['pandaid'])
 
         self.dbcondor.Commit()
-                
-                
+
+
     def cleanFailedJobs(self):
         '''
         Check for jobs with actpandastatus toclean and pandastatus transferring.
-        Move actpandastatus to failed. 
+        Move actpandastatus to failed.
         '''
         # get all jobs with pandastatus transferring and actpandastatus toclean
         select = "(pandastatus='transferring' and actpandastatus='toclean') and siteName in %s limit 100000" % self.sitesselect
@@ -82,13 +82,13 @@ class aCTValidatorCondor(aCTATLASProcess):
         Check for jobs with actpandastatus toresubmit and pandastatus starting.
         Move actpandastatus to starting and set condorjobid to NULL.
         For Condor true pilot, resubmission should never be automatic, so this
-        workflow only happens when the DB is manually changed. 
+        workflow only happens when the DB is manually changed.
         '''
 
         # First check for resubmitting jobs with no arcjob id defined
         select = "(actpandastatus='toresubmit' and condorjobid=NULL) and siteName in %s limit 100000" % self.sitesselect
         columns = ["pandaid", "id"]
-        
+
         jobstoupdate = self.dbpanda.getJobs(select, columns=columns)
 
         for job in jobstoupdate:
@@ -113,7 +113,7 @@ class aCTValidatorCondor(aCTATLASProcess):
                               (job['pandaid'], job['ClusterId']))
                 desc = {'condorstate': 'tocancel', 'tcondorstate': self.dbcondor.getTimeStamp()}
                 self.dbcondor.updateCondorJob(job['condorjobid'], desc)
-                
+
             self.log.info('%s: resubmitting' % job['pandaid'])
             select = "pandaid="+str(job['pandaid'])
             desc = {"actpandastatus": "starting", "condorjobid": None}
