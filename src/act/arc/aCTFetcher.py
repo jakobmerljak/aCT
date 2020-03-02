@@ -31,17 +31,17 @@ class aCTFetcher(aCTProcess):
     '''
     Downloads output data for finished ARC jobs.
     '''
-    
+
     def fetchAll(self, jobs):
-        
+
         # Get all outputs using Job Supervisor
         job_supervisor = arc.JobSupervisor(self.uc, list(jobs.values()))
         job_supervisor.Update()
         dirs = arc.StringList()
         job_supervisor.Retrieve(self.tmpdir, False, False, dirs)
-        
+
         return (list(job_supervisor.GetIDsProcessed()), list(job_supervisor.GetIDsNotProcessed()))
-  
+
     def listUrlRecursive(self, url, fname='', filelist=[]):
         dp = aCTUtils.DataPoint(url+'/'+fname, self.uc)
         files = dp.h.List(arc.DataPoint.INFO_TYPE_NAME | arc.DataPoint.INFO_TYPE_TYPE)
@@ -55,10 +55,9 @@ class aCTFetcher(aCTProcess):
                 filelist = self.listUrlRecursive(url, (fname+'/'+str(f.GetName())).strip('/'), filelist)
         return filelist
 
-  
-  
+
     def fetchSome(self, jobs, downloadfiles):
-        
+
         # Get specified files for the jobs in downloadfiles
         # jobs: id: Job object
         # downloadfiles: id: list of files relative to session dir, with wildcards
