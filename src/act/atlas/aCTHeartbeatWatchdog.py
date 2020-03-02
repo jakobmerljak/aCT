@@ -1,8 +1,8 @@
 # Tool for updating heartbeats when the main process has failed.
 from act.common.aCTLogger import aCTLogger
 from act.arc.aCTDBArc import aCTDBArc
-from .aCTDBPanda import aCTDBPanda
-from .aCTPanda import aCTPanda
+from act.atlas.aCTDBPanda import aCTDBPanda
+from act.atlas.aCTPanda import aCTPanda
 import sys
 import time
 

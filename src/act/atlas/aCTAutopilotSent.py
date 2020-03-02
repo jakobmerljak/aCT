@@ -1,10 +1,10 @@
 from threading import Thread
 import time
 import arc
-from . import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
-from .aCTATLASProcess import aCTATLASProcess
+from act.atlas import aCTPanda
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 class PandaThr(Thread):
     """

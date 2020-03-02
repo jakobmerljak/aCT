@@ -3,8 +3,8 @@ import os
 import traceback
 import json
 
-from .aCTATLASProcess import aCTATLASProcess
-from .aCTPanda2Xrsl import aCTPanda2Xrsl
+from act.atlas.aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTPanda2Xrsl import aCTPanda2Xrsl
 
 
 class aCTPanda2Arc(aCTATLASProcess):

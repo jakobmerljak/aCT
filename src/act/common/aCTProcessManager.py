@@ -229,11 +229,11 @@ class aCTProcessManager:
             self.child = None
             self.actlocation = actlocation
             # Redirect stdout and stderr to process log
-            self.fdout = open(os.path.join(logdir, name[name.rfind('/')+1:]+'.log'), 'a')            
+            self.fdout = open(os.path.join(logdir, name[name.rfind('/')+1:]+'.log'), 'a')
         def __del__(self):
             self.kill()
         def start(self):
-            self.child = subprocess.Popen(['/usr/bin/env', 'python2', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)            
+            self.child = subprocess.Popen(['/usr/bin/env', 'python3', os.path.join(self.actlocation, self.name+".py"), self.cluster], stdout=self.fdout, stderr=subprocess.STDOUT)
         def check(self):
             return self.child.poll()
         def restart(self):

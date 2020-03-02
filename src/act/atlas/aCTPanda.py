@@ -27,7 +27,7 @@ class aCTPanda:
             rdata=urllib.parse.urlencode(node)
             conn.request("POST", self.topdir+mode,rdata)
             resp = conn.getresponse()
-            urldata = resp.read()
+            urldata = resp.read().decode()
             conn.close()
         except Exception as x:
             self.log.error("error in connection: %s" %x)
@@ -65,10 +65,12 @@ class aCTPanda:
             self.log.info('No job from panda')
             return (None,None,None,None)
         try:
-            urldesc = cgi.parse_qs(urldata)
+            urldesc = urllib.parse.parse_qs(urldata)
         except Exception as x:
             self.log.error(x)
             return (None,None,None,None)
+        
+        self.log.info('panda returned %s' % urldesc)
         status = urldesc['StatusCode'][0]
         if status == '20':
             self.log.debug('No Panda activated jobs available')
@@ -214,4 +216,4 @@ if __name__ == '__main__':
     logger = aCTLogger('test')
     log = logger()
     p = aCTPanda(log, os.environ['X509_USER_PROXY'])
-    print(p.getQueueStatus('UIO_MCORE'))
+    print(p.getQueueStatus('UIO'))

@@ -7,11 +7,11 @@ import re
 import time
 import shutil
 import arc
-from . import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
-from .aCTATLASProcess import aCTATLASProcess
-from .aCTPandaJob import aCTPandaJob
+from act.atlas import aCTPanda
+from act.atlas.aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTPandaJob import aCTPandaJob
 
 class PandaThr(Thread):
     """

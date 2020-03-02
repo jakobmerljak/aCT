@@ -3,9 +3,9 @@ import re
 import time
 import random
 import arc
-from . import aCTPanda
+from act.atlas import aCTPanda
 from act.common import aCTProxy
-from .aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 
 class PandaGetThr(Thread):
@@ -19,7 +19,7 @@ class PandaGetThr(Thread):
         self.prodSourceLabel = prodSourceLabel
         self.getEventRanges = getEventRanges
         self.push = push
-        self.result = (None, None, None)
+        self.result = (None, None, None, None)
     def run(self):
         if not self.push:
             self.result = (0, '', None, self.prodSourceLabel)

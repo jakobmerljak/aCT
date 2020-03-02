@@ -7,12 +7,12 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from . import aCTConfig
-from . import aCTLogger
-from . import aCTSignal
-from . import aCTUtils
-from . import aCTProcessManager
-        
+from act.common import aCTConfig
+from act.common import aCTLogger
+from act.common import aCTSignal
+from act.common import aCTUtils
+from act.common import aCTProcessManager
+
 class aCTMain:
     """
     Main class to run aCT.
@@ -212,7 +212,7 @@ class aCTMain:
         
         # Make a temp file with conf and call logrotate    
         with tempfile.NamedTemporaryFile() as temp:
-            temp.write(logrotateconf)
+            temp.write(logrotateconf.encode('utf-8'))
             temp.flush()
             command = ['/usr/sbin/logrotate', '-s', logrotatestatus, temp.name]
             try:

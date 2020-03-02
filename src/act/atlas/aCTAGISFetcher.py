@@ -3,9 +3,9 @@
 from datetime import datetime, timedelta
 import os
 import time
-import urllib.request, urllib.error, urllib.parse
+import urllib.request, urllib.error
 
-from .aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 class aCTAGISFetcher(aCTATLASProcess):
                  
@@ -33,7 +33,7 @@ class aCTAGISFetcher(aCTATLASProcess):
                 pass
             return ''
 
-        urldata = response.read()
+        urldata = response.read().decode('utf-8')
         self.log.debug("Fetched %s" % url)
         return urldata
     

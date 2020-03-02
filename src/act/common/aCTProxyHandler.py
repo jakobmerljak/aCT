@@ -3,10 +3,9 @@
 # Handles proxy updates in proxies table
 #
 
-from . import aCTConfig
-
-from .aCTProcess import aCTProcess
-from .aCTProxy import aCTProxy
+from act.common import aCTConfig
+from act.common.aCTProcess import aCTProcess
+from act.common.aCTProxy import aCTProxy
 
 import datetime
 
