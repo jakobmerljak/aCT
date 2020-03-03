@@ -35,7 +35,7 @@ class aCTFetcher(aCTProcess):
     def fetchAll(self, jobs):
 
         # Get all outputs using Job Supervisor
-        job_supervisor = arc.JobSupervisor(self.uc, jobs.values())
+        job_supervisor = arc.JobSupervisor(self.uc, list(jobs.values()))
         job_supervisor.Update()
         dirs = arc.StringList()
         job_supervisor.Retrieve(self.tmpdir, False, False, dirs)
@@ -166,7 +166,7 @@ class aCTFetcher(aCTProcess):
             notfetchedretry.extend(r)
 
             nthreads=10
-            jobkeys=jobs_downloadsome.keys()
+            jobkeys=list(jobs_downloadsome.keys())
             # split job list in nthreads sublists
             jl=[jobkeys[i:i + nthreads] for i in range(0, len(jobkeys), nthreads)]
 
