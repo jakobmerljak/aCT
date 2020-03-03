@@ -327,11 +327,11 @@ class aCTReport:
                             rtot[state] += count
             self.log(f"All Harvester jobs: {sum(rtot.values())}       prodSourceLabel: submitted/running")
             for k in sorted(rep.keys()):
-                log=f"{k:>38.38}:"
+                log=f"{k:>28.28}:"
                 for psl, jobs in rep[k].items():
                     log += f"{psl:>10}: {jobs['submitted']}/{jobs['running']}"
                 self.log(log)
-            log = f"{'Totals':>38}:  submitted: {rtot['submitted']}  running: {rtot['running']}"
+            log = f"{'Totals':>28}:  submitted: {rtot['submitted']}  running: {rtot['running']}"
             self.log(log+'\n\n')
         except:
             pass
