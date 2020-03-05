@@ -148,16 +148,23 @@ def main():
             fullKey = 'c_' + col
             txt = job.get(fullKey)
             # just in case the value is a bunch of whitespace
-            if not txt or txt.strip() == '': # short circuit important!
+            # TODO: This (str(txt)) might not be a general fix; it is a direct 
+            #       fix for the problem encountered with
+            #       datetime.datetime object for 'created' field that
+            #       has to be converted to a string.
+            #       The same fix is used for arccols below.
+            # TODO: This fix assumes that all job fields are properly
+            #       convertible to string. Is that really so?
+            if not txt or str(txt).strip() == '': # short circuit important!
                 txt = "''"
             print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
         for col in arccols:
             fullKey = 'a_' + col
             txt = job.get(fullKey)
             # just in case the value is a bunch of whitespace
-            if not txt or txt.strip() == '': # short circuit important!
+            if not txt or str(txt).strip() == '': # short circuit important!
                 txt = "''"
-            print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
+            print('{:<{width}}'.format(str(txt), width=colsizes[fullKey]), end=' ')
         print()
 
 
