@@ -57,13 +57,12 @@ class JobManager(object):
     def __init__(self):
         """Initialize object's attributes."""
         self.logger = logging.getLogger(__name__)
-        arcconf = aCTConfig.aCTConfigARC()
-        dbname = arcconf.get(['db', 'name'])
         self.arcdb = aCTDBArc.aCTDBArc(self.logger)
-        self.clidb = clientdb.ClientDB(self.logger, dbname)
+        self.clidb = clientdb.ClientDB(self.logger)
 
         # TODO: if and when sites from arc config are used, move everything
         # that uses arc config to this class
+        arcconf = aCTConfig.aCTConfigARC()
         self.tmpdir = arcconf.get(['tmp', 'dir'])
 
     def checkProxy(self, proxyid):

@@ -66,7 +66,7 @@ def main():
 
     # check descriptions and submit jobs
     arcconf = aCTConfig.aCTConfigARC()
-    clidb = clientdb.ClientDB(dbname=arcconf.get(['db', 'name']))
+    clidb = clientdb.ClientDB()
     for xrsl in args.xRSL:
         try:
             jobdesc = readXRSL(xrsl)
