@@ -97,7 +97,7 @@ class aCTPanda2Xrsl:
             disk = 500
         # Add input file sizes
         if 'fsize' in self.jobdesc:
-            disk += sum([int(f) for f in self.jobdesc['fsize'][0].split(',')]) / 1000000
+            disk += sum([int(f) for f in self.jobdesc['fsize'][0].split(',')]) // 1000000
         # Add safety factor
         disk += 2000
         self.log.debug('%s: disk space %d' % (self.pandaid, disk))
@@ -120,7 +120,7 @@ class aCTPanda2Xrsl:
         if cpucount <= 0:
             cpucount = self.defaults['cputime']
 
-        walltime = int(cpucount / 60)
+        walltime = cpucount // 60
 
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
@@ -159,14 +159,14 @@ class aCTPanda2Xrsl:
 
         # hack mcore pile, use new convention for memory
         # fix memory to 500MB units (AF fix before divide)
-        memory = int(memory-1)/500*500 + 500
+        memory = (memory-1)//500*500 + 500
 
         if self.getNCores() > 1:
             # hack for 0 ramcount, defaulting to 4000, see above, fix to 2000/core
             if memory == 4000:
                 memory = 2000
             else:
-                memory = memory / self.getNCores()
+                memory = memory // self.getNCores()
         else:
             # Min 2GB for single core
             memory = max(memory, 2000)
@@ -417,11 +417,9 @@ class aCTPanda2Xrsl:
                 if prio < 1:
                     prio = 1
                 if prio > 0 and prio < 1001:
-                    prio = prio * 90 / 1000.
-                    prio = int(prio)
+                    prio = prio * 90 // 1000
                 if prio > 1000 and prio < 10001:
-                    prio = 90 + (prio - 1000) / 900.
-                    prio = int(prio)
+                    prio = 90 + (prio - 1000) // 900
                 if prio > 10000:
                     prio = 100
             except:

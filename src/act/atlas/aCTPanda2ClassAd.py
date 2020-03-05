@@ -176,11 +176,9 @@ class aCTPanda2ClassAd:
                 if prio < 1:
                     prio = 1
                 if prio > 0 and prio < 1001:
-                    prio = prio * 90 / 1000.
-                    prio = int(prio)
+                    prio = prio * 90 // 1000
                 if prio > 1000 and prio < 10001:
-                    prio = 90 + (prio - 1000) / 900.
-                    prio = int(prio)
+                    prio = 90 + (prio - 1000) // 900
                 if prio > 10000:
                     prio = 100
             except:
