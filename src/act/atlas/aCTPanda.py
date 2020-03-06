@@ -44,7 +44,7 @@ class aCTPanda:
             return None
 
         try:
-            data = pickle.loads(urldata)
+            data = pickle.loads(urldata.encode())
         except Exception as e:
             self.log.error('Could not load panda response: %s' % urldata)
             return None
