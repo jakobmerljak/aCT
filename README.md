@@ -6,7 +6,7 @@ ARC Control Tower (aCT) is a system for submitting and managing payloads on ARC 
 
 # Installing
 
-aCT requires python 2.7 and is designed to run in a python virtual environment.
+aCT requires python >= 3.6 and is designed to run in a python virtual environment.
 
 ## Mandatory dependencies
 
@@ -14,37 +14,37 @@ For CentOS 7:
 
 `# yum install epel-release`
 
-`# yum install python-pip nordugrid-arc-client python2-nordugrid-arc git`
+`# yum install python-pip nordugrid-arc-client python36-nordugrid-arc6 git`
 
-`# pip install virtualenv`
-
-ARC python bindings are not available in pip so must be installed as a system package
+ARC python bindings are not available in pip so must be installed as a system package.
 
 ## Optional dependencies
 
-`# yum install nordugrid-arc-plugins-globus` - for submission to ARC's GridFTP interface
+`# yum install nordugrid-arc6-plugins-gridftpjob` - for submission to ARC's GridFTP interface
 
-`# yum install nordugrid-arc-plugins-xrootd` - for aCT to validate any output files written using the xrootd protocol
+`# yum install nordugrid-arc6-plugins-xrootd` - for aCT to validate any output files written using the xrootd protocol
 
 `# yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
 
 ## Setting up the virtualenv
 
 ```
-$ virtualenv aCT
+$ python3 -m venv aCT
 $ source aCT/bin/activate
 $ pip install git+https://github.com/ARCControlTower/aCT
 ```
 
 Then one of two workarounds must be done to use ARC modules in the virtualenv, either create symlinks inside the virtualenv, eg
 ```
-$ ln -s /usr/lib64/python2.7/site-packages/_arc.so aCT/lib64/python2.7/site-packages/_arc.so
-$ ln -s /usr/lib64/python2.7/site-packages/arc aCT/lib64/python2.7/site-packages/arc
+$ ln -s /usr/lib64/python3.6/site-packages/_arc.cpython-36m-x86_64-linux-gnu.so aCT/lib64/python3.6/site-packages/
+$ ln -s /usr/lib64/python3.6/site-packages/arc aCT/lib64/python3.6/site-packages/arc
 ```
 or add the system packages to your python path
 ```
-export PYTHONPATH=/usr/lib64/python2.7/site-packages/arc
+export PYTHONPATH=/usr/lib64/python3.6/site-packages/arc
 ```
+The actual paths may depend on your system and python version.
+
 aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite.
 
 # Configuring
