@@ -10,9 +10,7 @@ notifications:
 virtualenv:
   system_site_packages: true
 before_install:
-#  - sudo apt-get install -y python36-nordugrid-arc6
-#  Temporary hack until ARC python3 bindings become available in Ubuntu
-  - touch ${VIRTUAL_ENV}/lib/python3.6/site-packages/arc.py
+  - sudo apt-get install -y nordugrid-arc-python
 install:
   - pip install -r requirements.txt
 script:
