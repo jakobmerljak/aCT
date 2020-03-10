@@ -14,7 +14,7 @@ For CentOS 7:
 
 `# yum install epel-release`
 
-`# yum install python-pip nordugrid-arc-client python36-nordugrid-arc6 git`
+`# yum install python-pip nordugrid-arc6-client python36-nordugrid-arc6 git`
 
 ARC python bindings are not available in pip so must be installed as a system package.
 
