@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 
 setup(name='aCT',
       version='0.1',
-      description='ATLAS Control Tower',
-      url='http://github.com/ATLASControlTower/aCT',
-      python_requires='>=2.7',
+      description='ARC Control Tower',
+      url='http://github.com/ARCControlTower/aCT',
+      python_requires='>=3.6',
       author='aCT team',
       author_email='act-dev@cern.ch',
       license='Apache 2.0',
@@ -18,7 +18,7 @@ setup(name='aCT',
 
         'pyopenssl',
         'flask',
-        'gunicorn',           # Python 2 is not supported in >= 20.*
+        'gunicorn',
         'sqlalchemy'
       ],
       entry_points={
