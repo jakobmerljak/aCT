@@ -7,7 +7,7 @@ import sys
 class xml_doc:
 
     def __init__(self) :
-        # print "Init of object"
+        # print ("Init of object")
         # init object data, create base common doc. header, get current timestamp
         self.info = {}
         self.data = []
@@ -17,7 +17,7 @@ class xml_doc:
         self.create_header()
 
     def create_header(self) :
-        # print "Creating header info"
+        # print ("Creating header info")
         self.mainchild = self.doc.createElement("serviceupdate")
         self.mainchild.setAttribute("xmlns", 'http://sls.cern.ch/SLS/XML/update')
         self.doc.appendChild(self.mainchild)
@@ -59,14 +59,14 @@ class xml_doc:
         return tmpstring
 
     def append_value(self, value) :
-        if(self.info.has_key(value)) :
+        if(value in self.info) :
             valelem = self.doc.createElement(value)
             valtext = self.doc.createTextNode(self.info[value])
             valelem.appendChild(valtext)
             self.mainchild.appendChild(valelem)
             return 1
         else :
-            print >> sys.stderr, 'Err: need to define the %s value with set_%s.' % (value)
+            print('Err: need to define the %s value with set_%s.' % (value, value))
             return 0
 
     def append_data(self) :
