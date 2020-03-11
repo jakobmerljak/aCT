@@ -1,4 +1,5 @@
 import sys
+import os
 from act.common.aCTLogger import aCTLogger
 from act.common.aCTConfig import aCTConfigARC, aCTConfigATLAS
 from act.arc.aCTDBArc import aCTDBArc
@@ -22,6 +23,11 @@ def bootstrap_conf():
         print('Error processing ATLAS config file: %s' % str(e))
         sys.exit(1)
 
+def bootstrap_dirs():
+    '''Make necessary directories'''
+    arcconf = aCTConfigARC()
+    os.makedirs(arcconf.get(['tmp', 'dir']), mode=0o755, exist_ok=True)
+    os.makedirs(arcconf.get(['logger', 'logdir']), mode=0o755, exist_ok=True)
 
 def bootstrap_db():
     '''Set up the DB tables'''
@@ -45,6 +51,7 @@ def bootstrap_db():
 def main():
 
     bootstrap_conf()
+    bootstrap_dirs()
     bootstrap_db()
 
 
