@@ -13,10 +13,10 @@ class aCTStatus(aCTProcess):
     Class for checking the status of submitted ARC jobs and updating their
     status in the DB.
     '''
-    
+
     def __init__(self):
-        
-        aCTProcess.__init__(self) 
+
+        aCTProcess.__init__(self)
 
         # store the last checkJobs time to avoid overloading of GIIS
         self.checktime=time.time()
@@ -30,20 +30,20 @@ class aCTStatus(aCTProcess):
         emptylist = arc.StringList()
         j = arc.Job()
         attrstoreset = [attr for attr in dir(j) if type(getattr(j, attr)) == arc.StringList]
-             
-        for jobs in jobstoreset.values():   
+
+        for jobs in jobstoreset.values():
             for job in jobs:
                 for attr in attrstoreset:
                     setattr(job[2], attr, emptylist)
-        
-        
+
+
     def processJobErrors(self, id, appjobid, failedjob):
         '''
         Examine errors of failed job and decide whether to resubmit or not
         '''
         errors = ";".join([joberr for joberr in failedjob.Error])
         self.log.info("%s: Job failure for %s: %s" % (appjobid, failedjob.JobID, errors))
-        
+
         # First check if it was a data staging problem
         if failedjob.RestartState == arc.JobState.PREPARING or \
            failedjob.RestartState == arc.JobState.FINISHING:
@@ -53,7 +53,7 @@ class aCTStatus(aCTProcess):
                 # Reset arc job state so that next time new state will be picked up
                 failedjob.State = arc.JobState('Undefined')
                 return "torerun"
-        
+
         newstate = "failed"
         # Check if any job runtime error matches any error in the toresubmit list
         resub = [err for err in self.conf.getList(['errors','toresubmit','arcerrors','item']) if err in errors]
@@ -68,16 +68,16 @@ class aCTStatus(aCTProcess):
                 self.log.info("%s: Will resubmit job %s, %i attempts left" % (appjobid, failedjob.JobID, attemptsleft))
                 failedjob.State = arc.JobState('Undefined')
                 newstate = "toresubmit"
-        
+
         else:
             self.log.info("%s: Job %s has fatal errors, cannot resubmit" % (appjobid, failedjob.JobID))
         return newstate
-        
+
     def checkJobs(self):
         '''
         Query all running jobs
         '''
-        
+
         # minimum time between checks
         if time.time()<self.checktime+int(self.conf.get(['jobs','checkmintime'])):
             self.log.debug("mininterval not reached")
@@ -90,21 +90,21 @@ class aCTStatus(aCTProcess):
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
 
-        njobstocheck = sum(len(v) for v in jobstocheck.itervalues())
+        njobstocheck = sum(len(v) for v in jobstocheck.values())
         if not njobstocheck:
             return
         self.log.info("%d jobs to check" % njobstocheck)
         self.resetJobs(jobstocheck)
-        
+
         # Loop over proxies
         for proxyid, jobs in jobstocheck.items():
             self.uc.CredentialString(str(self.db.getProxy(proxyid)))
-    
+
             job_supervisor = arc.JobSupervisor(self.uc, [j[2] for j in jobs])
             job_supervisor.Update()
             jobsupdated = job_supervisor.GetAllJobs()
             jobsnotupdated = job_supervisor.GetIDsNotProcessed()
-            
+
             for (originaljobinfo, updatedjob) in zip(jobs, jobsupdated):
                 (id, appjobid, originaljob, created) = originaljobinfo
                 if updatedjob.JobID in jobsnotupdated:
@@ -124,10 +124,10 @@ class aCTStatus(aCTProcess):
                     # Update numbers every time for superMUC since walltime is missing for finished jobs
                     self.db.updateArcJob(id, {'tarcstate': self.db.getTimeStamp()})
                     continue
-                
+
                 self.log.info("%s: Job %s: %s -> %s (%s)" % (appjobid, originaljob.JobID, originaljob.State.GetGeneralState(),
                                updatedjob.State.GetGeneralState(), updatedjob.State.GetSpecificState()))
-                
+
                 # state changed, update whole Job object
                 arcstate = 'submitted'
                 if updatedjob.State == arc.JobState.FINISHED:
@@ -153,7 +153,7 @@ class aCTStatus(aCTProcess):
 
                 # Walltime reported by ARC 6 is multiplied by cores
                 if arc.ARC_VERSION_MAJOR >= 6 and updatedjob.RequestedSlots > 0:
-                    updatedjob.UsedTotalWallTime = arc.Period(updatedjob.UsedTotalWallTime.GetPeriod() / updatedjob.RequestedSlots)
+                    updatedjob.UsedTotalWallTime = arc.Period(updatedjob.UsedTotalWallTime.GetPeriod() // updatedjob.RequestedSlots)
                 # Fix crazy wallclock and CPU times
                 if updatedjob.UsedTotalWallTime > arc.Time() - arc.Time(int(created.strftime("%s"))):
                     fixedwalltime = arc.Time() - arc.Time(int(created.strftime("%s")))
@@ -165,7 +165,7 @@ class aCTStatus(aCTProcess):
                 self.db.updateArcJob(id, {'arcstate': arcstate, 'tarcstate': self.db.getTimeStamp(), 'tstate': self.db.getTimeStamp()}, updatedjob)
 
         self.log.info('Done')
-        
+
     def checkLostJobs(self):
         '''
         Move jobs with a long time since status update to lost
@@ -175,7 +175,7 @@ class aCTStatus(aCTProcess):
         jobs=self.db.getArcJobsInfo("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='finished') and " \
                                     "cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 172800),
                                     ['id', 'appjobid', 'JobID', 'arcstate'])
-        
+
         for job in jobs:
             if job['arcstate'] == 'cancelling':
                 self.log.warning("%s: Job %s lost from information system, marking as cancelled" % (job['appjobid'], job['JobID']))

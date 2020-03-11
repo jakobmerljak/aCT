@@ -54,11 +54,11 @@ if args.id or args.name:
 try:
     r = requests.patch(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'], json=post_data)
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
-    print 'Will kill {} jobs'.format(r.text)
+    print('Will kill {} jobs'.format(r.text))
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)

@@ -4,10 +4,10 @@ class aCTDBOracle(aCTDBMS):
     """Class for Oracle specific db operations."""
 
     def __init__(self, log, conf):
-        raise Exception, "Oracle class is not implemented yet"
+        raise Exception("Oracle class is not implemented yet")
 
     def getCursor(self):
-        raise Exception, "Oracle class is not implemented yet"
+        raise Exception("Oracle class is not implemented yet")
 
     def timeStampLessThan(self, column, timediff):
         # should be tested...
@@ -26,7 +26,7 @@ class aCTDBOracle(aCTDBMS):
         """
         # don't know how to do mutex in oracle
         return None
-    
+
     def releaseMutexLock(self, lock_name):
         """
         Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.

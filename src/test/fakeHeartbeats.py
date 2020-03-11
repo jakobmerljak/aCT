@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG)
 p = aCTPanda(logging.getLogger('test'), sys.argv[1])
 
 for cloud in ['ND', 'CA', 'CERN', 'DE', 'ES', 'FR', 'IT', 'NL', 'TW', 'UK', 'US']:
-    
+
     print 'Cloud', cloud
     jobs = p.queryJobInfo(cloud=cloud)
     for j in jobs:

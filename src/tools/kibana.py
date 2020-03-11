@@ -47,7 +47,7 @@ def getPandaDone():
 
 def getPandaDoneFailed():
     return str(pandadb.getNJobs("actpandastatus='donefailed'"))
-    
+
 def getAvailability():
 
     # Check autopilot is running
@@ -95,5 +95,5 @@ kibana_xml.add_data( "arcqueued12h", "Number of arc jobs queued for >12h", getAr
 kibana_xml.add_data( "pandadone", "Number of panda jobs done in 24h", getPandaDone())
 kibana_xml.add_data( "pandafailed", "Number of panda jobs failed in 24h", getPandaDoneFailed())
 sendXML(kibana_xml.print_xml())
-#print kibana_xml.print_xml()
+#print(kibana_xml.print_xml())
 

@@ -7,12 +7,12 @@ import subprocess
 import sys
 import tempfile
 import traceback
-import aCTConfig
-import aCTLogger
-import aCTSignal
-import aCTUtils
-import aCTProcessManager
-        
+from act.common import aCTConfig
+from act.common import aCTLogger
+from act.common import aCTSignal
+from act.common import aCTUtils
+from act.common import aCTProcessManager
+
 class aCTMain:
     """
     Main class to run aCT.
@@ -25,20 +25,20 @@ class aCTMain:
 
         # xml config file
         self.conf = aCTConfig.aCTConfigARC()
-   
+
         # Create required directories
         tmpdir = self.conf.get(["tmp", "dir"])
         self.makeDirs(tmpdir)
         self.makeDirs(os.path.join(tmpdir, 'inputfiles'))
         self.makeDirs(os.path.join(tmpdir, 'eventranges'))
         self.makeDirs(os.path.join(tmpdir, 'failedlogs'))
-        self.makeDirs(self.conf.get(["voms","proxystoredir"]), 0700)
+        self.makeDirs(self.conf.get(["voms","proxystoredir"]), 0o700)
         self.makeDirs(self.conf.get(["logger", "logdir"]))
 
         # logger
         self.logger = aCTLogger.aCTLogger("aCTMain")
         self.log = self.logger()
-        
+
         # Check if we should run
         self.shouldrun = not os.path.exists(os.path.join(self.conf.get(["actlocation","dir"]), "act.stop"))
         if not self.shouldrun:
@@ -47,12 +47,12 @@ class aCTMain:
         # daemon operations
         if len(args) >= 2:
             self.daemon(args[1])
-         
+
         # process manager
         try:
             if self.shouldrun:
                 self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf)
-        except Exception, e:
+        except Exception as e:
             self.log.critical("*** Unexpected exception! ***")
             self.log.critical(traceback.format_exc())
             self.log.critical("*** Process exiting ***")
@@ -66,14 +66,14 @@ class aCTMain:
         try:
             import arc
         except ImportError:
-            print 'Error: failed to import ARC. Are ARC python bindings installed?'
-            sys.exit(1)
-            
-        if arc.ARC_VERSION_MAJOR < 4:
-            print 'Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION
+            print('Error: failed to import ARC. Are ARC python bindings installed?')
             sys.exit(1)
 
-    def makeDirs(self, dir, mode=0755):
+        if arc.ARC_VERSION_MAJOR < 4:
+            print('Error: Found ARC version %s. aCT requires 4.0.0 or higher' % arc.ARC_VERSION)
+            sys.exit(1)
+
+    def makeDirs(self, dir, mode=0o755):
         """
         Make a directory if it doesn't exist already
         """
@@ -92,37 +92,37 @@ class aCTMain:
             with open(pidfile) as f:
                 pid = f.read()
                 if pid:
-                    print "aCT already running (pid %s)" % pid
+                    print("aCT already running (pid %s)" % pid)
                     sys.exit(1)
         except IOError:
             pass
-        
-            
-        print 'Starting aCT... '
+
+
+        print('Starting aCT... ')
         # do double fork
         try:
             pid = os.fork()
             if pid > 0:
                 # exit first parent
                 sys.exit(0)
-        except OSError, e:
-            print "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+        except OSError as e:
+            print("fork #1 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
-    
+
         # decouple from parent environment
         os.setsid()
         os.umask(0)
-    
+
         # do second fork
         try:
             pid = os.fork()
             if pid > 0:
                 # exit from second parent
                 sys.exit(0)
-        except OSError, e:
-            print "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+        except OSError as e:
+            print("fork #2 failed: %d (%s)" % (e.errno, e.strerror))
             sys.exit(1)
-    
+
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
@@ -154,16 +154,16 @@ class aCTMain:
             pass
 
         if not pid:
-            print 'aCT already stopped'
+            print('aCT already stopped')
             return 1
 
         try:
             os.kill(int(pid), signal.SIGTERM)
         except OSError: # already stopped
             pass
-        
+
         os.remove(pidfile)
-        print 'Stopping aCT... ',
+        print('Stopping aCT... ', end=' ')
         sys.stdout.flush()
         while True:
             try:
@@ -172,7 +172,7 @@ class aCTMain:
             except OSError as err:
                 if err.errno == errno.ESRCH:
                     break
-        print 'stopped'
+        print('stopped')
         return 0
 
 
@@ -180,7 +180,7 @@ class aCTMain:
         """
         Start or stop process
         """
-     
+
         if operation == 'start':
             self.start()
         elif operation == 'stop':
@@ -189,15 +189,15 @@ class aCTMain:
             self.stop()
             self.start()
         else:
-            print 'Usage: python aCTMain.py [start|stop|restart]'
+            print('Usage: python aCTMain.py [start|stop|restart]')
             sys.exit(1)
-                
-                
+
+
     def logrotate(self):
         """
         Run logrotate to rotate all logs
         """
-        
+
         logrotateconf = '''
             %s/*.log {
                 daily
@@ -206,13 +206,13 @@ class aCTMain:
                 rotate %s
                 nocreate
                 nocompress
-            }''' % (self.conf.get(["logger", "logdir"]), 
+            }''' % (self.conf.get(["logger", "logdir"]),
                     self.conf.get(["logger", "rotate"]))
         logrotatestatus = os.path.join(self.conf.get(["tmp", "dir"]), "logrotate.status")
-        
-        # Make a temp file with conf and call logrotate    
+
+        # Make a temp file with conf and call logrotate
         with tempfile.NamedTemporaryFile() as temp:
-            temp.write(logrotateconf)
+            temp.write(logrotateconf.encode('utf-8'))
             temp.flush()
             command = ['/usr/sbin/logrotate', '-s', logrotatestatus, temp.name]
             try:
@@ -220,7 +220,7 @@ class aCTMain:
             except subprocess.CalledProcessError as e:
                 self.log.warning("Failed to run logrotate: %s" % str(e))
 
-                
+
     def run(self):
         """
         Main loop

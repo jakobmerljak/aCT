@@ -1,6 +1,5 @@
 import json
 from act.db.aCTDB import aCTDB
-from act.common import aCTConfig
 
 class aCTDBCondor(aCTDB):
 
@@ -46,7 +45,7 @@ class aCTDBCondor(aCTDB):
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
-        # current time for each change. 
+        # current time for each change.
         create="""
             CREATE TABLE condorjobs (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -75,14 +74,14 @@ class aCTDBCondor(aCTDB):
             CompletionDate TIMESTAMP
             )
             """
-            
+
         # First check if table already exists
         c = self.db.getCursor()
         c.execute("show tables like 'condorjobs'")
         row = c.fetchone()
         self.Commit()
         if row:
-            answer = raw_input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            answer = input("Table condorjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
                 return False
             c.execute("drop table condorjobs")
@@ -91,7 +90,7 @@ class aCTDBCondor(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -102,7 +101,7 @@ class aCTDBCondor(aCTDB):
         Add a new job description (ClassAd object) for the Condor engine to
         process.
         '''
-        
+
         if not clusterlist:
             self.log.error('%s: clusterlist cannot be empty for condor jobs' % appjobid)
             return None
@@ -115,12 +114,12 @@ class aCTDBCondor(aCTDB):
 
         # todo: find some useful default for proxyid
         c = self.db.getCursor()
-        
+
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdescstr])
         c.execute("SELECT LAST_INSERT_ID()")
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
-        
+
         desc = {}
         desc['created'] = self.getTimeStamp()
         desc['condorstate'] = "tosubmit"
@@ -136,12 +135,12 @@ class aCTDBCondor(aCTDB):
         desc['fairshare'] = fairshare
         s="insert into condorjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
         return row
-        
+
 
     def deleteCondorJob(self, id):
         '''
@@ -177,7 +176,7 @@ class aCTDBCondor(aCTDB):
         desc['modified'] = self.getTimeStamp()
         s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s += " where id="+str(id)
-        c.execute(s, desc.values())
+        c.execute(s, list(desc.values()))
 
     def updateCondorJobs(self, desc, select):
         '''
@@ -196,12 +195,12 @@ class aCTDBCondor(aCTDB):
         s = "update condorjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s += " where "+select
         c = self.db.getCursor()
-        c.execute(s, desc.values())
+        c.execute(s, list(desc.values()))
 
     def getCondorJobInfo(self, id, columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
-        ''' 
+        '''
         c = self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM condorjobs WHERE id="+str(id))
         row = c.fetchone()
@@ -238,7 +237,7 @@ class aCTDBCondor(aCTDB):
         if not row:
             return None
         return row['jobdescription']
-    
+
     def getActiveClusters(self):
         '''
         Return a list and count of clusters

@@ -3,12 +3,12 @@
 from datetime import datetime, timedelta
 import os
 import time
-import urllib2
+import urllib.request, urllib.error
 
-from aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 class aCTAGISFetcher(aCTATLASProcess):
-                 
+
     def __init__(self):
         aCTATLASProcess.__init__(self)
         self.queues = self.conf.get(['agis','server'])
@@ -19,8 +19,8 @@ class aCTAGISFetcher(aCTATLASProcess):
 
     def fetchFromAgis(self, url, filename):
         try:
-            response = urllib2.urlopen(url, timeout=60)
-        except urllib2.URLError as e:
+            response = urllib.request.urlopen(url, timeout=60)
+        except urllib.error.URLError as e:
             self.log.warning("Failed to contact AGIS: %s" % str(e))
             # Check if the cached data is getting old, if so raise a critical error
             try:
@@ -33,10 +33,10 @@ class aCTAGISFetcher(aCTATLASProcess):
                 pass
             return ''
 
-        urldata = response.read()
+        urldata = response.read().decode('utf-8')
         self.log.debug("Fetched %s" % url)
         return urldata
-    
+
     def storeToFile(self, agisjson, filename):
         if not agisjson:
             return
@@ -45,7 +45,7 @@ class aCTAGISFetcher(aCTATLASProcess):
             with open(tmpfile, 'w') as f:
                 f.write(agisjson)
         except:
-            os.makedirs(tmpfile[:tmpfile.rfind('/')], 0755)
+            os.makedirs(tmpfile[:tmpfile.rfind('/')], 0o755)
             with open(tmpfile, 'w') as f:
                 f.write(agisjson)
 
@@ -55,7 +55,7 @@ class aCTAGISFetcher(aCTATLASProcess):
     def process(self):
         """
         Main loop
-        """        
+        """
         self.log.info("Running")
         # todo: check if agis.json exists and return if too new
         # fetch data from AGIS
@@ -66,7 +66,7 @@ class aCTAGISFetcher(aCTATLASProcess):
         self.storeToFile(osesjson, self.osesfile)
         # temporary hack to avoid too much agis fetching
         time.sleep(600)
-        
+
 if __name__ == '__main__':
     aaf=aCTAGISFetcher()
     aaf.run()

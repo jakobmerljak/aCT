@@ -52,7 +52,7 @@ class aCTPanda2Xrsl:
         self.atlasrelease = None
         self.monitorurl = atlasconf.get(["monitor", "apfmon"])
         # ES merge jobs need unique guids because pilot uses them as dict keys
-        if not self.truepilot and self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+        if not self.truepilot and 'eventServiceMerge' in self.jobdesc and self.jobdesc['eventServiceMerge'][0] == 'True':
             if self.pandajob.startswith('GUID'):
                 esjobdesc = self.pandajob[self.pandajob.find('&'):]
             else:
@@ -97,7 +97,7 @@ class aCTPanda2Xrsl:
             disk = 500
         # Add input file sizes
         if 'fsize' in self.jobdesc:
-            disk += sum([int(f) for f in self.jobdesc['fsize'][0].split(',')]) / 1000000
+            disk += sum([int(f) for f in self.jobdesc['fsize'][0].split(',')]) // 1000000
         # Add safety factor
         disk += 2000
         self.log.debug('%s: disk space %d' % (self.pandaid, disk))
@@ -120,7 +120,7 @@ class aCTPanda2Xrsl:
         if cpucount <= 0:
             cpucount = self.defaults['cputime']
 
-        walltime = int(cpucount / 60)
+        walltime = cpucount // 60
 
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
@@ -159,14 +159,14 @@ class aCTPanda2Xrsl:
 
         # hack mcore pile, use new convention for memory
         # fix memory to 500MB units (AF fix before divide)
-        memory = int(memory-1)/500*500 + 500
+        memory = (memory-1)//500*500 + 500
 
         if self.getNCores() > 1:
             # hack for 0 ramcount, defaulting to 4000, see above, fix to 2000/core
             if memory == 4000:
                 memory = 2000
             else:
-                memory = memory / self.getNCores()
+                memory = memory // self.getNCores()
         else:
             # Min 2GB for single core
             memory = max(memory, 2000)
@@ -324,7 +324,7 @@ class aCTPanda2Xrsl:
         # Input files
         if 'inFiles' in self.jobdesc:
             inf = {}
-            if self.jobdesc.has_key('eventServiceMerge') and self.jobdesc['eventServiceMerge'][0] == 'True':
+            if 'eventServiceMerge' in self.jobdesc and self.jobdesc['eventServiceMerge'][0] == 'True':
                 self.setInputsES(inf)
 
             for filename, scope, dsn, guid, token, ddmin in zip(self.jobdesc['inFiles'][0].split(","),
@@ -345,7 +345,7 @@ class aCTPanda2Xrsl:
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
                 if self.sitename in []:
-                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename]) 
+                    lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename])
                 else:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;cache=invariant/replicas", scope, filename])
                 inf[filename] = lfn
@@ -367,9 +367,9 @@ class aCTPanda2Xrsl:
 
             # some files are double:
             for k, v in inf.items():
-                x += "(" + k + " " + '"' + v + '"' + ")"
+                x += f'("{k}" "{v}")'
 
-            if self.jobdesc.has_key('eventService') and self.jobdesc['eventService'] and self.eventranges:
+            if 'eventService' in self.jobdesc and self.jobdesc['eventService'] and self.eventranges:
                 # Create tmp json file to upload with job
                 pandaid = self.jobdesc['PandaID'][0]
                 tmpjsonfile = os.path.join(self.tmpdir, 'eventranges', str('%s.json' % pandaid))
@@ -417,11 +417,9 @@ class aCTPanda2Xrsl:
                 if prio < 1:
                     prio = 1
                 if prio > 0 and prio < 1001:
-                    prio = prio * 90 / 1000.
-                    prio = int(prio)
+                    prio = prio * 90 // 1000
                 if prio > 1000 and prio < 10001:
-                    prio = 90 + (prio - 1000) / 900.
-                    prio = int(prio)
+                    prio = 90 + (prio - 1000) // 900
                 if prio > 10000:
                     prio = 100
             except:
@@ -478,10 +476,7 @@ class aCTPanda2Xrsl:
         self.setEnvironment()
 
     def getXrsl(self):
-        x = "&"
-        for k in self.xrsl.keys():
-            x += self.xrsl[k] + "\n"
-        return x
+        return "&" + '\n'.join(self.xrsl.values())
 
 
 if __name__ == '__main__':
@@ -496,4 +491,4 @@ if __name__ == '__main__':
     pandadbjob = {'pandajob': pandajob, 'siteName': 'ANALY_SiGNET_DIRECT', 'eventranges': None, 'metadata': {}, 'created': datetime.utcnow()}
     a = aCTPanda2Xrsl(pandadbjob, siteinfo, {}, '/tmp', conf, log)
     a.parse()
-    print a.getXrsl()
+    print(a.getXrsl())

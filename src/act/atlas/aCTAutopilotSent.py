@@ -1,10 +1,10 @@
 from threading import Thread
 import time
 import arc
-import aCTPanda
 from act.common import aCTProxy
 from act.common import aCTUtils
-from aCTATLASProcess import aCTATLASProcess
+from act.atlas import aCTPanda
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 class PandaThr(Thread):
     """
@@ -82,7 +82,7 @@ class aCTAutopilotSent(aCTATLASProcess):
         if not jobs:
             return
 
-        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs]))) 
+        self.log.info("Update heartbeat for %d jobs in state %s (%s)" % (len(jobs), pstatus, ','.join([str(j['pandaid']) for j in jobs])))
 
         changed_pstatus = False
         if pstatus == 'sent':
@@ -117,16 +117,16 @@ class aCTAutopilotSent(aCTATLASProcess):
             t=PandaThr(self.getPanda(j['siteName']).updateStatus,j['pandaid'],pstatus,jd)
             tlist.append(t)
         aCTUtils.RunThreadsSplit(tlist,nthreads)
-        
+
         for t in tlist:
-            if t.result == None or not t.result.has_key('StatusCode'):
+            if t.result == None or 'StatusCode' not in t.result:
                 # Strange response from panda, try later
                 continue
             if t.result['StatusCode'] and t.result['StatusCode'][0] == '60':
                 self.log.error('Failed to contact Panda, proxy may have expired')
                 continue
             #self.log.debug('%s: %s' % (t.id, t.result))
-            if t.result.has_key('command')  and t.result['command'][0] != "NULL":
+            if 'command' in t.result  and t.result['command'][0] != "NULL":
                 self.log.info("%s: response: %s" % (t.id,t.result) )
             jd={}
             if changed_pstatus:
@@ -142,7 +142,7 @@ class aCTAutopilotSent(aCTATLASProcess):
                 jd['theartbeat'] = self.dbpanda.getTimeStamp(time.time()+1)
             # If panda tells us to kill the job, set actpandastatus to tobekilled
             # and remove from heartbeats
-            if t.result.has_key('command') and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
+            if 'command' in t.result and ( ("tobekilled" in t.result['command'][0]) or ("badattemptnr" in t.result['command'][0]) ):
                 self.log.info('%s: cancelled by panda' % t.id)
                 jd['actpandastatus']="tobekilled"
                 jd['pandastatus']=None

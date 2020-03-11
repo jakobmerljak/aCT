@@ -28,7 +28,7 @@ class aCTDBArc(aCTDB):
                     'JOBLOG',
                     'JOBDESCRIPTION',
                     'JobDescriptionDocument']
-        
+
         # Attributes of Job class mapped to DB column type
         self.jobattrs={}
         j=arc.Job()
@@ -39,7 +39,7 @@ class aCTDBArc(aCTDB):
                 continue
             if type(getattr(j, i)) in self.jobattrmap:
                 self.jobattrs[i] = type(getattr(j, i))
-        
+
 
     def createTables(self):
         '''
@@ -82,7 +82,7 @@ class aCTDBArc(aCTDB):
         '''
 
         # in MySQL the first timestamp specified gets automatically updated to
-        # current time for each change. 
+        # current time for each change.
         create="""CREATE TABLE arcjobs (
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             modified TIMESTAMP,
@@ -100,14 +100,14 @@ class aCTDBArc(aCTDB):
             priority SMALLINT,
             fairshare VARCHAR(255),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
-            
+
         # First check if table already exists
         c = self.db.getCursor()
         c.execute("show tables like 'arcjobs'")
         row = c.fetchone()
         self.Commit()
         if row:
-            answer = raw_input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            answer = input("Table arcjobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
                 return True
             c.execute("drop table arcjobs")
@@ -117,7 +117,7 @@ class aCTDBArc(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -136,7 +136,7 @@ class aCTDBArc(aCTDB):
             # add indexes
             c.execute("ALTER TABLE arcjobs ADD INDEX (arcstate)")
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -158,7 +158,7 @@ class aCTDBArc(aCTDB):
         try:
             c.execute(create)
             self.Commit()
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -174,7 +174,7 @@ class aCTDBArc(aCTDB):
         c.execute(s, [jobdesc])
         c.execute("SELECT LAST_INSERT_ID()")
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
-        
+
         j = self._job2db(job)
         c.execute("insert into arcjobs (created,tstate,jobdesc"+",".join(j.keys())+") values ('"+str(self.getTimeStamp())+"','"+str(self.getTimeStamp())+"','"+str(jobdescid)+"','"+"','".join(j.values())+"')")
         c.execute("SELECT LAST_INSERT_ID()")
@@ -199,12 +199,12 @@ class aCTDBArc(aCTDB):
 
         # todo: find some useful default for proxyid
         c=self.db.getCursor()
-        
+
         s = "insert into jobdescriptions (jobdescription) values (%s)"
         c.execute(s, [jobdesc])
         c.execute("SELECT LAST_INSERT_ID()")
         jobdescid = c.fetchone()['LAST_INSERT_ID()']
-        
+
         desc = {}
         desc['created'] = self.getTimeStamp()
         desc['arcstate'] = "tosubmit"
@@ -221,12 +221,11 @@ class aCTDBArc(aCTDB):
         desc['fairshare'] = fairshare
         s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in desc.keys()]) + " ) " + " values " + \
             " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(desc.keys()) ]) + " ) "
-        c.execute(s,desc.values())
+        c.execute(s, list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
         return row
-        
 
     def deleteArcJob(self, id):
         '''
@@ -265,10 +264,11 @@ class aCTDBArc(aCTDB):
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
+        print(s)
         if job:
-            c.execute(s,desc.values() + self._job2db(job).values() )
+            c.execute(s, list(desc.values()) + list(self._job2db(job).values()))
         else:
-            c.execute(s,desc.values())
+            c.execute(s, list(desc.values()))
 
     def updateArcJobs(self, desc, select):
         '''
@@ -286,12 +286,12 @@ class aCTDBArc(aCTDB):
         s = "update arcjobs set " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" where "+select
         c=self.db.getCursor()
-        c.execute(s,desc.values())
+        c.execute(s, list(desc.values()))
 
     def getArcJobInfo(self,id,columns=[]):
         '''
         Return a dictionary of column name: value for the given id and columns
-        ''' 
+        '''
         c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM arcjobs WHERE id="+str(id))
         row=c.fetchone()
@@ -299,7 +299,7 @@ class aCTDBArc(aCTDB):
             return {}
         # mysql SELECT returns list, we want dict
         if not isinstance(row,dict):
-            row=dict(zip([col[0] for col in c.description], row))
+            row = dict(zip([col[0] for col in c.description], row))
         return row
 
     def getArcJobsInfo(self, select, columns=[], tables="arcjobs", lock=False):
@@ -326,7 +326,7 @@ class aCTDBArc(aCTDB):
         rows=c.fetchall()
         d = {}
         if isinstance(rows, tuple):
-            rows=dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
+            rows = dict(zip([col[0] for col in c.description], zip(*[list(row) for row in rows])))
             for row in rows:
                 d[row[0]] = self._db2job(dict(zip([col[0] for col in c.description], row[1:])))
         # mysql returns list of dictionaries
@@ -335,9 +335,9 @@ class aCTDBArc(aCTDB):
                 if not row['proxyid'] in d:
                     d[row['proxyid']] = []
                 d[row['proxyid']].append((row['id'], row['appjobid'], self._db2job(row), row['created']))
-            
+
         return d
-    
+
     def getArcJobDescription(self, jobdescid):
         '''
         Return the job description for the given id in jobdescriptions
@@ -348,7 +348,7 @@ class aCTDBArc(aCTDB):
         if not row:
             return None
         return row['jobdescription']
-    
+
     def getNArcJobs(self):
         '''
         Return the total number of jobs in the table
@@ -357,7 +357,7 @@ class aCTDBArc(aCTDB):
         c.execute("SELECT COUNT(*) FROM arcjobs")
         row = c.fetchone()
         return row['COUNT(*)']
-         
+
     def getActiveClusters(self):
         '''
         Return a list and count of clusters
@@ -366,7 +366,7 @@ class aCTDBArc(aCTDB):
         c.execute("SELECT cluster, COUNT(*) FROM arcjobs WHERE cluster!='' GROUP BY cluster")
         rows=c.fetchall()
         return rows
-    
+
     def getClusterLists(self):
         '''
         Return a list and count of clusterlists for jobs to submit
@@ -377,7 +377,7 @@ class aCTDBArc(aCTDB):
         c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
-    
+
     def _db2job(self, dbinfo):
         '''
         Convert a dictionary of DB key value into arc Job object
@@ -389,7 +389,7 @@ class aCTDBArc(aCTDB):
             # Some object types need special treatment
             if self.jobattrs[attr] == arc.StringList:
                 l = arc.StringList()
-                for item in dbinfo[attr].encode('utf-8').split('|'):
+                for item in dbinfo[attr].split('|'):
                     l.append(item)
                 setattr(j, attr, l)
                 continue
@@ -402,10 +402,10 @@ class aCTDBArc(aCTDB):
                     m[k] = v
                 setattr(j, attr, m)
                 continue
-            
+
             setattr(j, attr, self.jobattrs[attr](str(dbinfo[attr])))
         return j
-    
+
     def _job2db(self, job):
         '''
         Convert an arc Job object to a dictionary of column name: value
@@ -443,8 +443,8 @@ class aCTDBArc(aCTDB):
         f.write(proxy)
         f.close()
         # make sure permissions are correct
-        os.chmod(proxypath, 0600)
-        
+        os.chmod(proxypath, 0o600)
+
     def insertProxy(self, proxy, dn, expirytime, attribute='', proxytype='local', myproxyid=''):
         '''
         Add new proxy.
@@ -494,7 +494,7 @@ class aCTDBArc(aCTDB):
             if not os.path.isfile(proxypath):
                 self._writeProxyFile(proxypath, self.getProxy(id))
             return proxypath
-        except Exception, x:
+        except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
 
     def getProxy(self, id):
@@ -507,9 +507,9 @@ class aCTDBArc(aCTDB):
         try:
             proxy = row['proxy']
             return proxy
-        except Exception, x:
+        except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
-        
+
     def getProxiesInfo(self, select, columns=[], lock=False, expect_one=False):
         '''
         Return a list of column: value dictionaries for proxies matching select.
@@ -548,29 +548,29 @@ if __name__ == '__main__':
 
     usercfg = arc.UserConfig("", "")
     usercfg.Timeout(10)
-    
+
     # Simple job description which outputs hostname to stdout
     jobdescstring = "&(executable=/bin/hostname)(stdout=stdout)"
-    
+
     # Parse job description
     jobdescs = arc.JobDescriptionList()
     if not arc.JobDescription_Parse(jobdescstring, jobdescs):
         logging.error("Invalid job description")
         exit(1)
-    
+
     # Use top-level NorduGrid information index to find resources
     index = arc.Endpoint("ldap://index1.nordugrid.org:2135/Mds-Vo-name=nordugrid,o=grid",
                          arc.Endpoint.REGISTRY,
                          "org.nordugrid.ldapegiis")
     services = arc.EndpointList(1, index)
-    
+
     # Do the submission
     #jobs = arc.JobList()
     #submitter = arc.Submitter(usercfg)
     #if submitter.BrokeredSubmit(services, jobdescs, jobs) != arc.SubmissionStatus.NONE:
     #    logging.error("Failed to submit job")
     #    exit(1)
-     
+
     #adb.insertArcJob(1, jobs[0])
     #dbjob = adb.getArcJob(1)
     #print dbjob[1].JobID, dbjob[1].State.GetGeneralState()

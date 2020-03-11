@@ -47,7 +47,7 @@ class aCTDBPanda(aCTDB):
            - corecount: Number of cores used by job
            - metadata: Generic json metadata sent by the client
            - error: Error string from a failed job
-           
+
         pandaarchive:
           - Selected fields from above list:
             - pandaid, siteName, actpandastatus, startTime, endTime
@@ -59,7 +59,7 @@ class aCTDBPanda(aCTDB):
         modified TIMESTAMP,
         created TIMESTAMP,
         pandajob mediumtext,
-        pandaid bigint, 
+        pandaid bigint,
         siteName VARCHAR(255),
         prodSourceLabel VARCHAR(255),
         arcjobid integer,
@@ -88,7 +88,7 @@ class aCTDBPanda(aCTDB):
         row = c.fetchone()
         self.Commit()
         if row:
-            answer = raw_input("Table pandajobs already exists!\nAre you sure you want to recreate it? (y/n) ")
+            answer = input("Table pandajobs already exists!\nAre you sure you want to recreate it? (y/n) ")
             if answer != 'y':
                 return True
             c.execute("drop table pandajobs")
@@ -102,27 +102,27 @@ class aCTDBPanda(aCTDB):
             c.execute("ALTER TABLE pandajobs ADD INDEX (pandastatus)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (actpandastatus)")
             c.execute("ALTER TABLE pandajobs ADD INDEX (siteName)")
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
         str="""
         create table pandaarchive (
-        pandaid bigint, 
+        pandaid bigint,
         siteName VARCHAR(255),
         actpandastatus VARCHAR(255),
         startTime TIMESTAMP DEFAULT 0,
         endTime TIMESTAMP
     )
 """
-       
+
         try:
             c.execute("drop table pandaarchive")
         except:
             self.log.warning("no pandaarchive table")
         try:
             c.execute(str)
-        except Exception,x:
+        except Exception as x:
             self.log.error("failed create table %s" %x)
             return False
 
@@ -136,16 +136,16 @@ class aCTDBPanda(aCTDB):
         desc['pandajob']=pandajob
         s="insert into pandajobs (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.db.getCursor()
-        c.execute(s,desc.values())
+        c.execute(s,list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
         return row
-        
+
     def insertJobArchiveLazy(self,desc={}):
         s="insert into pandaarchive (" + ",".join([k for k in desc.keys()]) + ") values (" + ",".join(['%s' for k in desc.keys()]) + ")"
         c=self.db.getCursor()
-        c.execute(s,desc.values())
+        c.execute(s,list(desc.values()))
 
     def deleteJob(self,pandaid):
         c=self.db.getCursor()
@@ -161,7 +161,7 @@ class aCTDBPanda(aCTDB):
         s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE pandaid="+str(pandaid)
         c=self.db.getCursor()
-        c.execute(s,desc.values())
+        c.execute(s,list(desc.values()))
 
     def updateJobs(self, select, desc):
         self.updateJobsLazy(select, desc)
@@ -172,8 +172,8 @@ class aCTDBPanda(aCTDB):
         s="UPDATE pandajobs SET " + ",".join(['%s=%%s' % (k) for k in desc.keys()])
         s+=" WHERE "+select
         c=self.db.getCursor()
-        c.execute(s,desc.values())
-        
+        c.execute(s,list(desc.values()))
+
     def getJob(self,pandaid,columns=[]):
         c=self.db.getCursor()
         c.execute("SELECT "+self._column_list2str(columns)+" FROM pandajobs WHERE pandaid="+str(pandaid))

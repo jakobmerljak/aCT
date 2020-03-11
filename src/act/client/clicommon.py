@@ -25,12 +25,12 @@ def getProxyIdFromProxy(proxyPath):
     try:
         return manager.getProxyIdForProxyFile(proxyPath)
     except NoSuchProxyError as e:
-        print "error: no proxy for DN=\"{}\" and attributes=\"{}\" "\
-                "found in database; use actproxy".format(e.dn, e.attribute)
+        print("error: no proxy for DN=\"{}\" and attributes=\"{}\" "\
+                "found in database; use actproxy".format(e.dn, e.attribute))
         sys.exit(1)
 
     except NoProxyFileError as e:
-        print "error: path \"{}\" is not a proxy file; use arcproxy".format(e.path)
+        print("error: path \"{}\" is not a proxy file; use arcproxy".format(e.path))
         sys.exit(2)
 
 

@@ -59,14 +59,14 @@ def main():
     if args.get_cols:
         clientCols = manager.getClientColumns()
         arcCols = manager.getArcColumns()
-        print 'client cols:',
+        print('client cols:', end=' ')
         for col in clientCols:
-            print col,
-        print
-        print 'arc cols:',
+            print(col, end=' ')
+        print()
+        print('arc cols:', end=' ')
         for col in arcCols:
-            print col,
-        print
+            print(col, end=' ')
+        print()
         sys.exit(0)
 
     # create a list of jobs to work on
@@ -76,13 +76,13 @@ def main():
         try:
             jobs = jobmgr.getIDsFromList(args.jobs)
         except InvalidJobRangeError as e:
-            print "error: range '{}' is not a valid range".format(e.jobRange)
+            print("error: range '{}' is not a valid range".format(e.jobRange))
             sys.exit(2)
         except InvalidJobIDError as e:
-            print "error: ID '{}' is not a valid ID".format(e.jobid)
+            print("error: ID '{}' is not a valid ID".format(e.jobid))
             sys.exit(3)
     else:
-        print "error: no jobs specified (use -a or -j)"
+        print("error: no jobs specified (use -a or -j)")
         sys.exit(10)
 
     # create column lists
@@ -108,7 +108,7 @@ def main():
                 clicols=clicols,
                 arccols=arccols)
     except Exception as e:
-        print 'error: {}'.format(str(e))
+        print('error: {}'.format(str(e)))
         sys.exit(9)
 
     if not jobdicts: # no jobs so just exit
@@ -118,7 +118,7 @@ def main():
     # be nicely formatted.
     colsizes = {}
     for job in jobdicts:
-        for key, value in job.items():
+        for key, value in list(job.items()):
             # All keys have a letter and underscore prepended, which is not
             # used when printing
             colsize = max(len(str(key[2:])), len(str(value)))
@@ -130,15 +130,15 @@ def main():
 
 # Print table header
     for col in clicols:
-        print '{:<{width}}'.format(col, width=colsizes['c_' + col]),
+        print('{:<{width}}'.format(col, width=colsizes['c_' + col]), end=' ')
     for col in arccols:
-        print '{:<{width}}'.format(col, width=colsizes['a_' + col]),
-    print
+        print('{:<{width}}'.format(col, width=colsizes['a_' + col]), end=' ')
+    print()
     line = ''
-    for value in colsizes.values():
+    for value in list(colsizes.values()):
         line += '-' * value
-    line += '-' * (len(colsizes.values()) - 1)
-    print line
+    line += '-' * (len(list(colsizes.values())) - 1)
+    print(line)
 
     # Print jobs
     for job in jobdicts:
@@ -151,7 +151,7 @@ def main():
                     txt = job[fullKey]
             except:
                 txt = job[fullKey]
-            print '{:<{width}}'.format(txt, width=colsizes[fullKey]),
+            print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
         for col in arccols:
             fullKey = 'a_' + col
             try:
@@ -161,8 +161,8 @@ def main():
                     txt = job[fullKey]
             except:
                 txt = job[fullKey]
-            print '{:<{width}}'.format(txt, width=colsizes[fullKey]),
-        print
+            print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
+        print()
 
 
 if __name__ == '__main__':

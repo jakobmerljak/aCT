@@ -50,9 +50,9 @@ class aCTPanda2ClassAd:
         self.logdir = os.path.join(atlasconf.get(['joblog','dir']), today, sitename)
         try: os.makedirs(self.logdir)
         except: pass
-        
+
         self.logurl = '%s/%s/%s' % (atlasconf.get(['joblog', 'urlprefix']), today, sitename)
-        
+
         # APFmon
         self.monitorurl = atlasconf.get(["monitor", "apfmon"])
 
@@ -129,7 +129,7 @@ class aCTPanda2ClassAd:
         # fix memory to 500MB units
         memory = int(memory-1)/500*500 + 500
         self.memory = memory
-        
+
         self.classad['+maxMemory'] = str(memory)
 
     def setExecutable(self):
@@ -176,11 +176,9 @@ class aCTPanda2ClassAd:
                 if prio < 1:
                     prio = 1
                 if prio > 0 and prio < 1001:
-                    prio = prio * 90 / 1000.
-                    prio = int(prio)
+                    prio = prio * 90 // 1000
                 if prio > 1000 and prio < 10001:
-                    prio = 90 + (prio - 1000) / 900.
-                    prio = int(prio)
+                    prio = 90 + (prio - 1000) // 900
                 if prio > 10000:
                     prio = 100
             except:
@@ -192,7 +190,7 @@ class aCTPanda2ClassAd:
         # Set schedulerID and job log URL
         environment.append('PANDA_JSID=%s' % self.schedulerid)
         environment.append('GTAG=%s/%s.out' % (self.logurl, self.pandaid))
-        
+
         # Vars for APFMon
         environment.append('APFCID=%s' % self.pandajobid)
         # harvester prepends "harvester-" to the schedulerid but APFMon uses the original one
@@ -202,13 +200,13 @@ class aCTPanda2ClassAd:
         environment.append('FACTORYQUEUE=%s' % self.sitename)
 
         self.classad['Environment2'] = '"%s"' % ' '.join(environment)
-        
+
 
     def setProxy(self):
         self.classad['X509UserProxy'] = self.proxy
 
     def setAttrs(self):
-        
+
         # Set CREAM attributes. Times are in minutes.
         if len([e for e in self.siteinfo['endpoints'] if e.startswith('cream')]) > 0:
             creamattrs = 'CpuNumber=%d;WholeNodes=false;SMPGranularity=%d;' % (self.ncores, self.ncores)
@@ -248,4 +246,4 @@ if __name__ == '__main__':
     conf = aCTConfigATLAS()
     a = aCTPanda2ClassAd(pjob, pjobid, 'ANALY_SiGNET_DIRECT', info, proxy, '/tmp', conf, '{}', l)
     a.parse()
-    print a.getClassAd()
+    print(a.getClassAd())

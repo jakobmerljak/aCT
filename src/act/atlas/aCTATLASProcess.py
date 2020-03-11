@@ -16,15 +16,15 @@ from act.atlas import aCTDBPanda
 
 class aCTATLASProcess:
     '''
-    Base class for all ATLAS-specific aCT processes. Sets up logging and configuration and 
+    Base class for all ATLAS-specific aCT processes. Sets up logging and configuration and
     provides basic start and stop functionality.
     '''
-    
+
     def __init__(self, ceflavour=['ARC-CE']):
-        
+
         # Get agent name from /path/to/aCTAgent.py
         self.name = os.path.basename(sys.argv[0])[:-3]
-        
+
         # logger
         self.logger=aCTLogger.aCTLogger(self.name)
         self.log=self.logger()
@@ -43,8 +43,8 @@ class aCTATLASProcess:
         # APFMon
         self.apfmon = aCTAPFMon.aCTAPFMon(self.conf)
 
-        # AGIS info    
-        self.flavour = ceflavour    
+        # AGIS info
+        self.flavour = ceflavour
         self.agisparser = aCTAGISParser.aCTAGISParser(self.log)
         self.sites = {}
         self.osmap = {}
@@ -85,7 +85,7 @@ class aCTATLASProcess:
                 #if time.time()-self.starttime > ip and ip != 0 :
                 #    self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                 #    return
-        except aCTSignal.ExceptInterrupt,x:
+        except aCTSignal.ExceptInterrupt as x:
             self.log.info("Received interrupt %s, exiting", str(x))
         except:
             self.log.critical("*** Unexpected exception! ***")

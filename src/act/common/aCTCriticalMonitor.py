@@ -27,8 +27,8 @@ def main():
                 lastcritical += line
 
     if criticalerrors:
-        print '%d critical errors in the last hour\n' % criticalerrors
-        print 'Last critical error:\n%s' % lastcritical
+        print('%d critical errors in the last hour\n' % criticalerrors)
+        print('Last critical error:\n%s' % lastcritical)
 
 if __name__ == '__main__':
     main()

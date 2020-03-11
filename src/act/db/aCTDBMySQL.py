@@ -7,9 +7,9 @@ class aCTDBMySQL(aCTDBMS):
 
     def __init__(self, log, config):
         aCTDBMS.__init__(self, log, config)
-        # mysql.connector must be 2.1.x
-        if mysql.__version_info__[:2] != (2, 1):
-            raise Exception("mysql-connector must be version 2.1.x")
+        # mysql.connector must be 8.
+        if mysql.__version_info__[0] != 8:
+            raise Exception("mysql-connector must be version 8.x")
         try:
             self._connect(self.dbname)
         except mysql.Error as err:
@@ -26,12 +26,12 @@ class aCTDBMySQL(aCTDBMS):
 
     def _connect(self, dbname=None):
         if self.socket != 'None':
-            self.conn=mysql.connect(unix_socket=self.socket,db=dbname)
+            self.conn = mysql.connect(unix_socket=self.socket, database=dbname)
         elif self.user and self.passwd:
             if self.host != 'None' and self.port != 'None':
-                self.conn=mysql.connect(user=self.user, password=self.passwd, host=self.host, port=self.port, db=dbname)
+                self.conn = mysql.connect(user=self.user, password=self.passwd, host=self.host, port=self.port, database=dbname)
             else:
-                self.conn=mysql.connect(user=self.user, password=self.passwd, db=dbname)
+                self.conn = mysql.connect(user=self.user, password=self.passwd, db=dbname)
 
     def getCursor(self):
         # make sure cursor reads newest db state
@@ -69,7 +69,7 @@ class aCTDBMySQL(aCTDBMS):
         select="GET_LOCK('"+lock_name+"',"+str(timeout)+")"
         c.execute("SELECT "+select)
         return c.fetchone()[select]
-    
+
     def releaseMutexLock(self, lock_name):
         """
         Function to release named lock. Returns 1 if lock was released, 0 if someone else owns the lock, None if error occured.

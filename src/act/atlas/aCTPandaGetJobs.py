@@ -3,9 +3,9 @@ import re
 import time
 import random
 import arc
-import aCTPanda
+from act.atlas import aCTPanda
 from act.common import aCTProxy
-from aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTATLASProcess import aCTATLASProcess
 
 
 class PandaGetThr(Thread):
@@ -19,7 +19,7 @@ class PandaGetThr(Thread):
         self.prodSourceLabel = prodSourceLabel
         self.getEventRanges = getEventRanges
         self.push = push
-        self.result = (None, None, None)
+        self.result = (None, None, None, None)
     def run(self):
         if not self.push:
             self.result = (0, '', None, self.prodSourceLabel)
@@ -35,7 +35,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
     def __init__(self):
         aCTATLASProcess.__init__(self)
-        
+
         # Get DN from configured proxy file
         uc = arc.UserConfig()
         uc.ProxyPath(str(self.arcconf.get(['voms', 'proxypath'])))
@@ -48,7 +48,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
         # Map the site type to a proxy id in proxies table
         # In future for analysis the id will change once the job is picked up
         self.proxymap = {}
-        
+
         actp = aCTProxy.aCTProxy(self.log)
         for role in self.arcconf.getList(['voms', 'roles', 'item']):
             attr = '/atlas/Role='+role
@@ -87,9 +87,9 @@ class aCTPandaGetJobs(aCTATLASProcess):
         Get the number of activated jobs for each served queue
         """
         # If panda query fails safer to assume all queues have jobs
-        self.activated.clear() 
+        self.activated.clear()
         # Assume any proxy is ok to query panda
-        queueinfo = self.pandas.values()[0].getQueueStatus()
+        queueinfo = next(iter(self.pandas.values())).getQueueStatus()
         if queueinfo:
             for site in [k for k,v in self.sites.items() if v['enabled']]:
                 if site not in queueinfo:
@@ -98,13 +98,13 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     continue
                 n_rc_test = 0
                 n_rest = 0
-                for label, jobs in queueinfo[site].iteritems():
+                for label, jobs in queueinfo[site].items():
                     if 'activated' in jobs:
                         if label == 'rc_test':
                             n_rc_test += jobs['activated']
                         else:
                             n_rest += jobs['activated']
-                            
+
                 self.activated[site] = {'rc_test': n_rc_test, 'rest': n_rest}
                 self.log.debug('%s: activated rc_test %d, rest %d' % (site, n_rc_test, n_rest))
 
@@ -116,18 +116,18 @@ class aCTPandaGetJobs(aCTATLASProcess):
         """
         Get at most num panda jobs from panda server. Store fetched jobs in database.
         """
-       
+
         if num == 0:
             return 0
 
         if self.getjob:
             num = 1
-        
+
         count=0
 
-        for site, attrs in self.sites.iteritems():
+        for site, attrs in self.sites.items():
             if not attrs['enabled']:
-                continue        
+                continue
 
             if attrs['status'] == 'offline':
                 continue
@@ -138,14 +138,14 @@ class aCTPandaGetJobs(aCTATLASProcess):
             if (not self.getjob) and site in self.activated and sum([x for x in self.activated[site].values()]) == 0:
                 self.log.info("Site %s: No activated jobs" % site)
                 continue
-            
+
             prodsourcelabel = None
             if attrs['status'] == 'test' and attrs['type'] in ['production', 'unified']:
                 self.log.info("Site %s is in test, will set prodSourceLabel to prod_test" % site)
                 prodsourcelabel = 'prod_test'
             elif attrs['type'] == 'unified':
                 prodsourcelabel = 'unified'
-            
+
             # Get number of jobs injected into ARC but not yet submitted
             nsubmitting = self.dbpanda.getNJobs("actpandastatus='sent' and siteName='%s'" % site )
 
@@ -155,16 +155,16 @@ class aCTPandaGetJobs(aCTATLASProcess):
             self.log.info("Site %s: %i jobs in sent, %i total" % (site, nsubmitting, nall))
 
             # Limit number of jobs waiting submission to avoid getting too many
-            # jobs from Panda 
+            # jobs from Panda
             if nsubmitting > int(self.conf.get(["panda","minjobs"])) :
                 self.log.info("Site %s: at limit of sent jobs" % site)
                 continue
-            
+
             if nall >= self.sites[site]['maxjobs']:
                 self.log.info("Site %s: at or above max job limit of %d" % (site, self.sites[site]['maxjobs']))
                 continue
 
-            nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall) 
+            nthreads = min(int(self.conf.get(['panda','threads'])), self.sites[site]['maxjobs'] - nall)
             if self.getjob:
                 nthreads = 1
 
@@ -175,7 +175,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
             getEventRanges = site in ['LRZ-LMU_MUC_MCORE1', 'BOINC-ES', 'IN2P3-CC_HPC_IDRIS_MCORE', 'praguelcg2_IT4I_MCORE']
             apfmonjobs = []
 
-            for nc in range(0, max(int(num/nthreads), 1)):
+            for nc in range(0, max(num//nthreads, 1)):
                 if stopflag:
                     continue
 
@@ -218,7 +218,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
                     if pandaid == None: # connection error
                         stopflag = True
                         continue
-                    
+
                     n = {}
                     # Check eventranges is defined for ES jobs
                     if re.search('eventService=True', pandajob) and getEventRanges and (eventranges is None or eventranges == '[]'):
@@ -274,14 +274,14 @@ class aCTPandaGetJobs(aCTATLASProcess):
             self.starttime = time.time()
             self.getjob = True
             # Each 5 mins send the list of queues with maxjobs>0 to APFmon
-            self.apfmon.registerLabels([k for (k,v) in self.sites.items() if v['maxjobs'] > 0])    
+            self.apfmon.registerLabels([k for (k,v) in self.sites.items() if v['maxjobs'] > 0])
 
         # request new jobs
         num = self.getJobs(int(self.conf.get(['panda','getjobs'])))
         if num:
             self.log.info("Got %i jobs" % num)
         self.getjob = False
-        
+
 if __name__ == '__main__':
     am=aCTPandaGetJobs()
     am.run()

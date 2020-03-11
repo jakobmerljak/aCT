@@ -75,7 +75,7 @@ class aCTAPFMon:
 
         if not self.apfmonurl or not self.sendupdates:
             return
- 
+
         jobupdate = '%s/jobs/%s:%s' % (self.apfmonurl, self.factory, pandaid)
         payload = {"state": "%s" % status}
         if exitcode is not None:
@@ -96,4 +96,4 @@ def test():
 
 if __name__ == '__main__':
     test()
-    
+

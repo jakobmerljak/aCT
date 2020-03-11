@@ -7,7 +7,7 @@ class aCTPandaJob:
     Class containing information on a panda job being processed by aCT. Normally
     at the end of the job this information is encoded in the json file produced
     by the pilot and downloaded by aCT. aCT adjusts certain information before
-    sending it to panda. If the json is missing then default values are used. 
+    sending it to panda. If the json is missing then default values are used.
     The fields here are those expected by JobDispatcher.updateJob() in the Panda
     server.
     '''
@@ -41,7 +41,7 @@ class aCTPandaJob:
         '''
         Set attributes in the jobinfo dictionary
         '''
-        for key, value in jobinfo.iteritems():
+        for key, value in jobinfo.items():
             self.__dict__[key] = value
 
     def dictionary(self):
@@ -55,7 +55,7 @@ class aCTPandaJob:
         Write json of job info to filename. Overwrites an existing file.
         '''
         try:
-            os.makedirs(os.path.dirname(filename), 0755)
+            os.makedirs(os.path.dirname(filename), 0o755)
         except:
             pass
 
@@ -64,14 +64,14 @@ class aCTPandaJob:
 
 
 if __name__ == '__main__':
-    pj = aCTPandaJob(jobinfo={'jobId': 1234, 'state': 'running', 'batchID': 1234})  
+    pj = aCTPandaJob(jobinfo={'jobId': 1234, 'state': 'running', 'batchID': 1234})
     pj.newfield = 'blabla'
-    print pj.__dict__  
-    print pj.dictionary()
+    print(pj.__dict__)
+    print(pj.dictionary())
     pj.writeToFile('/tmp/x/pickle')
     pj2 = aCTPandaJob(filename='/tmp/x/pickle')
-    print pj2.dictionary()
+    print(pj2.dictionary())
     with open('/tmp/x/pickle') as f:
         pj3 = aCTPandaJob(filehandle=f)
-        print pj3.dictionary()
-        
+        print(pj3.dictionary())
+

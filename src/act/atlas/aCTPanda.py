@@ -1,6 +1,6 @@
 import cgi
 import json
-import urllib, urlparse, socket, httplib
+import urllib.request, urllib.parse, urllib.error, urllib.parse, socket, http.client
 import os
 import pickle
 from act.common import aCTConfig
@@ -11,7 +11,7 @@ class aCTPanda:
     def __init__(self,logger, proxyfile):
         self.conf = aCTConfig.aCTConfigATLAS()
         server = self.conf.get(['panda','server'])
-        u = urlparse.urlparse(server)
+        u = urllib.parse.urlparse(server)
         self.hostport = u.netloc
         self.topdir = u.path
         self.proxypath = proxyfile
@@ -23,13 +23,13 @@ class aCTPanda:
     def __HTTPConnect__(self,mode,node):
         urldata = None
         try:
-            conn = httplib.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
-            rdata=urllib.urlencode(node)
+            conn = http.client.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
+            rdata=urllib.parse.urlencode(node)
             conn.request("POST", self.topdir+mode,rdata)
             resp = conn.getresponse()
-            urldata = resp.read()
+            urldata = resp.read().decode()
             conn.close()
-        except Exception,x:
+        except Exception as x:
             self.log.error("error in connection: %s" %x)
         return urldata
 
@@ -44,13 +44,13 @@ class aCTPanda:
             return None
 
         try:
-            data = pickle.loads(urldata)
+            data = pickle.loads(urldata.encode())
         except Exception as e:
             self.log.error('Could not load panda response: %s' % urldata)
             return None
 
         return data
-    
+
     def getJob(self,siteName,prodSourceLabel=None,getEventRanges=True):
         node={}
         node['siteName']=siteName
@@ -65,10 +65,12 @@ class aCTPanda:
             self.log.info('No job from panda')
             return (None,None,None,None)
         try:
-            urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+            urldesc = urllib.parse.parse_qs(urldata)
+        except Exception as x:
             self.log.error(x)
             return (None,None,None,None)
+
+        self.log.info('panda returned %s' % urldesc)
         status = urldesc['StatusCode'][0]
         if status == '20':
             self.log.debug('No Panda activated jobs available')
@@ -81,13 +83,13 @@ class aCTPanda:
                 node = {}
                 node['pandaID'] = urldesc['PandaID'][0]
                 node['jobsetID'] = urldesc['jobsetID'][0]
-                node['taskID'] = urldesc['taskID'][0] 
+                node['taskID'] = urldesc['taskID'][0]
                 node['nRanges'] = 500 # TODO: configurable?
                 if siteName == 'BOINC-ES':
                     node['nRanges'] = 100
                 eventranges = self.getEventRanges(node)
         elif status == '60':
-            self.log.error('Failed to contact Panda, proxy may have expired')             
+            self.log.error('Failed to contact Panda, proxy may have expired')
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         self.log.debug("%s %s" % (pid,urldesc))
@@ -101,7 +103,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         self.log.debug('%s: Panda returned %s' % (node['pandaID'], urldesc))
@@ -109,7 +111,7 @@ class aCTPanda:
         if status == '0':
             return urldesc['eventRanges'][0]
         if status == '60':
-            self.log.error('Failed to contact Panda, proxy may have expired')             
+            self.log.error('Failed to contact Panda, proxy may have expired')
         else:
             self.log.error('Check out what this Panda rc means %s' % status)
         return None
@@ -123,7 +125,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -136,7 +138,7 @@ class aCTPanda:
             return None
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -149,11 +151,11 @@ class aCTPanda:
         urldata=self.__HTTPConnect__('getStatus',node)
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
-        
+
 
     def updateStatus(self,pandaId,state,desc={}):
         node={}
@@ -173,7 +175,7 @@ class aCTPanda:
         #self.log.debug('panda returned %s' % str(urldata))
         try:
             urldesc = cgi.parse_qs(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return None
         return urldesc
@@ -188,7 +190,7 @@ class aCTPanda:
         urldata=self.__HTTPConnect__('updateJobsInBulk', {'jobList': json.dumps(jobdata)})
         try:
             urldesc = json.loads(urldata)
-        except Exception,x:
+        except Exception as x:
             self.log.error(x)
             return {}
         return urldesc
@@ -209,9 +211,9 @@ class aCTPanda:
 
 
 if __name__ == '__main__':
-    
+
     from act.common.aCTLogger import aCTLogger
     logger = aCTLogger('test')
     log = logger()
     p = aCTPanda(log, os.environ['X509_USER_PROXY'])
-    print p.getQueueStatus('UIO_MCORE')
+    print(p.getQueueStatus('UIO'))

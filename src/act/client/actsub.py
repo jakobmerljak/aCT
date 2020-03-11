@@ -58,10 +58,10 @@ def main():
     try:
         jobmgr.checkSite(args.site) # use default path for sites.json
     except errors.NoSuchSiteError as e:
-        print 'error: site \'{}\' is not configured'.format(args.site)
+        print('error: site \'{}\' is not configured'.format(args.site))
         sys.exit(4)
     except Exception as e:
-        print 'error: could not read site config: {}'.format(str(e))
+        print('error: could not read site config: {}'.format(str(e)))
         sys.exit(11) # TODO: refactor error handling
 
     # get and check job description
@@ -69,17 +69,17 @@ def main():
         jobdesc = readXRSL(args.xRSL)
         jobmgr.checkJobDesc(jobdesc)
     except errors.InvalidJobDescriptionError:
-        print 'error: invalid job description'
+        print('error: invalid job description')
         sys.exit(6)
     except IOError:
-        print 'error: could not read xRSL file'
+        print('error: could not read xRSL file')
         sys.exit(7)
 
     # insert job
     arcconf = aCTConfig.aCTConfigARC()
     clidb = clientdb.ClientDB(dbname=arcconf.get(['db', 'name']))
     jobid = clidb.insertJobAndDescription(jobdesc, proxyid, args.site)
-    print 'Successfully inserted job with id {}'.format(jobid)
+    print('Successfully inserted job with id {}'.format(jobid))
 
 
 if __name__ == '__main__':

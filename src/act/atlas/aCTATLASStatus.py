@@ -6,7 +6,7 @@ import json
 import re
 import os
 import shutil
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 from act.common import aCTSignal
 
@@ -14,7 +14,7 @@ from act.atlas.aCTATLASProcess import aCTATLASProcess
 from act.atlas.aCTPandaJob import aCTPandaJob
 
 class aCTATLASStatus(aCTATLASProcess):
-    
+
     def __init__(self):
         aCTATLASProcess.__init__(self, ceflavour=['ARC-CE'])
 
@@ -27,10 +27,10 @@ class aCTATLASStatus(aCTATLASProcess):
           and report failed back to panda
         """
 
-        offlinesites = [s for s,a in self.sites.iteritems() if a['status'] == 'offline']
-        
+        offlinesites = [s for s,a in self.sites.items() if a['status'] == 'offline']
+
         if offlinesites:
-            
+
             offlinesitesselect = "('%s')" % "','".join(offlinesites)
             jobs = self.dbpanda.getJobs("(actpandastatus='starting' or actpandastatus='sent') and sitename in %s" % offlinesitesselect,
                                         ['pandaid', 'arcjobid', 'siteName', 'id'])
@@ -42,24 +42,24 @@ class aCTATLASStatus(aCTATLASProcess):
                                                      'error': 'Starting job was killed because queue went offline'})
                 if job['arcjobid']:
                     self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
-            
+
             self.dbpanda.Commit()
-        
+
         # Get jobs killed by panda
         jobs = self.dbpanda.getJobs("actpandastatus='tobekilled' and siteName in %s limit 100" % self.sitesselect,
                                     ['pandaid', 'arcjobid', 'pandastatus', 'id', 'siteName'])
         if not jobs:
             return
-        
+
         for job in jobs:
             self.log.info("Cancelling arc job for %d", job['pandaid'])
             select = 'id=%s' % job['id']
-            
+
             # Check if arcjobid is set before cancelling the job
             if not job['arcjobid']:
                 self.dbpanda.updateJobsLazy(select, {'actpandastatus': 'cancelled'})
                 continue
-            
+
             # Put timings in the DB
             arcselect = "arcjobid='%s' and arcjobs.id=pandajobs.arcjobid and sitename in %s" % (job['arcjobid'], self.sitesselect)
             columns = ['arcjobs.EndTime', 'UsedTotalWallTime', 'stdout', 'JobID', 'appjobid', 'siteName', 'cluster', 'metadata',
@@ -87,7 +87,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
             # Finally cancel the arc job
             self.dbarc.updateArcJob(job['arcjobid'], {'arcstate': 'tocancel'})
-        
+
         self.dbpanda.Commit()
 
     def getStartTime(self, endtime, walltime):
@@ -98,8 +98,8 @@ class aCTATLASStatus(aCTATLASProcess):
         if not endtime:
             return datetime.datetime.utcnow() - datetime.timedelta(0, walltime)
         return endtime-datetime.timedelta(0, walltime)
-           
-           
+
+
     def updateStartingJobs(self):
         """
         Check for sent jobs that have been submitted to ARC and update
@@ -127,7 +127,7 @@ class aCTATLASStatus(aCTATLASProcess):
             self.dbpanda.updateJobsLazy(select, desc)
         self.dbpanda.Commit()
 
-        
+
     def updateRunningJobs(self):
         """
         Check for new running jobs and update pandajobs with
@@ -138,7 +138,7 @@ class aCTATLASStatus(aCTATLASProcess):
         """
 
         # do an inner join to pick up all jobs that should be set to running
-        # todo: pandajobs.starttime will not be updated if a job is resubmitted 
+        # todo: pandajobs.starttime will not be updated if a job is resubmitted
         # internally by the ARC part.
         select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus in ('starting', 'sent')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
@@ -181,7 +181,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
         self.dbpanda.Commit()
 
-        
+
     def updateFinishedJobs(self):
         """
         Check for new finished jobs, update pandajobs with
@@ -200,7 +200,7 @@ class aCTATLASStatus(aCTATLASProcess):
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
         columns = ["arcjobs.id", "arcjobs.UsedTotalWallTime", "arcjobs.EndTime", "arcjobs.appjobid", "pandajobs.sendhb", "pandajobs.siteName"]
         jobstoupdate=self.dbarc.getArcJobsInfo(select, tables="arcjobs,pandajobs", columns=columns)
-        
+
         if len(jobstoupdate) == 0:
             return
         else:
@@ -276,7 +276,7 @@ class aCTATLASStatus(aCTATLASProcess):
             f.close()
         except:
             pass
-        
+
 
         import glob
         lf=glob.glob(outd+"/log*")
@@ -327,7 +327,7 @@ class aCTATLASStatus(aCTATLASProcess):
             outd = os.path.join(self.conf.get(['joblog','dir']), date, aj['siteName'])
             # Make sure the path to outd exists
             try:
-                os.makedirs(outd, 0755)
+                os.makedirs(outd, 0o755)
             except:
                 pass
             # copy from tmp to outd. tmp dir will be cleaned in validator
@@ -337,21 +337,21 @@ class aCTATLASStatus(aCTATLASProcess):
             if not os.path.exists(arcjoblog):
                 try:
                     shutil.copy(gmlogerrors, arcjoblog)
-                    os.chmod(arcjoblog, 0644)
+                    os.chmod(arcjoblog, 0o644)
                 except:
-                    self.log.error("Failed to copy %s" % gmlogerrors) 
+                    self.log.error("Failed to copy %s" % gmlogerrors)
 
             pilotlog = aj['stdout']
             if not pilotlog and os.path.exists(localdir):
                 pilotlogs = [f for f in os.listdir(localdir)]
                 for f in pilotlogs:
-                    if f.find('.log'):	
+                    if f.find('.log'):
                         pilotlog = f
             if pilotlog:
                 try:
                     shutil.copy(os.path.join(localdir, pilotlog),
                                 os.path.join(outd, '%s.out' % aj['appjobid']))
-                    os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0644)
+                    os.chmod(os.path.join(outd, '%s.out' % aj['appjobid']), 0o644)
                 except Exception as e:
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
 
@@ -428,7 +428,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 desc = {"arcstate":"tofetch", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJobsLazy(desc, select)
             self.dbarc.Commit()
-        
+
         # Look for failed final states in ARC which are still starting or running in panda
         select = "(arcstate='donefailed' or arcstate='cancelled' or arcstate='lost')"
         select += " and actpandastatus in ('sent', 'starting', 'running')"
@@ -441,7 +441,7 @@ class aCTATLASStatus(aCTATLASProcess):
 
         if len(jobstoupdate) == 0:
             return
-        
+
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
         if len(failedjobs) != 0:
             self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
@@ -451,7 +451,7 @@ class aCTATLASStatus(aCTATLASProcess):
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
         if len(cancelledjobs) != 0:
             self.log.debug("Found %d cancelled jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
-                
+
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted
         self.processFailed(failedjobs)
@@ -549,7 +549,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 shutil.rmtree(localdir, ignore_errors=True)
         if jobs:
             self.dbarc.Commit()
-            
+
         select = "arcstate='cancelled' and (actpandastatus in ('cancelled', 'donecancelled', 'failed', 'donefailed')) " \
                  "and pandajobs.arcjobid = arcjobs.id and siteName in %s" % self.sitesselect
         cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}

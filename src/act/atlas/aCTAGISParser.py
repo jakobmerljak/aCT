@@ -65,16 +65,16 @@ class aCTAGISParser:
                     siteinfo['status'] = 'online'
             siteinfo['enabled'] = True
             sites[sitename] = siteinfo
-        self.log.info("Parsed sites from config: %s" % str(sites.keys()))
-        return sites 
+        self.log.info("Parsed sites from config: %s" % str(list(sites.keys())))
+        return sites
 
     def _parseAgisJson(self, agisfilename, pilotmgr, pilotver):
         with open(agisfilename) as f:
             agisjson = json.load(f)
-        sites = dict([(agisjson[entry]['panda_resource'], dict(agisjson[entry].items()+[('schedconfig', entry)])) for entry in agisjson if agisjson[entry].has_key('panda_resource')])
+        sites = dict([(agisjson[entry]['panda_resource'], dict(list(agisjson[entry].items())+[('schedconfig', entry)])) for entry in agisjson if 'panda_resource' in agisjson[entry]])
         for sitename, siteinfo in sites.items():
-            siteinfo['push'] = True # TODO configure in AGIS 
-            if not siteinfo.has_key('schedconfig'):
+            siteinfo['push'] = True # TODO configure in AGIS
+            if 'schedconfig' not in siteinfo:
                 siteinfo['schedconfig'] = sitename
             if (pilotmgr == 'all' or siteinfo['pilot_manager'] == pilotmgr) and \
                (pilotver is None or siteinfo['pilot_version'] == str(pilotver)) and \
@@ -84,14 +84,14 @@ class aCTAGISParser:
             else:
                 siteinfo['enabled'] = False
                 siteinfo['maxjobs'] = 0
-            if (not siteinfo.has_key('corecount')) or (not siteinfo['corecount']):
+            if ('corecount' not in siteinfo) or (not siteinfo['corecount']):
                 siteinfo['corecount'] = 1
             if siteinfo.get('queues'):
                 siteinfo['flavour'] = siteinfo['queues'][0]['ce_flavour']
             else:
                 siteinfo['flavour'] = 'UNKNOWN'
             # pull out endpoints
-            if not siteinfo.has_key('endpoints'):
+            if 'endpoints' not in siteinfo:
                 endpoints = []
                 for queue in siteinfo['queues']:
                     if queue.get('ce_state') != 'ACTIVE':
@@ -113,7 +113,7 @@ class aCTAGISParser:
                     siteinfo['endpoints'] = endpoints
                 else:
                     siteinfo['endpoints'] = nondefaultendpoints
-            if not siteinfo.has_key('maxtime') or siteinfo['maxtime'] == 0:
+            if 'maxtime' not in siteinfo or siteinfo['maxtime'] == 0:
                 try:
                     maxwalltime = max([int(queue['ce_queue_maxwctime']) for queue in siteinfo['queues']])
                 except:
@@ -122,11 +122,11 @@ class aCTAGISParser:
                 if maxwalltime <= 0:
                     maxwalltime = 60*24*7
                 else:
-                    maxwalltime = min(maxwalltime, 60*24*7) 
+                    maxwalltime = min(maxwalltime, 60*24*7)
                 siteinfo['maxwalltime'] = maxwalltime
             else:
                 siteinfo['maxwalltime'] = min(int(siteinfo['maxtime'])/60, 60*24*7)
-            if not siteinfo.has_key('maxcputime'):
+            if 'maxcputime' not in siteinfo:
                 try:
                     maxcputime = max([int(queue['ce_queue_maxcputime']) for queue in siteinfo['queues']])
                 except:
@@ -135,7 +135,7 @@ class aCTAGISParser:
                 if maxcputime <= 0:
                     maxcputime = 60*24*7
                 else:
-                    maxcputime = min(maxcputime, 60*24*7) 
+                    maxcputime = min(maxcputime, 60*24*7)
                 siteinfo['maxcputime'] = maxcputime
             else:
                 siteinfo['maxcputime'] = min(int(siteinfo['maxcputime']), 60*24*7)
@@ -158,7 +158,7 @@ class aCTAGISParser:
                     self.log.debug('No ES object store for %s but jobseed is %s' % (sitename, siteinfo['jobseed']))
 
         if len(sites) < 100:
-            self.log.info("Parsed sites from AGIS: %s" % str(sites.keys()))
+            self.log.info("Parsed sites from AGIS: %s" % str(list(sites.keys())))
         else:
             self.log.info("Parsed %d sites from AGIS" % len(sites))
         return sites
@@ -189,7 +189,7 @@ class aCTAGISParser:
 
     def _mergeSiteDicts(self, dict1, dict2):
         for d in dict2.keys():
-            if dict1.has_key(d):
+            if d in dict1:
                 dict1[d].update(dict2[d])
             else:
                 dict1[d]=dict2[d]
@@ -210,7 +210,7 @@ class aCTAGISParser:
                 agismtime = os.stat(agisfile).st_mtime
                 break
             except:
-                i += 1 
+                i += 1
                 if i > 2:
                     self.log.critical("Couldn't get AGIS json")
                     return {}
@@ -239,7 +239,7 @@ class aCTAGISParser:
                     self.log.info("%s (%s): %s (%s), maxjobs %d" % (site, info['status'], 'True pilot' if info['truepilot'] else 'ARC pilot', info['flavour'], info['maxjobs']))
 
         if flavour:
-            return dict((k,v) for (k,v) in self.sites.iteritems() if v.get('flavour') in flavour)
+            return dict((k,v) for (k,v) in self.sites.items() if v.get('flavour') in flavour)
         return self.sites
 
     def getOSMap(self):
@@ -254,17 +254,17 @@ if __name__ == '__main__':
     log.setLevel("DEBUG")
     out = logging.StreamHandler(sys.stdout)
     log.addHandler(out)
-    agisparser=aCTAGISParser(log)
+    agisparser = aCTAGISParser(log)
     while 1:
         sites = agisparser.getSites()
         sites = dict([(s,i) for s,i in sites.items() if i['enabled']])
-        pprint.pprint(sites)
+        pprint.pprint(len(sites))
         for s,i in sites.items():
             try:
-                print s, i['ddmoses']
+                print(s, i['ddmoses'])
             except:
                 pass
-        print len(sites)
+        print(len(sites))
         oses = agisparser.getOSMap()
         sites = dict([(s,i) for s,i in oses.items()])
         pprint.pprint(sites)

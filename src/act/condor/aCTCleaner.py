@@ -6,7 +6,7 @@
 from act.common.aCTProcess import aCTProcess
 
 class aCTCleaner(aCTProcess):
-    
+
     def processToClean(self):
 
         select = "condorstate='toclean' and cluster='%s' limit 100" % self.cluster

@@ -37,7 +37,7 @@ def Submit(jobdesc, log, appjobid, schedd):
 
 
 class aCTSubmitter(aCTProcess):
-    
+
     def __init__(self):
         aCTProcess.__init__(self)
         self.schedd = htcondor.Schedd()
@@ -87,7 +87,7 @@ class aCTSubmitter(aCTProcess):
         if not self.cluster:
             self.log.error('Cluster must be defined for condor jobs')
             return 0
-        
+
         global queuelist
 
         # check for stopsubmission flag
@@ -97,11 +97,11 @@ class aCTSubmitter(aCTProcess):
 
         # Apply fair-share
         fairshares = self.dbcondor.getCondorJobsInfo("condorstate='tosubmit' and clusterlist like '%"+self.cluster+"%'", ['fairshare'])
-            
+
         if not fairshares:
             self.log.info('Nothing to submit')
             return 0
-        
+
         fairshares = set([p['fairshare'] for p in fairshares])
         count = 0
 
@@ -148,7 +148,7 @@ class aCTSubmitter(aCTProcess):
             # Check queued jobs and limits
             qjobs=self.dbcondor.getCondorJobsInfo("cluster='" +str(self.cluster)+ "' and ( condorstate='submitted' or condorstate='holding' ) and fairshare='%s'" % fairshare, ['id', 'priority'])
             rjobs=self.dbcondor.getCondorJobsInfo("cluster='" +str(self.cluster)+ "' and condorstate='running' and fairshare='%s'" % fairshare, ['id'])
-                    
+
             # max queued priority
             try:
                 maxprioqueued = max(qjobs,key = lambda x : x['priority'])['priority']
@@ -176,9 +176,9 @@ class aCTSubmitter(aCTProcess):
                 self.log.info("No free queues available")
                 self.dbcondor.Commit()
                 continue
-    
+
             self.log.info("start submitting")
-    
+
             # Just run one thread for each job in sequence.
             for j in jobs:
                 self.log.debug("%s: preparing submission" % j['appjobid'])
@@ -208,7 +208,7 @@ class aCTSubmitter(aCTProcess):
                 t = SubmitThr(Submit, j['id'], j['appjobid'], jobdesc, self.log, self.schedd)
                 self.RunThreadsSplit([t], 1)
                 count += 1
-    
+
             self.log.info("threads finished")
             # commit transaction to release row locks
             self.dbcondor.Commit()
@@ -234,10 +234,10 @@ class aCTSubmitter(aCTProcess):
                                                        ['id', 'appjobid', 'ClusterId'])
         if not jobstocancel:
             return
-        
+
         for job in jobstocancel:
             self.log.info("%s: Cancelling condor job" % job['appjobid'])
-    
+
             if not job['ClusterId']:
                 # Job not submitted
                 self.log.info("%s: Marking unsubmitted job cancelled" % job['appjobid'])
@@ -258,7 +258,7 @@ class aCTSubmitter(aCTProcess):
 
 
     def processToResubmit(self):
-        
+
         jobstoresubmit = self.dbcondor.getCondorJobsInfo("condorstate='toresubmit' and cluster='"+self.cluster+"'",
                                                          ['id', 'appjobid', 'ClusterId'])
 
@@ -296,4 +296,4 @@ if __name__ == '__main__':
     asb=aCTSubmitter()
     asb.run()
     asb.finish()
-    
+

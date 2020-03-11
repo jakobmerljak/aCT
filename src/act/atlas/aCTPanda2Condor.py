@@ -58,7 +58,7 @@ class aCTPanda2Condor(aCTATLASProcess):
                     logdir = os.path.join(self.conf.get(["joblog", "dir"]),
                                           job['created'].strftime('%Y-%m-%d'),
                                           job['siteName'])
-                    try: os.makedirs(logdir, 0755)
+                    try: os.makedirs(logdir, 0o755)
                     except: pass
                     jdlfile = os.path.join(logdir, '%s.jdl' % job['pandaid'])
                     with open(jdlfile, 'w') as f:

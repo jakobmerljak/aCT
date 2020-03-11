@@ -1,10 +1,10 @@
-import httplib
+import http.client
 import os
 import traceback
 import json
 
-from aCTATLASProcess import aCTATLASProcess
-from aCTPanda2Xrsl import aCTPanda2Xrsl
+from act.atlas.aCTATLASProcess import aCTATLASProcess
+from act.atlas.aCTPanda2Xrsl import aCTPanda2Xrsl
 
 
 class aCTPanda2Arc(aCTATLASProcess):
@@ -87,7 +87,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                     logdir = os.path.join(self.conf.get(["joblog", "dir"]),
                                           job['created'].strftime('%Y-%m-%d'),
                                           job['siteName'])
-                    try: os.makedirs(logdir, 0755)
+                    try: os.makedirs(logdir, 0o755)
                     except: pass
                     jdlfile = os.path.join(logdir, '%s.jdl' % job['pandaid'])
                     with open(jdlfile, 'w') as f:
@@ -101,7 +101,7 @@ class aCTPanda2Arc(aCTATLASProcess):
     def sendTraces(self, traces, proxypath):
         for trace in traces:
             try:
-                conn = httplib.HTTPSConnection('rucio-lb-prod.cern.ch:443', key_file=proxypath, cert_file=proxypath, timeout=5)
+                conn = http.client.HTTPSConnection('rucio-lb-prod.cern.ch:443', key_file=proxypath, cert_file=proxypath, timeout=5)
                 rdata = json.dumps(trace)
                 headers = {"Content-type": "application/json"}
                 conn.request("POST", "/traces/", rdata, headers)
@@ -110,7 +110,7 @@ class aCTPanda2Arc(aCTATLASProcess):
                 if status != 201:
                     self.log.error("Error sending trace: %s : %s" % (resp.status, resp.reason))
                 conn.close()
-            except Exception, error:
+            except Exception as error:
                 self.log.error("Error sending trace: %s" % error)
 
 

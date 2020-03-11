@@ -79,13 +79,13 @@ def main():
         try:
             jobs = jobmgr.getIDsFromList(args.jobs)
         except InvalidJobRangeError as e:
-            print "error: range '{}' is not a valid range".format(e.jobRange)
+            print("error: range '{}' is not a valid range".format(e.jobRange))
             sys.exit(2)
         except InvalidJobIDError as e:
-            print "error: ID '{}' is not a valid ID".format(e.jobid)
+            print("error: ID '{}' is not a valid ID".format(e.jobid))
             sys.exit(3)
     else:
-        print "error: no jobs specified (use -a or -j)"
+        print("error: no jobs specified (use -a or -j)")
         sys.exit(10)
 
     # get proxy ID given proxy
@@ -96,11 +96,11 @@ def main():
     try:
         results = manager.getJobs(proxyid, jobs, args.state, args.find)
     except TmpConfigurationError:
-        print 'error: tmp directory not configured'
+        print('error: tmp directory not configured')
         sys.exit(5)
 
     if not results.jobdicts:
-        print 'no jobs to get'
+        print('no jobs to get')
         sys.exit(0)
 
     # copy job results
@@ -111,14 +111,14 @@ def main():
                 dst_dirname = os.path.basename(os.path.normpath(result['name']))
                 dstdir = getLocalDir(dst_dirname)
                 shutil.copytree(result['dir'], dstdir)
-                print 'Results stored at: {}'.format(dstdir)
+                print('Results stored at: {}'.format(dstdir))
             else:
                 raise NoJobDirectoryError(result['dir'])
 
         except NoJobDirectoryError as e:
-            print 'error: tmp results directory {} does not exist'.format(e.jobdir)
+            print('error: tmp results directory {} does not exist'.format(e.jobdir))
         except TargetDirExistsError as e:
-            print 'error: job destination {} already exists'.format(e.dstdir)
+            print('error: job destination {} already exists'.format(e.dstdir))
             # don't clean job that could not be removed
             dontRemove.append(result['id'])
 

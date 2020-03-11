@@ -41,7 +41,7 @@ config.parse_non_param_conf(conf_dict, args.conf)
 try:
     proxy_file = open(conf_dict['proxy'], 'r')
 except Exception as e:
-    print 'error opening proxy file: {}'.format(str(e))
+    print('error opening proxy file: {}'.format(str(e)))
     sys.exit(2)
 else:
     proxy_str = proxy_file.read()
@@ -52,14 +52,14 @@ request_url = conf_dict['server'] + ':' + str(conf_dict['port']) + '/proxies'
 try:
     r = requests.put(request_url, data=proxy_str, cert=(conf_dict['cert'], conf_dict['key']), verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
-    print '{} - successfully inserted proxy with id {}'.format(r.status_code, r.text)
+    print('{} - successfully inserted proxy with id {}'.format(r.status_code, r.text))
     sys.exit(0)
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)
 
 

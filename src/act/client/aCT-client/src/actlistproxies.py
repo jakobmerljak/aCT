@@ -36,15 +36,15 @@ request_url = conf_dict['server'] + ':' + str(conf_dict['port']) + '/proxies'
 try:
     r = requests.get(request_url, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
     json_r = json.loads(r.text)
     for proxy in json_r:
-        for key, value in proxy.items():
-            print '{}:{} '.format(key, value),
-        print
+        for key, value in list(proxy.items()):
+            print('{}:{} '.format(key, value), end=' ')
+        print()
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)

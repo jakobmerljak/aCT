@@ -106,17 +106,17 @@ if __name__ == '__main__':
     #actconf.printConfig()
     while 1:
         actconf.parse()
-        print actconf.get(['jobs','maxqueued'])
-        print actconf.get(['rls','server'])
-        print actconf.getList(['test','a1','a2'])
-        print actconf.getList(['atlasgiis','item'])
-        print actconf.getList(['clustersreject','item'])
-        print actconf.getList(['srm','token','name'])
-        print actconf.getList(['srm','token','dir'])
-        print actconf.get(['srm','prefix'])
-        print actconf.getList(['brokerlist','broker','qreject','item'])
+        print(actconf.get(['jobs','maxqueued']))
+        print(actconf.get(['rls','server']))
+        print(actconf.getList(['test','a1','a2']))
+        print(actconf.getList(['atlasgiis','item']))
+        print(actconf.getList(['clustersreject','item']))
+        print(actconf.getList(['srm','token','name']))
+        print(actconf.getList(['srm','token','dir']))
+        print(actconf.get(['srm','prefix']))
+        print(actconf.getList(['brokerlist','broker','qreject','item']))
         for (i,j) in zip(actconf.getList(['srm','token','name']),actconf.getList(['srm','token','dir'])):
-            print i,j
+            print(i,j)
         exit(1)
         time.sleep(1)
-    
+

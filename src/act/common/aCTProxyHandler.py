@@ -3,15 +3,14 @@
 # Handles proxy updates in proxies table
 #
 
-import aCTConfig
-
-from aCTProcess import aCTProcess
-from aCTProxy import aCTProxy
+from act.common import aCTConfig
+from act.common.aCTProcess import aCTProcess
+from act.common.aCTProxy import aCTProxy
 
 import datetime
 
 class aCTProxyHandler(aCTProcess):
-    
+
     def __init__(self):
         aCTProcess.__init__(self)
         self.conf=aCTConfig.aCTConfigARC()
@@ -29,7 +28,7 @@ class aCTProxyHandler(aCTProcess):
             return 345600
         else:
             return proxylifetime
-        
+
     def _updateRolesFromConfig(self):
         vo = self.conf.get(["voms", "vo"])
         validTime = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
@@ -55,14 +54,14 @@ class aCTProxyHandler(aCTProcess):
             proxyid = row["id"]
             self.pm.voms_proxies[(dn, attribute)] = (vo, attribute, proxypath, validTime, proxyid)
         return len(ret_columns)
-            
+
     def _updateMyProxies(self):
         return None
 
     def renewProxies(self):
         self.log.info("renewing proxies")
         self.pm.renew()
-  
+
     def process(self):
         # renew proxies
         t=datetime.datetime.utcnow()

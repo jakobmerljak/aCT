@@ -37,18 +37,18 @@ request_url = conf_dict['server'] + ':' + str(conf_dict['port']) + '/jobs'
 try:
     files = {'xrsl': open(args.xRSL, 'r')}
 except Exception as e:
-    print 'error opening xRSL file: {}'.format(str(e))
+    print('error opening xRSL file: {}'.format(str(e)))
     sys.exit(2)
 form = {'site': args.site}
 
 try:
     r = requests.post(request_url, files=files, data=form, cert=conf_dict['proxy'], verify=conf_dict['cadir'])
 except Exception as e:
-    print 'requests error: {}'.format(str(e))
+    print('requests error: {}'.format(str(e)))
     sys.exit(5)
 
 if r.status_code == 200:
-    print '{} - succesfully submited job with id {}'.format(r.status_code, r.text)
+    print('{} - succesfully submited job with id {}'.format(r.status_code, r.text))
 else:
-    print '{} - {}'.format(r.status_code, r.text)
+    print('{} - {}'.format(r.status_code, r.text))
     sys.exit(4)
