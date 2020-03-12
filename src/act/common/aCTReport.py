@@ -322,7 +322,7 @@ class aCTReport:
             for site, prodsourcelabels in workers.items():
                 for prodsourcelabel, resources in prodsourcelabels.items():
                     for resource, jobs in resources.items():
-                        rep[f'{site}-{resource}'][prodsourcelabel] = jobs
+                        rep[f'{site}-{resource}'][prodsourcelabel or 'empty'] = jobs
                         for state, count in jobs.items():
                             rtot[state] += count
             self.log(f"All Harvester jobs: {sum(rtot.values())}       prodSourceLabel: submitted/running")
