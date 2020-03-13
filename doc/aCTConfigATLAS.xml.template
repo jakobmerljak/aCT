@@ -1,9 +1,15 @@
+<!-- copy this file to aCTConfigAPP.xml and modify -->
+
 <config>
 
+<modules>
+  <app>act.atlas</app>
+</modules>
+
 <executable>
-  <wrapperurl>http://www-f9.ijs.si;cache=check/grid/ARCpilot-test</wrapperurl>
-  <ptarurl>http://pandaserver.cern.ch:25080;cache=check/cache/pilot/pilotcode.tar.gz</ptarurl>
-  <ptarurlrc>"http://project-atlas-gmsb.web.cern.ch;cache=no/project-atlas-gmsb/pilotcode-rc.tar.gz"</ptarurlrc>
+  <wrapperurl>/cvmfs/atlas.cern.ch/repo/sw/PandaPilotWrapper/latest/runpilot2-wrapper.sh</wrapperurl>
+  <ptarurl>http://pandaserver.cern.ch:25085/cache/pilot/pilot2.tar.gz</ptarurl>
+  <ptarurlrc>http://atlas-panda-pilot.web.cern.ch/atlas-panda-pilot/pilot2-dev.tar.gz</ptarurlrc>
 </executable>
 
 <joblog>
@@ -12,7 +18,7 @@
 </joblog>
 
 <agis>
-  <server>http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/&#63;json&#38;preset&#61;schedconf.all</server>
+  <server>http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/&#63;json&#38;preset&#61;schedconf.all&#38;state&#61;ANY&#38;vo_name&#61;atlas&#38;is_virtual&#61;False</server>
   <objectstores>http://atlas-agis-api.cern.ch/request/ddmendpoint/query/list/&#63;json&#38;type&#91;&#93;&#61;OS_LOGS&#38;type&#91;&#93;&#61;OS_ES</objectstores>
   <jsonfilename>/data/user/atlact1/act-test1/tmp/agis.json</jsonfilename>
   <osfilename>/home/dcameron/dev/aCT/tmp/oses.json</osfilename>

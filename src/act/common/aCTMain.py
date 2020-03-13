@@ -25,6 +25,7 @@ class aCTMain:
 
         # xml config file
         self.conf = aCTConfig.aCTConfigARC()
+        self.appconf = aCTConfig.aCTConfigAPP()
 
         # Create required directories
         tmpdir = self.conf.get(["tmp", "dir"])
@@ -51,7 +52,7 @@ class aCTMain:
         # process manager
         try:
             if self.shouldrun:
-                self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf)
+                self.procmanager = aCTProcessManager.aCTProcessManager(self.log, self.conf, self.appconf)
         except Exception as e:
             self.log.critical("*** Unexpected exception! ***")
             self.log.critical(traceback.format_exc())

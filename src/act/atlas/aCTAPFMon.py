@@ -86,8 +86,8 @@ class aCTAPFMon:
         self.log.debug("APFmon returned %d: %s" % (r.status_code, r.text))
 
 def test():
-    from act.common.aCTConfig import aCTConfigATLAS
-    conf = aCTConfigATLAS()
+    from act.common.aCTConfig import aCTConfigAPP
+    conf = aCTConfigAPP()
     apf = aCTAPFMon(conf)
     apf.registerFactory()
     apf.registerLabels(['ARC-TEST', 'BOINC_MCORE'])

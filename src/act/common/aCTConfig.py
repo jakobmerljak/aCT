@@ -8,7 +8,8 @@ class aCTConfig:
         self.configfile = configfile
         self.top=[]
         self.tparse=0
-        self.parse()
+        if self.configfile:
+            self.parse()
 
     def parse(self):
         mtime=os.stat(self.configfile)[8]
@@ -84,19 +85,19 @@ class aCTConfigARC(aCTConfig):
             raise Exception('Could not find aCTConfigARC.xml')
         aCTConfig.__init__(self, configfile)
 
-class aCTConfigATLAS(aCTConfig):
+class aCTConfigAPP(aCTConfig):
 
     def __init__(self):
-        if 'ACTCONFIGATLAS' in os.environ and os.path.exists(os.environ['ACTCONFIGATLAS']):
-            configfile = os.environ['ACTCONFIGATLAS']
-        elif 'VIRTUAL_ENV' in os.environ and os.path.exists(os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigATLAS.xml')):
-            configfile = os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigATLAS.xml')
-        elif os.path.exists('/etc/act/aCTConfigATLAS.xml'):
-            configfile = '/etc/act/aCTConfigATLAS.xml'
-        elif os.path.exists('aCTConfigATLAS.xml'):
-            configfile="aCTConfigATLAS.xml"
+        if 'ACTCONFIGAPP' in os.environ and os.path.exists(os.environ['ACTCONFIGAPP']):
+            configfile = os.environ['ACTCONFIGAPP']
+        elif 'VIRTUAL_ENV' in os.environ and os.path.exists(os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigAPP.xml')):
+            configfile = os.path.join(os.environ['VIRTUAL_ENV'], 'etc', 'act', 'aCTConfigAPP.xml')
+        elif os.path.exists('/etc/act/aCTConfigAPP.xml'):
+            configfile = '/etc/act/aCTConfigAPP.xml'
+        elif os.path.exists('aCTConfigAPP.xml'):
+            configfile="aCTConfigAPP.xml"
         else:
-            raise Exception('Could not find aCTConfigATLAS.xml')
+            configfile=None
         aCTConfig.__init__(self, configfile)
 
 

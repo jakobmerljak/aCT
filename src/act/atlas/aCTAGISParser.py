@@ -12,7 +12,7 @@ class aCTAGISParser:
 
     def __init__(self, logger):
         self.log = logger
-        self.conf = aCTConfig.aCTConfigATLAS()
+        self.conf = aCTConfig.aCTConfigAPP()
         self.arcconf = aCTConfig.aCTConfigARC()
         self.tparse = 0
         self.getSites()

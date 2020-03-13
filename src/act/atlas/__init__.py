@@ -1,0 +1,11 @@
+app_processes = ['aCTAGISFetcher',
+                 'aCTATLASStatus',
+                 'aCTATLASStatusCondor',
+                 'aCTAutopilot',
+                 'aCTAutopilotSent',
+                 'aCTPandaGetJobs',
+                 'aCTPanda2Arc',
+                 'aCTPanda2Condor',
+                 'aCTProxyHandler',
+                 'aCTValidator',
+                 'aCTValidatorCondor']

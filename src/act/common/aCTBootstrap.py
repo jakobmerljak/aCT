@@ -1,7 +1,7 @@
 import sys
 import os
 from act.common.aCTLogger import aCTLogger
-from act.common.aCTConfig import aCTConfigARC, aCTConfigATLAS
+from act.common.aCTConfig import aCTConfigARC, aCTConfigAPP
 from act.arc.aCTDBArc import aCTDBArc
 from act.condor.aCTDBCondor import aCTDBCondor
 from act.atlas.aCTDBPanda import aCTDBPanda
@@ -18,9 +18,9 @@ def bootstrap_conf():
         sys.exit(1)
 
     try:
-        atlasconf = aCTConfigATLAS()
+        atlasconf = aCTConfigAPP()
     except Exception as e:
-        print('Error processing ATLAS config file: %s' % str(e))
+        print('Error processing APP config file: %s' % str(e))
         sys.exit(1)
 
 def bootstrap_dirs():
@@ -31,7 +31,7 @@ def bootstrap_dirs():
 
 def bootstrap_db():
     '''Set up the DB tables'''
-    # TODO: setup only what is needed based on config
+    # TODO: setup only what is needed based on config and app
     logger = aCTLogger('aCTBootstrap')
     log = logger()
     dbarc = aCTDBArc(log)
