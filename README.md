@@ -51,14 +51,14 @@ aCT requires a database. MySQL/MariaDB is the only officially supported database
 
 # Configuring
 
-aCT is configured with 2 configuration files, `aCTConfigARC.xml` and `aCTConfigATLAS.xml`. These files are searched for in the following places in order until found:
+aCT is configured with 2 configuration files, `aCTConfigARC.xml` and optional `aCTConfigAPP.xml`. These files are searched for in the following places in order until found:
 ```
 $ACTCONFIGARC
 $VIRTUAL_ENV/etc/act/aCTConfigARC.xml
 /etc/act/aCTConfigARC.xml
 ./aCTConfigARC.xml
 ```
-and the same for aCTConfigATLAS.xml. Configuration templates can be found in etc/act in the virtualenv.
+and the same for aCTConfigAPP.xml. Configuration templates can be found in etc/act in the virtualenv.
 
 Once configuration is set up, the `actbootstrap` tool should be used to create the necessary database tables.
 
