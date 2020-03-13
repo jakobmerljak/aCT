@@ -239,7 +239,7 @@ class aCTATLASStatus(aCTATLASProcess):
                 failedjobs += [aj]
                 continue
             resubmit=False
-            # todo: errors part of aCTConfigARC should probably be moved to aCTConfigATLAS.
+            # todo: errors part of aCTConfigARC should probably be moved to aCTConfigAPP.
             for error in self.arcconf.getList(['errors','toresubmit','arcerrors','item']):
                 if aj['Error'].find(error) != -1:
                     resubmit=True

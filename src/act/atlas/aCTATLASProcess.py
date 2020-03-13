@@ -32,7 +32,7 @@ class aCTATLASProcess:
         self.criticallog = self.criticallogger()
 
         # config
-        self.conf=aCTConfig.aCTConfigATLAS()
+        self.conf=aCTConfig.aCTConfigAPP()
         self.arcconf=aCTConfig.aCTConfigARC()
         self.tmpdir=str(self.arcconf.get(['tmp', 'dir']))
         # database

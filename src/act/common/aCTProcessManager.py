@@ -1,3 +1,4 @@
+import importlib
 import subprocess
 import os
 
@@ -10,7 +11,7 @@ class aCTProcessManager:
     Manager of aCT processes, starting and stopping as necessary
     '''
 
-    def __init__(self, log, conf):
+    def __init__(self, log, conf, appconf):
 
         # logger
         self.log = log
@@ -26,20 +27,20 @@ class aCTProcessManager:
         self.arcsubmitter = 'act/arc/aCTSubmitter'
         self.condorsubmitter = 'act/condor/aCTSubmitter'
         # dictionary of processes:aCTProcessHandler of which to run a single instance
-        # TODO: app-specific processes in conf file instead of hard-coded
-        self.processes_single = {'act/atlas/aCTAutopilot':None,
-                                 'act/atlas/aCTAutopilotSent':None,
-                                 'act/atlas/aCTPandaGetJobs':None,
-                                 'act/atlas/aCTPanda2Arc':None,
-                                 'act/atlas/aCTPanda2Condor':None,
-                                 'act/common/aCTProxyHandler':None,
-                                 'act/atlas/aCTATLASStatus':None,
-                                 'act/atlas/aCTATLASStatusCondor':None,
-                                 'act/atlas/aCTValidator':None,
-                                 'act/atlas/aCTValidatorCondor':None,
-                                 'act/atlas/aCTAGISFetcher':None,
-                                 'act/client/client2arc':None
-                                 }
+        self.processes_single = {'act/common/aCTProxyHandler': None}
+        apps = appconf.getList(["modules", "app"])
+        for app in apps:
+            try:
+                ap = importlib.import_module(app).app_processes
+                self.processes_single.update({f'{app.replace(".", "/")}/{p}': None for p in ap})
+            except ModuleNotFoundError as e:
+                self.log.critical(f'No such module {app}')
+                raise e
+            except AttributeError:
+                self.log.info(f'No app-specific processes found in {app}')
+            else:
+                self.log.info(f'Loaded {", ".join(ap)} processes from {app}')
+
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
         # dictionary of cluster to Submitter processes handlers, there should

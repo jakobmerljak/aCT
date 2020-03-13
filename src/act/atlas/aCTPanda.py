@@ -10,7 +10,7 @@ class aCTPanda:
 
 
     def __init__(self,logger, proxyfile):
-        self.conf = aCTConfig.aCTConfigATLAS()
+        self.conf = aCTConfig.aCTConfigAPP()
         server = self.conf.get(['panda','server'])
         u = urllib.parse.urlparse(server)
         self.hostport = u.netloc
