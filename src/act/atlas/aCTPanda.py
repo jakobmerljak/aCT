@@ -1,8 +1,9 @@
 import cgi
 import json
-import urllib.request, urllib.parse, urllib.error, urllib.parse, socket, http.client
+import urllib.parse, socket, http.client
 import os
 import pickle
+import ssl
 from act.common import aCTConfig
 
 class aCTPanda:
@@ -14,18 +15,23 @@ class aCTPanda:
         u = urllib.parse.urlparse(server)
         self.hostport = u.netloc
         self.topdir = u.path
-        self.proxypath = proxyfile
+        proxypath = proxyfile
         self.log = logger
         # timeout in seconds
         self.timeout = int(self.conf.get(['panda','timeout']))
         socket.setdefaulttimeout(self.timeout)
 
-    def __HTTPConnect__(self,mode,node):
+        self.context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        self.context.load_cert_chain(proxypath, keyfile=proxypath)
+        self.context.verify_mode = ssl.CERT_REQUIRED
+        self.context.load_verify_locations('/etc/pki/tls/certs/CERN-bundle.pem')
+
+    def __HTTPConnect__(self, mode, node):
         urldata = None
         try:
-            conn = http.client.HTTPSConnection(self.hostport, key_file=self.proxypath, cert_file=self.proxypath )
-            rdata=urllib.parse.urlencode(node)
-            conn.request("POST", self.topdir+mode,rdata)
+            conn = http.client.HTTPSConnection(self.hostport, context=self.context)
+            rdata = urllib.parse.urlencode(node)
+            conn.request("POST", self.topdir+mode, rdata)
             resp = conn.getresponse()
             urldata = resp.read().decode()
             conn.close()
