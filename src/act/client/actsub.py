@@ -77,7 +77,7 @@ def main():
 
     # insert job
     arcconf = aCTConfig.aCTConfigARC()
-    clidb = clientdb.ClientDB(dbname=arcconf.get(['db', 'name']))
+    clidb = clientdb.ClientDB()
     jobid = clidb.insertJobAndDescription(jobdesc, proxyid, args.site)
     print('Successfully inserted job with id {}'.format(jobid))
 

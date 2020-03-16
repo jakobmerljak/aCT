@@ -211,9 +211,8 @@ def submit():
     except errors.NoSuchSiteError as e:
         return 'Invalid site', 400
     else:
-        clidb = clientdb.ClientDB()
         try:
-            jobid = clidb.insertJobAndDescription(jobdesc, proxyid, site)
+            jobid = jmgr.clidb.insertJobAndDescription(jobdesc, proxyid, site)
         except Exception as e:
             return 'Server error: {}'.format(str(e)), 500
         else:
