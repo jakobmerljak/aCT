@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
+# TODO: Add CLI switch for no header for simpler processing
 
 """
 Get job information from aCT.
@@ -118,7 +120,7 @@ def main():
     # be nicely formatted.
     colsizes = {}
     for job in jobdicts:
-        for key, value in list(job.items()):
+        for key, value in job.items():
             # All keys have a letter and underscore prepended, which is not
             # used when printing
             colsize = max(len(str(key[2:])), len(str(value)))
@@ -128,40 +130,41 @@ def main():
             except KeyError:
                 colsizes[key] = colsize
 
-# Print table header
+    # Print table header
     for col in clicols:
         print('{:<{width}}'.format(col, width=colsizes['c_' + col]), end=' ')
     for col in arccols:
         print('{:<{width}}'.format(col, width=colsizes['a_' + col]), end=' ')
     print()
     line = ''
-    for value in list(colsizes.values()):
+    for value in colsizes.values():
         line += '-' * value
-    line += '-' * (len(list(colsizes.values())) - 1)
+    line += '-' * (len(colsizes) - 1)
     print(line)
 
     # Print jobs
     for job in jobdicts:
         for col in clicols:
             fullKey = 'c_' + col
-            try:
-                if job[fullKey].strip() == '':
-                    txt = "''"
-                else:
-                    txt = job[fullKey]
-            except:
-                txt = job[fullKey]
+            txt = job.get(fullKey)
+            # just in case the value is a bunch of whitespace
+            # TODO: This (str(txt)) might not be a general fix; it is a direct 
+            #       fix for the problem encountered with
+            #       datetime.datetime object for 'created' field that
+            #       has to be converted to a string.
+            #       The same fix is used for arccols below.
+            # TODO: This fix assumes that all job fields are properly
+            #       convertible to string. Is that really so?
+            if not txt or str(txt).strip() == '': # short circuit important!
+                txt = "''"
             print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
         for col in arccols:
             fullKey = 'a_' + col
-            try:
-                if job[fullKey].strip() == '':
-                    txt = "''"
-                else:
-                    txt = job[fullKey]
-            except:
-                txt = job[fullKey]
-            print('{:<{width}}'.format(txt, width=colsizes[fullKey]), end=' ')
+            txt = job.get(fullKey)
+            # just in case the value is a bunch of whitespace
+            if not txt or str(txt).strip() == '': # short circuit important!
+                txt = "''"
+            print('{:<{width}}'.format(str(txt), width=colsizes[fullKey]), end=' ')
         print()
 
 

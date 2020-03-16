@@ -1,23 +1,28 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
-        name = 'aCT-client',
-        version = '1.0',
-        url = 'https://www.act.com',
-        maintainer = 'Jakob Merljak',
-        maintainer_email = 'jakob.merljak@ijs.si',
-        package_dir = {'': 'src'},
-        py_modules = ['config'],
-        scripts = [
-            'src/actproxy.py',
-            'src/actlistproxies.py',
-            'src/actdeleteproxy.py',
-            'src/actstat.py',
-            'src/actclean.py',
-            'src/actfetch.py',
-            'src/actkill.py',
-            'src/actresub.py',
-            'src/actsub.py',
-            'src/actget.py'
-        ]
+    name = 'aCT-client',
+    version = '0.1',
+    url = 'http://github.com/ATLASControlTower/aCT',
+    author = 'aCT team',
+    author_email = 'act-dev@cern.ch',
+    package_dir = {'': 'src'},
+    packages=find_packages('src'),
+    entry_points = {
+        'console_scripts': [
+            'actproxy       = actproxy:main',
+            'actlistproxies = actlistproxies:main',
+            'actdeleteproxy = actdeleteproxy:main',
+            'actstat        = actstat:main',
+            'actclean       = actclean:main',
+            'actfetch       = actfetch:main',
+            'actkill        = actkill:main',
+            'actresub       = actresub:main',
+            'actsub         = actsub:main',
+            'actget         = actget:main',
+        ],
+    },
+    install_requires = [
+        'requests',
+    ]
 )

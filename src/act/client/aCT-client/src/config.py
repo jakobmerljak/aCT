@@ -46,14 +46,14 @@ def parse_conf_file(conf_file, conf_dict):
     conf_parser.readfp(conf_fp)
     config = dict(conf_parser.items('dummy'))
 
-    for key, value in list(conf_dict.items()):
+    for key, value in conf_dict.items():
         if value == None:
             conf_dict[key] = config.get(key, None)
 
 
 def set_defaults(conf_dict):
     """Set all None parameters to default values in config dictionary."""
-    for key, value in list(conf_dict.items()):
+    for key, value in conf_dict.items():
         if value is None:
             conf_dict[key] = DEFAULTS.get(key, None)
 
@@ -61,7 +61,7 @@ def set_defaults(conf_dict):
 def expand_paths(conf_dict):
     """Expand home directories (~) in path parameters of config dictionary."""
     for param in PATH_PARAMS:
-        if param in list(conf_dict.keys()):
+        if param in conf_dict:
             conf_dict[param] = os.path.expanduser(conf_dict[param])
 
 
@@ -102,11 +102,11 @@ def parse_default_conf(conf_dict):
 def parse_non_param_conf(conf_dict, conf_arg):
     """Parse from config files and use defaults for any not given parameter."""
     # get remaining config from conf file parameter
-    if None in list(conf_dict.values()) and conf_arg:
+    if None in conf_dict.values() and conf_arg:
         parse_param_conf(conf_arg, conf_dict)
 
     # get remaining config from default conf file
-    if None in list(conf_dict.values()):
+    if None in conf_dict.values():
         parse_default_conf(conf_dict)
 
     # use defaults for all remaining not given parameters
