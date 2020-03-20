@@ -35,7 +35,10 @@ class aCTDB(object):
             res = self.db.releaseMutexLock(self.table)
             if not res:
                 self.log.warning("Could not release lock: %s" % str(res))
-        self.db.conn.commit()
+        try:
+            self.db.conn.commit()
+        except Exception as e:
+            self.log.error("Exception on commit: %s" % str(e))
         if lock:
             c = self.db.getCursor()
             c.execute("UNLOCK TABLES")
