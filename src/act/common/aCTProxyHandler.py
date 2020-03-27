@@ -34,9 +34,13 @@ class aCTProxyHandler(aCTProcess):
         validTime = self._checkProxyLifetime(int(self.conf.get(["voms", "proxylifetime"])))
         proxypath = self.conf.get(["voms", "proxypath"])
         # TODO: roles should be taken from AGIIS
-        for role in self.conf.getList(["voms", "roles", "item"]):
-            attribute = "/"+vo+"/Role="+role
-            self.pm.createVOMSAttribute(vo, attribute, proxypath, validTime)
+        roles = self.conf.getList(["voms", "roles", "item"])
+        if not roles:
+            self.pm.createVOMSAttribute(vo, '', proxypath, validTime)
+        else:
+            for role in roles:
+                attribute = "/"+vo+"/Role="+role
+                self.pm.createVOMSAttribute(vo, attribute, proxypath, validTime)
 
     def _updateLocalProxies(self):
         """
