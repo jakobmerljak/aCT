@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import os
 import re
 import signal
@@ -7,8 +8,8 @@ import sys
 import time
 import logging
 from act.common import aCTLogger
+from act.common.aCTConfig import aCTConfigAPP
 from act.arc import aCTDBArc
-from act.atlas import aCTDBPanda
 
 
 class aCTReport:
@@ -17,13 +18,12 @@ class aCTReport:
 
     def __init__(self, args):
         self.output = ""
-        self.harvester = args.harvester
         self.outfile = args.web
         self.actconfs = args.conffiles or [''] # empty string for default behaviour
 
         self.logger=aCTLogger.aCTLogger("aCTReport")
         self.actlog=self.logger()
-        self.actlog.logger.setLevel(logging.ERROR)
+        self.actlog.logger.setLevel(logging.INFO)
         self.criticallogger = aCTLogger.aCTLogger('aCTCritical', arclog=False)
         self.criticallog = self.criticallogger()
 
@@ -32,10 +32,25 @@ class aCTReport:
             self.log(time.asctime() + '\n')
 
         self.db=aCTDBArc.aCTDBArc(self.actlog)
-        self.pandadb=aCTDBPanda.aCTDBPanda(self.actlog)
 
     def log(self, message=''):
         self.output += message + '\n'
+
+    def AppReport(self):
+
+        appconf = aCTConfigAPP()
+        apps = appconf.getList(["modules", "app"])
+        for app in apps:
+            try:
+                ap = importlib.import_module(f'{app}.aCTReport').report
+                self.log(ap(self.actconfs))
+            except ModuleNotFoundError as e:
+                self.actlog.info(f'No report in module {app}')
+            except AttributeError:
+                self.actlog.info(f'aCTReport.report() not found in {app}')
+            except Exception as e:
+                self.actlog.error(f'Exception running {app}.aCTReport.report: {e}')
+
 
     def ProcessReport(self):
         if self.actconfs != ['']:
@@ -84,73 +99,7 @@ class aCTReport:
             self.log(f'{cluster:>38.38}: {" ".join(procs)}')
         self.log()
 
-    def PandaReport(self):
-        rep={}
-        rtot={}
-        states = ["sent", "starting", "running", "slots", "tovalidate", "toresubmit",
-                  "toclean", "finished", "done", "failed", "donefailed",
-                  "tobekilled", "cancelled", "donecancelled"]
 
-        for conf in self.actconfs:
-            if conf:
-                os.environ['ACTCONFIGARC'] = conf
-
-            db=aCTDBArc.aCTDBArc(self.actlog)
-            c=db.db.conn.cursor()
-            c.execute("select sitename, actpandastatus, corecount from pandajobs")
-            rows=c.fetchall()
-            for r in rows:
-
-                site, state = (str(r[0]), str(r[1]))
-                if r[2] is None:
-                    corecount=1
-                else:
-                    corecount=int(r[2])
-
-                try:
-                    rep[site][state]+=1
-                    if state == "running":
-                        rep[site]["slots"]+=1*corecount
-                except:
-                    try:
-                        rep[site][state]=1
-                        if state == "running":
-                            try:
-                                rep[site]["slots"]+=1*corecount
-                            except:
-                                rep[site]["slots"]=corecount
-                    except:
-                        rep[site]={}
-                        rep[site][state]=1
-                        if state == "running":
-                            rep[site]["slots"]=corecount
-                try:
-                    rtot[state]+=1
-                    if state == "running":
-                        rtot["slots"]+=1*corecount
-                except:
-                    rtot[state]=1
-                    if state == "running":
-                        rtot["slots"]=corecount
-
-        self.log(f"All Panda jobs: {sum([v for k,v in rtot.items() if k != 'slots'])}")
-        self.log(f"{'':29} {' '.join([f'{s:>9}' for s in states])}")
-
-        for k in sorted(rep.keys()):
-            log=f"{k:>28.28}:"
-            for s in states:
-                try:
-                    log += f'{rep[k][s]:>10}'
-                except KeyError:
-                    log += f'{"-":>10}'
-            self.log(log)
-        log = f'{"Totals":>28}:'
-        for s in states:
-            try:
-                log += f'{rtot[s]:>10}'
-            except:
-                log += f'{"-":>10}'
-        self.log(log+'\n\n')
 
     def ArcJobReport(self):
         rep={}
@@ -280,9 +229,9 @@ class aCTReport:
         lostlimit = 86400
         select = "(arcstate='submitted' or arcstate='running') and " \
                  + self.db.timeStampLessThan("tarcstate", lostlimit) + \
-                 " and sendhb=1 and arcjobs.id=pandajobs.arcjobid order by tarcstate"
+                 " order by tarcstate"
         columns = ['cluster']
-        jobs = self.db.getArcJobsInfo(select, columns, tables='arcjobs,pandajobs')
+        jobs = self.db.getArcJobsInfo(select, columns)
 
         if jobs:
             self.log('Found %d jobs not updated in over %d seconds:\n' % (len(jobs), lostlimit))
@@ -302,39 +251,6 @@ class aCTReport:
                 self.log(f'{count} {cluster}')
             self.log()
 
-    def HarvesterReport(self):
-        try:
-            from distutils.sysconfig import get_python_lib # pylint: disable=import-error
-            sys.path.append(get_python_lib()+'/pandacommon')
-
-            os.environ['PANDA_HOME']=os.environ['VIRTUAL_ENV']
-
-            from collections import defaultdict # pylint: disable=import-error
-            from pandaharvester.harvestercore.db_proxy_pool import DBProxyPool as DBProxy # pylint: disable=import-error
-
-            self.dbProxy = DBProxy()
-
-            workers = self.dbProxy.get_worker_stats_bulk(None)
-            rep = defaultdict(dict)
-
-            rtot = defaultdict(int)
-
-            for site, prodsourcelabels in workers.items():
-                for prodsourcelabel, resources in prodsourcelabels.items():
-                    for resource, jobs in resources.items():
-                        rep[f'{site}-{resource}'][prodsourcelabel or 'empty'] = jobs
-                        for state, count in jobs.items():
-                            rtot[state] += count
-            self.log(f"All Harvester jobs: {sum(rtot.values())}       prodSourceLabel: submitted/running")
-            for k in sorted(rep.keys()):
-                log=f"{k:>28.28}:"
-                for psl, jobs in rep[k].items():
-                    log += f"{psl:>10}: {jobs['submitted']}/{jobs['running']}"
-                self.log(log)
-            log = f"{'Totals':>28}:  submitted: {rtot['submitted']}  running: {rtot['running']}"
-            self.log(log+'\n\n')
-        except:
-            pass
 
     def end(self):
         if self.outfile:
@@ -345,13 +261,10 @@ def main():
     parser = argparse.ArgumentParser(description='Report table of aCT jobs.')
     parser.add_argument('conffiles', nargs='*', help='list of configuration files')
     parser.add_argument('--web', help='Output suitable for web page')
-    parser.add_argument('--harvester', action='store_true', help='Include harvester info')
     args = parser.parse_args(sys.argv[1:])
 
     acts = aCTReport(args)
-    acts.PandaReport()
-    if acts.harvester:
-        acts.HarvesterReport()
+    acts.AppReport()
     acts.ArcJobReport()
     acts.CondorJobReport()
     acts.StuckReport()
