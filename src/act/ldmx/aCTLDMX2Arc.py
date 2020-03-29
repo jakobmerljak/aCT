@@ -30,18 +30,22 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             self.log.info(f'{nsubmitted} jobs already submitted, not submitting more')
             return
 
-        # Get CE endpoints
-        sites = self.conf.getListCond(['sites' ,'site'], 'status=online', ['endpoints', 'item'])
-        self.log.debug(f'Using sites {",".join(sites)}')
+        # Get CE endpoints, filter by status and maxjobs
+        onlinesites = [s for s, i in self.sites.items() if i['status'] == 'online' and i['maxjobs'] > 0]
+        sitejobs = {s: self.dbldmx.getNJobs(f"ldmxstatus in ('submitted', 'queueing', 'running') AND sitename='{s}'") for s in onlinesites}
+        self.log.debug(', '.join([f'{s}: submitted jobs {i}, maxjobs {self.sites[s]["maxjobs"]}' for (s, i) in sitejobs.items()]))
+        onlinesites = [s for s in onlinesites if sitejobs[s] < self.sites[s]['maxjobs']]
+        clusterlist = ','.join([','.join(self.sites[s]['endpoints']) for s in onlinesites])
+        self.log.debug(f'Available CEs: {clusterlist}')
 
         # Submit waiting jobs
-        waitingjobs = self.dbldmx.getJobs("ldmxstatus='waiting'")
+        waitingjobs = self.dbldmx.getJobs("ldmxstatus='waiting' limit 10")
         for job in waitingjobs:
 
             xrsl = self.createXRSL(job['description'])
             arcid = self.dbarc.insertArcJobDescription(xrsl,
                                                        proxyid=job['proxyid'],
-                                                       clusterlist=','.join(sites),
+                                                       clusterlist=clusterlist,
                                                        downloadfiles='stdout;gmlog/errors;rucio.metadata',
                                                        appjobid=str(job['id']))
 
