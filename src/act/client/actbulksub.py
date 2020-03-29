@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Submit xRSL job to aCT.
@@ -66,7 +66,7 @@ def main():
 
     # check descriptions and submit jobs
     arcconf = aCTConfig.aCTConfigARC()
-    clidb = clientdb.ClientDB(dbname=arcconf.get(['db', 'name']))
+    clidb = clientdb.ClientDB()
     for xrsl in args.xRSL:
         try:
             jobdesc = readXRSL(xrsl)

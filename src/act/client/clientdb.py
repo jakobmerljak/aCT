@@ -28,16 +28,14 @@ class ClientDB(aCTDB):
     has :meth:`Commit`  method (inherited from ancestors).
     """
 
-    # TODO: dbname was omitted from aCTDBArc; should this be done here?
-    def __init__(self, logger=logging.getLogger(__name__), dbname='act'):
+    def __init__(self, logger=logging.getLogger(__name__)):
         """
         Initialize base object.
 
         Args:
             logger: An object for logging.
-            dbname: A string with a name of aCT database.
         """
-        aCTDB.__init__(self, logger, dbname)
+        aCTDB.__init__(self, logger, "clientjobs")
 
     def createTables(self):
         """Create clientjobs table."""
@@ -220,9 +218,11 @@ class ClientDB(aCTDB):
         desc['downloadfiles'] = downloadfiles
         desc['priority'] = priority
         desc['fairshare'] = fairshare
-        s="insert into arcjobs" + " ( " + ",".join(['%s' % (k) for k in list(desc.keys())]) + " ) " + " values " + \
-            " ( " + ",".join(['%s' % (k) for k in ["%s"] * len(list(desc.keys())) ]) + " ) "
-        c.execute(s,list(desc.values()))
+        s="insert into arcjobs" + " ( " + \
+            ",".join(["%s" % (k) for k in desc.keys()]) + \
+            " ) " + " values " + " ( " + \
+            ",".join(['%s' % (k) for k in ["%s"] * len(desc)]) + " ) "
+        c.execute(s, list(desc.values()))
         c.execute("SELECT LAST_INSERT_ID()")
         row = c.fetchone()
         self.Commit()
@@ -271,7 +271,7 @@ class ClientDB(aCTDB):
         Returns:
             A list of dictionaries of column_name:value.
         """
-        if self._checkColumns('clientjobs', columns) == False:
+        if not self._checkColumns('clientjobs', columns):
             return None
 
         # query params
@@ -279,13 +279,13 @@ class ClientDB(aCTDB):
         # create query
         query = 'SELECT {} FROM clientjobs '.format(
             self._column_list2str(columns))
-        if 'where' in list(kwargs.keys()):
+        if 'where' in kwargs:
             query += ' WHERE {} '.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in list(kwargs.keys()):
+        if 'order_by' in kwargs:
             query += ' ORDER BY {} '.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in list(kwargs.keys()):
+        if 'limit' in kwargs:
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
@@ -325,12 +325,12 @@ class ClientDB(aCTDB):
             lazy: A boolean that determines whether transaction should be
                 commited after operation.
         """
-        if self._checkColumns('clientjobs', list(patch.keys())) == False:
+        if not self._checkColumns('clientjobs', patch.keys()):
             raise Exception("Invalid job attribute")
 
         query = 'UPDATE clientjobs SET '
         params = []
-        for key in list(patch.keys()):
+        for key in patch.keys():
             query += '{} = %s, '.format(key)
             params.append(patch[key])
         query = query.rstrip(', ')
@@ -372,8 +372,8 @@ class ClientDB(aCTDB):
         if not clicols and not arccols:
             return []
 
-        if self._checkColumns('clientjobs', clicols) == False or \
-                self._checkColumns('arcjobs', arccols) == False:
+        if not self._checkColumns('clientjobs', clicols) or \
+                not self._checkColumns('arcjobs', arccols):
             raise Exception("Invalid columns")
 
         c = self.db.getCursor()
@@ -391,13 +391,13 @@ class ClientDB(aCTDB):
 
         params = []
         # select job
-        if 'where' in list(kwargs.keys()):
+        if 'where' in kwargs:
             query += ' WHERE {}'.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in list(kwargs.keys()):
+        if 'order_by' in kwargs:
             query += ' ORDER BY {}'.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in list(kwargs.keys()):
+        if 'limit' in kwargs:
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 
@@ -440,8 +440,8 @@ class ClientDB(aCTDB):
         if not clicols and not arccols:
             return []
 
-        if self._checkColumns('clientjobs', clicols) == False or \
-                self._checkColumns('arcjobs', arccols) == False:
+        if not self._checkColumns('clientjobs', clicols) or \
+                not self._checkColumns('arcjobs', arccols):
             raise Exception("Invalid columns")
 
         c = self.db.getCursor()
@@ -459,13 +459,13 @@ class ClientDB(aCTDB):
 
         params = []
         # select job
-        if 'where' in list(kwargs.keys()):
+        if 'where' in kwargs:
             query += ' WHERE {}'.format(kwargs['where'])
             params.extend(kwargs['where_params'])
-        if 'order_by' in list(kwargs.keys()):
+        if 'order_by' in kwargs:
             query += ' ORDER BY {}'.format(kwargs['order_by'])
             params.extend(kwargs['order_by_params'])
-        if 'limit' in list(kwargs.keys()):
+        if 'limit' in kwargs:
             query += ' LIMIT %s'
             params.append(kwargs['limit'])
 

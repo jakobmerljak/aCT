@@ -6,6 +6,5 @@ app_processes = ['aCTAGISFetcher',
                  'aCTPandaGetJobs',
                  'aCTPanda2Arc',
                  'aCTPanda2Condor',
-                 'aCTProxyHandler',
                  'aCTValidator',
                  'aCTValidatorCondor']

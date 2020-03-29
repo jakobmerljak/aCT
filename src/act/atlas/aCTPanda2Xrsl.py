@@ -129,6 +129,10 @@ class aCTPanda2Xrsl:
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
 
+        # For truepilot use queue maxwalltime
+        if self.truepilot:
+            walltime = self.maxwalltime
+
         cputime = self.getNCores() * walltime
         if self.sitename.startswith('BOINC'):
             walltime = min(240, walltime)

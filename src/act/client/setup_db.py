@@ -24,7 +24,7 @@ conn.commit()
 
 # create tables for in database
 print('Creating aCT tables ...')
-clidb = clientdb.ClientDB(dbname=dbname)
+clidb = clientdb.ClientDB()
 arcdb = aCTDBArc.aCTDBArc(logging.getLogger(__name__))
 clidb.createTables()
 arcdb.createTables()
