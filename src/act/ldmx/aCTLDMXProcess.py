@@ -38,6 +38,18 @@ class aCTLDMXProcess:
         self.starttime = time.time()
         self.log.info("Started %s", self.name)
 
+    def setSites(self):
+        '''
+        Set map of sites, CEs and status
+        '''
+        self.sites = {}
+        for sitename in self.conf.getList(["sites", "site", "name"]):
+            siteinfo = {}
+            siteinfo['endpoints'] = self.conf.getListCond(["sites", "site"], f"name={sitename}", ["endpoints", "item"])
+            siteinfo['status'] = self.conf.getCond(["sites", "site"], f"name={sitename}", ["status"]) or 'online'
+            siteinfo['maxjobs'] = int(self.conf.getCond(["sites", "site"], f"name={sitename}", ["maxjobs"]) or 999999)
+            self.sites[sitename] = siteinfo
+
     def process(self):
         '''
         Called every loop during the main loop. Subclasses must implement this
@@ -54,6 +66,7 @@ class aCTLDMXProcess:
                 # parse config file
                 self.conf.parse()
                 self.arcconf.parse()
+                self.setSites()
                 # do class-specific things
                 self.process()
                 # sleep
