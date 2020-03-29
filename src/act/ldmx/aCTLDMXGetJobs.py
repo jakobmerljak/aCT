@@ -21,6 +21,11 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
         bufferdir = self.conf.get(['jobs', 'bufferdir'])
         jobs = os.listdir(bufferdir)
         now = time.time()
+        try:
+            proxyid = self.dbarc.getProxiesInfo("attribute=''", ['id'], expect_one=True)['id']
+        except Exception:
+            self.log.error('No proxies found in DB')
+            return
 
         for job in jobs:
             jobfile = os.path.join(bufferdir, job)
@@ -35,7 +40,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                 newjobfile = f.name
                 shutil.move(jobfile, newjobfile)
 
-            self.dbldmx.insertJob(newjobfile, 2) # TODO fix proxies to handle voms-less
+            self.dbldmx.insertJob(newjobfile, proxyid)
             self.log.info(f'Inserted job at {newjobfile} into DB')
 
 
