@@ -14,7 +14,7 @@ def report(actconfs):
 
     db = aCTDBLDMX(logger)
     c = db.db.conn.cursor()
-    c.execute("select computingelement, ldmxstatus from ldmxjobs")
+    c.execute("select sitename, ldmxstatus from ldmxjobs")
     rows = c.fetchall()
     for r in rows:
 

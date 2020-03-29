@@ -52,6 +52,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Read the metadata and insert into rucio
             select = f"id={int(aj['appjobid'])}"
             desc = {'computingelement': aj['cluster'],
+                    'sitename': self.endpoints[aj['cluster']],
                     'starttime': aj['EndTime'] - timedelta(0, aj['UsedTotalWallTime']),
                     'endtime': aj['EndTime']}
             if self.insertMetadata(aj):

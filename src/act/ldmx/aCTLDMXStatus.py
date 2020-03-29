@@ -25,7 +25,8 @@ class aCTLDMXStatus(aCTLDMXProcess):
         for job in submittedjobs:
             self.log.info(f"Job {job['id']} now in state {job['arcstate']}")
             desc = {'ldmxstatus': 'queueing' if job['arcstate'] == 'submitted' else 'running',
-                    'computingelement': job['cluster']}
+                    'computingelement': job['cluster'],
+                    'sitename': self.endpoints[job['cluster']]}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
         select = "ldmxstatus='queueing' and arcstate = 'running'"
@@ -34,7 +35,8 @@ class aCTLDMXStatus(aCTLDMXProcess):
         for job in queueingjobs:
             self.log.info(f"Job {job['id']} now in state {job['arcstate']}")
             desc = {'ldmxstatus': 'running',
-                    'computingelement': job['cluster']}
+                    'computingelement': job['cluster'],
+                    'sitename': self.endpoints[job['cluster']]}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
         if submittedjobs or queueingjobs:
@@ -82,19 +84,22 @@ class aCTLDMXStatus(aCTLDMXProcess):
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
-                                                                'computingelement': aj['cluster']})
+                                                                'computingelement': aj['cluster'],
+                                                                'sitename': self.endpoints[aj['cluster']]})
 
         for aj in lostjobs:
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
-                                                                'computingelement': aj['cluster']})
+                                                                'computingelement': aj['cluster'],
+                                                                'sitename': self.endpoints[aj['cluster']]})
 
         for aj in cancelledjobs:
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'cancelled',
-                                                                'computingelement': aj['cluster']})
+                                                                'computingelement': aj['cluster'],
+                                                                'sitename': self.endpoints[aj['cluster']]})
 
         self.dbarc.Commit()
         self.dbldmx.Commit()
