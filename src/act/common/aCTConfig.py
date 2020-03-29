@@ -70,6 +70,12 @@ class aCTConfig:
             return l[0]
         return None
 
+    def getCond(self, nodesc, cond, nodes):
+        l = self.getListCond(nodesc, cond, nodes)
+        if l:
+            return l[0]
+        return None
+
 class aCTConfigARC(aCTConfig):
 
     def __init__(self):
