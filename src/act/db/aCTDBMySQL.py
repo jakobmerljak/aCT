@@ -42,6 +42,8 @@ class aCTDBMySQL(aCTDBMS):
             self.log.warning(str(e))
             self.conn.close()
             self._connect(self.dbname)
+        except:
+            pass
 
         for _ in range(3):
             try:
