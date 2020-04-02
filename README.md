@@ -47,7 +47,7 @@ export PYTHONPATH=/usr/lib64/python3.6/site-packages/arc
 ```
 The actual paths may depend on your system and python version.
 
-aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite.
+aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite. __Note__ that MySQL/MariaDB >= 5.6 is required whereas the default on CentOS 7 is 5.5.
 
 # Configuring
 
