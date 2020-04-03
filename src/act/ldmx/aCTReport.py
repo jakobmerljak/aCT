@@ -9,7 +9,7 @@ def report(actconfs):
     rep = {}
     rtot = {}
     log = ''
-    states = ["new", "waiting", "queueing", "running", "tovalidate", "toresubmit",
+    states = ["new", "waiting", "submitted", "queueing", "running", "tovalidate", "toresubmit",
               "toclean", "finished", "failed", "tobekilled", "cancelled"]
 
     db = aCTDBLDMX(logger)
