@@ -38,6 +38,9 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         onlineendpoints = [ep for ep, s in self.endpoints.items() if s in onlinesites]
         self.log.debug(f'Available CEs: {", ".join([f"{self.endpoints[ce]}: {ce}" for ce in onlineendpoints])}')
 
+        if not onlineendpoints:
+            return
+
         # Submit waiting jobs
         waitingjobs = self.dbldmx.getJobs("ldmxstatus='waiting' limit 10")
         for job in waitingjobs:
@@ -70,6 +73,8 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['gmlog'] = 'gmlog'
         xrsl['join'] = 'yes'
         xrsl['rerun'] = '2'
+        xrsl['walltime'] = 30
+        xrsl['cputime'] = 30
         xrsl['outputfiles'] = '("rucio.metadata" "")'
 
         return '&' + '\n'.join(f'({k} = {v})' for k,v in xrsl.items())
