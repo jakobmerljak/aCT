@@ -25,20 +25,12 @@ class aCTLDMXRegister(aCTLDMXProcess):
         Look for done jobs, and register output metadata in Rucio
         '''
 
-        # Get the done jobs, set to clean
         select = "arcstate='done'"
         columns = ['id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime',
                    'EndTime', 'ExecutionNode', 'stdout', 'fairshare', 'created']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns)
         if not arcjobs:
             return
-
-        # Set the arcjob to toclean
-        for aj in arcjobs:
-            select = f"id={aj['id']}"
-            desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
-            self.dbarc.updateArcJobsLazy(desc, select)
-        self.dbarc.Commit()
 
         for aj in arcjobs:
             jobid = aj.get('JobID')
@@ -64,7 +56,13 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Clean tmp dir
             self.cleanDownloadedJob(jobid)
 
+            # Set arc job to clean
+            select = f"id={aj['id']}"
+            desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
+            self.dbarc.updateArcJobsLazy(desc, select)
+
         self.dbldmx.Commit()
+        self.dbarc.Commit()
 
     def copyOutputFiles(self, arcjob):
         '''
@@ -135,6 +133,9 @@ class aCTLDMXRegister(aCTLDMXProcess):
                                     {x: str(y) for x, y in metadata.items() if x not in native_metadata})
         except KeyError as e:
             self.log.info(f'key missing in metadata json: {e}')
+            return False
+        except RucioException as e:
+            self.log.warning(f'Rucio exception: {e}')
             return False
 
         return True
