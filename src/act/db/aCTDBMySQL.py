@@ -1,4 +1,5 @@
 import mysql.connector as mysql
+from _mysql_connector import MySQLInterfaceError
 from act.common import aCTUtils
 from act.db.aCTDBMS import aCTDBMS
 
@@ -37,13 +38,11 @@ class aCTDBMySQL(aCTDBMS):
         # make sure cursor reads newest db state
         try:
             self.conn.commit()
-        except mysql.errors.InternalError as e:
+        except (mysql.errors.InternalError, MySQLInterfaceError) as e:
             # Unread result, force reconnection
             self.log.warning(str(e))
             self.conn.close()
             self._connect(self.dbname)
-        except:
-            pass
 
         for _ in range(3):
             try:
