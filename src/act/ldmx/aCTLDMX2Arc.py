@@ -23,9 +23,9 @@ class aCTLDMX2Arc(aCTLDMXProcess):
 
     def processWaitingJobs(self):
 
-        # Thottle submission
-        maxsubmitted = self.conf.get(['jobs', 'maxsubmitted']) or 999999
-        nsubmitted = self.dbldmx.getNJobs("ldmxstatus in ('submitted', 'queueing', 'running')")
+        # Thottle submission to not have too big a queue of unsubmitted jobs
+        maxsubmitted = self.conf.get(['jobs', 'maxsubmitted']) or 50
+        nsubmitted = self.dbldmx.getNJobs("ldmxstatus='submitted'")
         if nsubmitted >= int(maxsubmitted):
             self.log.info(f'{nsubmitted} jobs already submitted, not submitting more')
             return
@@ -56,6 +56,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             self.dbldmx.updateJobLazy(job['id'], desc)
             self.log.info(f'Inserted job {job["id"]} with xrsl {xrsl}')
 
+            nsubmitted += 1
             if nsubmitted >= int(maxsubmitted):
                 self.log.info(f'Reached maximum {maxsubmitted} submitted jobs')
                 break
