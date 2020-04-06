@@ -13,7 +13,8 @@ class aCTDBLDMX(aCTDB):
            - created: Creation time of ldmx job
            - sitename: the site on which the job ran or is submitted to
            - arcjobid: Row ID of job in arcjobs table
-           - description: LDMX job description
+           - description: LDMX job description (config file)
+           - template: LDMX job template file
            - ldmxstatus: LDMX job status
                  new: job has been entered but not processed yet
                  waiting: job is waiting to be submitted
@@ -44,7 +45,8 @@ class aCTDBLDMX(aCTDB):
         created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         sitename VARCHAR(255),
         arcjobid integer,
-        description MEDIUMTEXT,
+        description VARCHAR(255),
+        template VARCHAR(255)
         ldmxstatus VARCHAR(255),
         priority integer,
         starttime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -99,9 +101,10 @@ class aCTDBLDMX(aCTDB):
         return True
 
 
-    def insertJob(self, description, proxyid, priority=0):
+    def insertJob(self, description, template, proxyid, priority=0):
         '''Insert new job description'''
         desc = {'description': description,
+                'template': template,
                 'proxyid': proxyid,
                 'priority': priority,
                 'ldmxstatus': 'new'}
