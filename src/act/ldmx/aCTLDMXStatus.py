@@ -84,22 +84,22 @@ class aCTLDMXStatus(aCTLDMXProcess):
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
-                                                                'computingelement': aj['cluster'],
-                                                                'sitename': self.endpoints[aj['cluster']]})
+                                                                'computingelement': aj.get('cluster'),
+                                                                'sitename': self.endpoints.get(aj.get('cluster'))})
 
         for aj in lostjobs:
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
-                                                                'computingelement': aj['cluster'],
-                                                                'sitename': self.endpoints[aj['cluster']]})
+                                                                'computingelement': aj.get('cluster'),
+                                                                'sitename': self.endpoints.get(aj.get('cluster'))})
 
         for aj in cancelledjobs:
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'cancelled',
-                                                                'computingelement': aj['cluster'],
-                                                                'sitename': self.endpoints[aj['cluster']]})
+                                                                'computingelement': aj.get('cluster'),
+                                                                'sitename': self.endpoints.get(aj.get('cluster'))})
 
         self.dbarc.Commit()
         self.dbldmx.Commit()
@@ -109,6 +109,11 @@ class aCTLDMXStatus(aCTLDMXProcess):
         '''
         Copy job stdout and errors log to final location
         '''
+
+        if not arcjob.get('JobID'):
+            self.log.info('Job did not run, no output to copy')
+            return
+
         sessionid = arcjob['JobID'][arcjob['JobID'].rfind('/')+1:]
         date = arcjob['created'].strftime('%Y-%m-%d')
         outd = os.path.join(self.conf.get(['joblog','dir']), date)
