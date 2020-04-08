@@ -33,8 +33,14 @@ class aCTPanda2Xrsl:
 
         self.created = pandadbjob['created']
         self.wrapper = atlasconf.get(["executable", "wrapperurl"])
-        self.piloturl = siteinfo.get('params', {}).get('pilot_url') or atlasconf.get(["executable", "ptarurl"])
-        self.piloturlrc = atlasconf.get(["executable", "ptarurlrc"])
+        if self.prodSourceLabel.startswith('rc_'):
+            self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
+
+        self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        if 'pilot_url' in siteinfo.get('params', {}):
+            self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        elif self.prodSourceLabel.startswith('rc_test'):
+            self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -255,8 +261,7 @@ class aCTPanda2Xrsl:
         elif self.prodSourceLabel.startswith('rc_test'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' \
-                      % (self.piloturlrc if self.prodSourceLabel.startswith('rc_test') else self.piloturl)
+            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
@@ -310,10 +315,7 @@ class aCTPanda2Xrsl:
             x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
 
         # Pilot tarball
-        if self.prodSourceLabel.startswith('rc_test'):
-            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturlrc
-        else:
-            x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
+        x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get agis files from cvmfs or over network
         if self.agisjsons:
