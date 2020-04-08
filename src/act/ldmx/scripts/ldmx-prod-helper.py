@@ -6,6 +6,7 @@ import argparse
 import sys
 import os
 import json
+import zlib
 
 
 config_to_mac_substs = {
@@ -197,6 +198,18 @@ def collect_meta(conf_dict, mac_dict):
     data_location = os.environ['LDMX_STORAGE_BASE']
     data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
+
+    # Rucio metadata
+    meta['scope'] = 'test'
+    meta['name'] = os.path.basename(data_location)
+    meta['datasetscope'] = 'test'
+    meta['datasetname'] = meta['SampleId']
+
+    meta['bytes'] = os.stat(conf_dict['FileName']).st_size
+    # TODO: chunked read for large files
+    with open(conf_dict['FileName']) as f:
+        cs = zlib.adler32(f.read().encode()) & 0xffffffff
+    meta['adler32'] = '{:08x}'.format(cs)
 
     return meta
 
