@@ -33,6 +33,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             return
 
         for aj in arcjobs:
+            self.log.info(f'Found finished job {aj["id"]}')
             jobid = aj.get('JobID')
             if not jobid:
                 self.log.error(f'No JobID in arcjob {aj["id"]}')
@@ -105,6 +106,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
             self.log.error(f'Failed to read metadata.json file at {metadatafile}: {e}')
             return False
 
+        # Set RSE from configuration
+        metadata['rse'] = self.sites[self.endpoints[arcjob['cluster']]]['rse']
         try:
             scope = metadata['scope']
             name = metadata['name']
@@ -112,8 +115,9 @@ class aCTLDMXRegister(aCTLDMXProcess):
             dname = metadata['datasetname']
             self.log.info(f'Inserting metadata info for {scope}:{name}: {metadata}')
             # Add replica
+            pfn = f'file://{metadata["DataLocation"]}'
             self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
-                                   metadata['adler32'], metadata['pfn'])
+                                   metadata['adler32'], pfn)
             try:
                 # Attach to dataset
                 self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
@@ -126,7 +130,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
                     self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
 
             # Add metadata, removing all rucio "native" metadata
-            native_metadata = ['scope', 'name', 'bytes', 'adler32', 'rse', 'pfn',
+            native_metadata = ['scope', 'name', 'bytes', 'adler32', 'rse',
                                'datasetscope', 'datasetname']
             # Metadata values must be strings to be searchable
             self.rucio.add_did_meta(scope, name,
