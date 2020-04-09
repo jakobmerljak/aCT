@@ -41,9 +41,10 @@ class aCTProxy:
         cmd=[self.conf.get(["voms","bindir"])+"/arcproxy"]
         cmd.extend(["--constraint=validityPeriod="+str(validTime)+"S"])
         cmd.extend(["--constraint=vomsACvalidityPeriod="+str(validTime)+"S"])
-        cmd.extend(["--voms="+voms])
-        if attribute:
-            cmd[-1]+=":"+attribute
+        if voms:
+            cmd.extend(["--voms="+voms])
+            if attribute:
+                cmd[-1]+=":"+attribute
         cmd.extend(["--cert="+oldproxypath])
         cmd.extend(["--key="+oldproxypath])
         cmd.extend(["--proxy="+newproxypath])
