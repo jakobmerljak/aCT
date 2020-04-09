@@ -108,6 +108,16 @@ def print_eval(conf_dict):
           'export OUTPUTDATAFILE="{FileName}"'.format(**conf_dict))
 
 
+def calculate_adler32_checksum(file, chunk_size=524288):
+    adler32 = 1
+    with open(file) as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            adler32 = zlib.adler32(chunk.encode(), adler32) & 0xffffffff
+    return '{:08x}'.format(adler32)
+
 def collect_meta(conf_dict, mac_dict):
     meta = {
         'IsSimulation': True,
@@ -206,10 +216,7 @@ def collect_meta(conf_dict, mac_dict):
     meta['datasetname'] = meta['SampleId']
 
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
-    # TODO: chunked read for large files
-    with open(conf_dict['FileName']) as f:
-        cs = zlib.adler32(f.read().encode()) & 0xffffffff
-    meta['adler32'] = '{:08x}'.format(cs)
+    meta['adler32'] = calculate_adler32_checksum(conf_dict['FileName'])
 
     return meta
 
