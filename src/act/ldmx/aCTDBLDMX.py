@@ -25,7 +25,8 @@ class aCTDBLDMX(aCTDB):
                  finished: job finished successfully
                  failed: job failed
                  toresubmit: job will be cancelled and resubmitted
-                 tobekilled: job will be killed
+                 tocancel: job will be cancelled
+                 cancelling: job is being cancelled
                  cancelled: job was cancelled
            - priority: Job priority
            - starttime: Job start time

@@ -10,7 +10,7 @@ def report(actconfs):
     rtot = {}
     log = ''
     states = ["new", "waiting", "submitted", "queueing", "running", "tovalidate", "toresubmit",
-              "toclean", "finished", "failed", "tobekilled", "cancelled"]
+              "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)
     c = db.db.conn.cursor()

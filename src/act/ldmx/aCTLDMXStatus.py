@@ -6,7 +6,7 @@ from act.ldmx.aCTLDMXProcess import aCTLDMXProcess
 class aCTLDMXStatus(aCTLDMXProcess):
     '''
     Check the status of submitted and running jobs, handle resubmission or
-    cleanup of failed jobs.
+    cleanup of failed and cancelled jobs.
     '''
 
     def __init__(self):
@@ -41,6 +41,68 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         if submittedjobs or queueingjobs:
             self.dbldmx.Commit()
+
+
+    def checkToCancelJobs(self):
+        '''
+        Look for jobs marked to cancel and cancel the arc jobs
+        '''
+        select = "ldmxstatus='tocancel'"
+        columns = ['id', 'arcjobid']
+        cancelledjobs = self.dbldmx.getJobs(select, columns)
+
+        if not cancelledjobs:
+            return
+
+        for job in cancelledjobs:
+            self.log.info(f"Job {job['id']} requested to cancel, killing arc job")
+
+            # Check if there is an arc job
+            columns = ['id']
+            arcjob = self.dbarc.getArcJobInfo(job['arcjobid'], columns)
+            if arcjob:
+                self.log.info(f"Cancelling arc job {arcjob['id']}")
+                select = "id='{}'".format(job['arcjobid'])
+                desc = {"arcstate": "tocancel", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJobs(desc, select)
+                self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelling'})
+            else:
+                self.log.info(f"Job {job['id']} has no arc job, marking cancelled")
+                self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelled'})
+
+        self.dbldmx.Commit()
+
+
+    def checkToResubmitJobs(self):
+        '''
+        Look for jobs marked to resubmit, cancel the arc jobs and set to waiting
+        '''
+        select = "ldmxstatus='toresubmit'"
+        columns = ['id', 'arcjobid']
+        toresubmitjobs = self.dbldmx.getJobs(select, columns)
+
+        if not toresubmitjobs:
+            return
+
+        for job in toresubmitjobs:
+            self.log.info(f"Job {job['id']} requested to resubmit, killing arc job")
+
+            # Check if there is an arc job
+            columns = ['id']
+            arcjob = self.dbarc.getArcJobInfo(job['arcjobid'], columns)
+            if arcjob:
+                self.log.info(f"Cancelling arc job {arcjob['id']}")
+                select = "id='{}'".format(job['arcjobid'])
+                desc = {"arcstate": "tocancel", "tarcstate": self.dbarc.getTimeStamp()}
+                self.dbarc.updateArcJobs(desc, select)
+            else:
+                self.log.info(f"Job {job['id']} has no arc job, marking cancelled")
+
+            ldmxdesc = {'ldmxstatus': 'waiting', 'arcjobid': None,
+                        'sitename': None, 'computingelement': None}
+            self.dbldmx.updateJobLazy(job['id'], ldmxdesc)
+
+        self.dbldmx.Commit()
 
 
     def checkFailedJobs(self):
@@ -137,8 +199,11 @@ class aCTLDMXStatus(aCTLDMXProcess):
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 
+
     def process(self):
 
+        self.checkToCancelJobs()
+        self.checkToResubmitJobs()
         self.checkSubmittedJobs()
         self.checkFailedJobs()
 
