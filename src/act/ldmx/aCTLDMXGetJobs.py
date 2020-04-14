@@ -82,9 +82,46 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             os.remove(jobfile)
 
 
+    def archiveOldJobs(self):
+        '''Move old jobs to the archive table'''
+
+        # modified column is reported in local time so may not be exactly one day
+        select = self.dbldmx.timeStampLessThan('modified', 60*60*24)
+        select += ' and ldmxstatus in ("finished", "failed", "cancelled")'
+        columns = ['id', 'sitename', 'ldmxstatus', 'starttime', 'endtime', 'modified']
+        jobs = self.dbldmx.getJobs(select, columns)
+        if not jobs:
+            return
+
+        self.log.info('Archiving %d jobs' % len(jobs))
+        for job in jobs:
+            self.log.debug('Archiving LDMX job %d' % job['id'])
+            # Fill out empty start/end time
+            if job['starttime']:
+                if not job['endtime']:
+                    job['endtime'] = job['modified']
+            elif job['endtime']:
+                job['starttime'] = job['endtime']
+            else:
+                job['starttime'] = self.dbldmx.getTimeStamp()
+                job['endtime'] = self.dbldmx.getTimeStamp()
+
+            # archive table doesn't have modified
+            jobarchive = job.copy()
+            del jobarchive['modified']
+            self.dbldmx.insertJobArchiveLazy(jobarchive)
+            self.dbldmx.deleteJob(job['id']) # commit is called here
+
+
     def process(self):
 
         self.getNewJobs()
+
+        # Move old jobs to archive - every hour
+        if time.time() - self.starttime > 3600:
+            self.log.info("Checking for jobs to archive")
+            self.archiveOldJobs()
+            self.starttime = time.time()
 
 
 if __name__ == '__main__':
