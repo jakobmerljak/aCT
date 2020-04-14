@@ -1,54 +1,57 @@
-import os
-
+from collections import defaultdict
 from act.common.aCTLogger import aCTLogger
 from act.ldmx.aCTDBLDMX import aCTDBLDMX
 
 def report(actconfs):
+
+    # Get current jobs
     actlogger = aCTLogger('aCTReport')
     logger = actlogger()
-    rep = {}
-    rtot = {}
+    rep = defaultdict(lambda: defaultdict(int))
+    rtot = defaultdict(int)
     log = ''
     states = ["new", "waiting", "submitted", "queueing", "running", "tovalidate", "toresubmit",
               "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)
-    c = db.db.conn.cursor()
-    c.execute("select sitename, ldmxstatus from ldmxjobs")
-    rows = c.fetchall()
+    rows = db.getJobs('True', ['sitename', 'ldmxstatus'])
     for r in rows:
 
-        site, state = (str(r[0]), str(r[1]))
+        site, state = (r['sitename'] or 'None', r['ldmxstatus'])
+        rep[site][state] += 1
+        rtot[state] += 1
 
-        try:
-            rep[site][state] += 1
-        except:
-            try:
-                rep[site][state] = 1
-            except:
-                rep[site] = {}
-                rep[site][state] = 1
-        try:
-            rtot[state] += 1
-        except:
-            rtot[state] = 1
-
-    log += f"All LDMX jobs: {sum(rtot.values())}\n"
+    log += f"Active LDMX jobs: {sum(rtot.values())}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys()):
         log += f"{k:>28.28}:"
-        for s in states:
-            try:
-                log += f'{rep[k][s]:>10}'
-            except KeyError:
-                log += f'{"-":>10}'
+        log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += '\n'
 
     log += f'{"Totals":>28}:'
-    for s in states:
-        try:
-            log += f'{rtot[s]:>10}'
-        except:
-            log += f'{"-":>10}'
+    log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += '\n\n'
+
+    # Summary from archive
+    states = ['finished', 'failed', 'cancelled']
+    rep = defaultdict(lambda: defaultdict(int))
+    rtot = defaultdict(int)
+    rows = db.getNArchiveJobs('True', 'ldmxstatus, sitename')
+    for r in rows:
+        count, state, site = (r['count(*)'], r['ldmxstatus'], r['sitename'] or 'None')
+        rep[site][state] += count
+        rtot[state] += count
+
+    log += f"Archived LDMX jobs: {sum(rtot.values())}\n"
+    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+
+    for k in sorted(rep.keys()):
+        log += f"{k:>28.28}:"
+        log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += '\n'
+
+    log += f'{"Totals":>28}:'
+    log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+
     return log+'\n\n'

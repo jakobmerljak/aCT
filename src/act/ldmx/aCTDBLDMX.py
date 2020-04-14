@@ -163,6 +163,13 @@ class aCTDBLDMX(aCTDB):
         njobs = c.fetchone()['count(*)']
         return int(njobs)
 
+    def getNArchiveJobs(self, select, groupby):
+        c = self.db.getCursor()
+        c.execute(f"SELECT count(*), {groupby} FROM ldmxarchive WHERE {select} GROUP BY {groupby}")
+        rows = c.fetchall()
+        return rows
+
+
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
