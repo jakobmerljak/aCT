@@ -81,7 +81,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         # Parse some requirements from descriptionfile
         with open(descriptionfile) as f:
             config = {l.split('=')[0]: l.split('=')[1].strip() for l in f}
-            xrsl['memory'] = f"(memory = {int(config.get('JobMemory', 2)) * 1000})"
+            xrsl['memory'] = f"(memory = {float(config.get('JobMemory', 2)) * 1000})"
             xrsl['walltime'] = f"(walltime = {int(config.get('JobWallTime', 240))})"
             xrsl['cputime'] = f"(cputime = {int(config.get('JobWallTime', 240))})"
             xrsl['defaultrte'] = "(runtimeenvironment = APPS/LDMX-SIMPROD-1.0)"
@@ -93,7 +93,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
                                              (ldmxjob.config {descriptionfile}) \
                                              (ldmxsim.mac.template {templatefile}) \
-                                             (ldmx-prod-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
+                                             (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
         xrsl['stdout'] = '(stdout = stdout)'
         xrsl['gmlog'] = '(gmlog = gmlog)'
         xrsl['join'] = '(join = yes)'
