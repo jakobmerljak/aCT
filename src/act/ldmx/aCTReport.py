@@ -24,7 +24,7 @@ def report(actconfs):
     log += f"Active LDMX jobs: {sum(rtot.values())}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
-    for k in sorted(rep.keys()):
+    for k in sorted(rep.keys(), key=lambda x: x != None):
         log += f"{k:>28.28}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += '\n'
@@ -37,7 +37,7 @@ def report(actconfs):
     states = ['finished', 'failed', 'cancelled']
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
-    rows = db.getNArchiveJobs('True', 'ldmxstatus, sitename')
+    rows = db.getNArchiveJobs('True', 'sitename, ldmxstatus')
     for r in rows:
         count, state, site = (r['count(*)'], r['ldmxstatus'], r['sitename'] or 'None')
         rep[site][state] += count
@@ -46,7 +46,7 @@ def report(actconfs):
     log += f"Archived LDMX jobs: {sum(rtot.values())}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
-    for k in sorted(rep.keys()):
+    for k in sorted(rep.keys(), key=lambda x: x != None):
         log += f"{k:>28.28}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += '\n'
