@@ -65,6 +65,15 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             desc = {'ldmxstatus': 'submitted', 'arcjobid': arcid['LAST_INSERT_ID()']}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
+            # Dump job description
+            logdir = os.path.join(self.conf.get(["joblog", "dir"]),
+                                  job['created'].strftime('%Y-%m-%d'))
+            os.makedirs(logdir, 0o755, exist_ok=True)
+            xrslfile = os.path.join(logdir, f'{job["id"]}.xrsl')
+            with open(xrslfile, 'w') as f:
+                f.write(xrsl)
+                self.log.debug(f'Wrote description to {xrslfile}')
+
             nsubmitted += 1
             if nsubmitted >= int(maxsubmitted):
                 self.log.info(f'Reached maximum {maxsubmitted} submitted jobs')
@@ -101,7 +110,6 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['count'] = '(count = 1)'
         xrsl['outputfiles'] = '(outputfiles = ("rucio.metadata" ""))'
         xrsl['jobName'] = '(jobname = "LDMX Prod Simulation")'
-        self.log.info(xrsl)
 
         return '&' + '\n'.join(xrsl.values())
 
