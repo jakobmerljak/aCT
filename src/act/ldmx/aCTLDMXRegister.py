@@ -2,6 +2,7 @@ from datetime import timedelta
 import json
 import os
 import shutil
+from urllib.parse import urlparse
 
 from rucio.client import Client
 from rucio.common.exception import RucioException, DataIdentifierNotFound
@@ -25,10 +26,10 @@ class aCTLDMXRegister(aCTLDMXProcess):
         Look for done jobs, and register output metadata in Rucio
         '''
 
-        select = "arcstate='done'"
-        columns = ['id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime',
-                   'EndTime', 'ExecutionNode', 'stdout', 'fairshare', 'created']
-        arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns)
+        select = "arcstate='done' and arcjobs.id=ldmxjobs.arcjobid"
+        columns = ['arcjobs.id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime',
+                   'arcjobs.EndTime', 'stdout', 'ldmxjobs.created']
+        arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
         if not arcjobs:
             return
 
@@ -108,6 +109,9 @@ class aCTLDMXRegister(aCTLDMXProcess):
 
         # Set RSE from configuration
         metadata['rse'] = self.sites[self.endpoints[arcjob['cluster']]]['rse']
+        # Set some aCT metadata
+        metadata['ComputingElement'] = urlparse(arcjob['cluster']).hostname or 'unknown'
+        metadata['JobSubmissionTime'] = arcjob['created']
         try:
             scope = metadata['scope']
             name = metadata['name']
