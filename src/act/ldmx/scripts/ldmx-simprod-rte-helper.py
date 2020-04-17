@@ -6,7 +6,7 @@ import argparse
 import sys
 import os
 import json
-import zlib
+import hashlib
 
 
 config_to_mac_substs = {
@@ -108,15 +108,15 @@ def print_eval(conf_dict):
           'export OUTPUTDATAFILE="{FileName}"'.format(**conf_dict))
 
 
-def calculate_adler32_checksum(file, chunk_size=524288):
-    adler32 = 1
-    with open(file) as f:
+def calculate_md5_checksum(file, chunk_size=524288):
+    h = hashlib.md5()
+    with open(file, 'rb') as f:
         while True:
             chunk = f.read(chunk_size)
             if not chunk:
                 break
-            adler32 = zlib.adler32(chunk.encode(), adler32) & 0xffffffff
-    return '{:08x}'.format(adler32)
+            h.update(chunk)
+    return h.hexdigest()
 
 def collect_meta(conf_dict, mac_dict):
     meta = {
@@ -216,7 +216,7 @@ def collect_meta(conf_dict, mac_dict):
     meta['datasetname'] = meta['SampleId']
 
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
-    meta['adler32'] = calculate_adler32_checksum(conf_dict['FileName'])
+    meta['md5'] = calculate_md5_checksum(conf_dict['FileName'])
 
     return meta
 

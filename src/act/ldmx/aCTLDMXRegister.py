@@ -121,7 +121,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Add replica
             pfn = f'file://{metadata["DataLocation"]}'
             self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
-                                   metadata['adler32'], pfn)
+                                   None, pfn=pfn, md5=metadata['md5'])
             try:
                 # Attach to dataset
                 self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
@@ -134,7 +134,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
                     self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
 
             # Add metadata, removing all rucio "native" metadata
-            native_metadata = ['scope', 'name', 'bytes', 'adler32', 'rse',
+            native_metadata = ['scope', 'name', 'bytes', 'md5', 'rse',
                                'datasetscope', 'datasetname']
             # Metadata values must be strings to be searchable
             self.rucio.add_did_meta(scope, name,
