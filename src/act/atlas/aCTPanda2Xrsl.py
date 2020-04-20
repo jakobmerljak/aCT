@@ -150,7 +150,7 @@ class aCTPanda2Xrsl:
 
     def setMemory(self):
 
-        if 'minRamCount' in self.jobdesc:
+        if 'minRamCount' in self.jobdesc and int(self.jobdesc['minRamCount'][0]) > 0:
             memory = int(self.jobdesc['minRamCount'][0])
         elif not self.prodSourceLabel in ('user', 'panda'):
             memory = 4000
