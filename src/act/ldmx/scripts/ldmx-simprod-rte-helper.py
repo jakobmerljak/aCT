@@ -7,7 +7,7 @@ import sys
 import os
 import json
 import hashlib
-
+import zlib
 
 config_to_mac_substs = {
     'RandomSeed1': [('/random/setSeeds', '{RandomSeed1} {RandomSeed2}')],
@@ -108,15 +108,18 @@ def print_eval(conf_dict):
           'export OUTPUTDATAFILE="{FileName}"'.format(**conf_dict))
 
 
-def calculate_md5_checksum(file, chunk_size=524288):
-    h = hashlib.md5()
+def calculate_md5_adler32_checksum(file, chunk_size=524288):
+    md5 = hashlib.md5()
+    adler32 = 1
     with open(file, 'rb') as f:
         while True:
             chunk = f.read(chunk_size)
             if not chunk:
                 break
-            h.update(chunk)
-    return h.hexdigest()
+            md5.update(chunk)
+            adler32 = zlib.adler32(chunk, adler32) & 0xffffffff
+    return (md5.hexdigest(), '{:08x}'.format(adler32))
+
 
 def collect_meta(conf_dict, mac_dict):
     meta = {
@@ -216,7 +219,7 @@ def collect_meta(conf_dict, mac_dict):
     meta['datasetname'] = meta['SampleId']
 
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
-    meta['md5'] = calculate_md5_checksum(conf_dict['FileName'])
+    (meta['md5'], meta['adler32']) = calculate_md5_adler32_checksum(conf_dict['FileName'])
 
     return meta
 
