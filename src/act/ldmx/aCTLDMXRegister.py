@@ -28,7 +28,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
 
         select = "arcstate='done' and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcjobs.id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime',
-                   'arcjobs.EndTime', 'stdout', 'ldmxjobs.created']
+                   'arcjobs.EndTime', 'stdout', 'ldmxjobs.created', 'description', 'template']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
         if not arcjobs:
             return
@@ -63,6 +63,9 @@ class aCTLDMXRegister(aCTLDMXProcess):
             desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
             self.dbarc.updateArcJobsLazy(desc, select)
 
+            # Clean input files
+            self.cleanInputFiles(aj)
+
         self.dbldmx.Commit()
         self.dbarc.Commit()
 
@@ -92,6 +95,18 @@ class aCTLDMXRegister(aCTLDMXProcess):
                 os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
+
+
+    def cleanInputFiles(self, job):
+        '''
+        Clean job input files in tmp dir
+        '''
+        try:
+            os.remove(job['description'])
+            os.remove(job['template'])
+            self.log.debug(f'Removed {job["description"]} and {job["template"]}')
+        except:
+            pass
 
 
     def insertMetadata(self, arcjob):

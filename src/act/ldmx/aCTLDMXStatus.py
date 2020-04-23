@@ -48,7 +48,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         Look for jobs marked to cancel and cancel the arc jobs
         '''
         select = "ldmxstatus='tocancel'"
-        columns = ['id', 'arcjobid']
+        columns = ['id', 'arcjobid', 'description', 'template']
         cancelledjobs = self.dbldmx.getJobs(select, columns)
 
         if not cancelledjobs:
@@ -69,6 +69,8 @@ class aCTLDMXStatus(aCTLDMXProcess):
             else:
                 self.log.info(f"Job {job['id']} has no arc job, marking cancelled")
                 self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelled'})
+
+            self.cleanInputFiles(job)
 
         self.dbldmx.Commit()
 
@@ -96,7 +98,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
                 desc = {"arcstate": "tocancel", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJobs(desc, select)
             else:
-                self.log.info(f"Job {job['id']} has no arc job, marking cancelled")
+                self.log.info(f"Job {job['id']} has no arc job")
 
             ldmxdesc = {'ldmxstatus': 'waiting', 'arcjobid': None,
                         'sitename': None, 'computingelement': None}
@@ -122,8 +124,9 @@ class aCTLDMXStatus(aCTLDMXProcess):
             self.dbarc.Commit()
 
         # Look for failed final states in ARC which are still starting or running in LDMX
-        select = "arcstate in ('donefailed', 'cancelled', 'lost')"
-        columns = ['arcstate', 'id', 'cluster', 'JobID', 'created', 'stdout']
+        select = "arcstate in ('donefailed', 'cancelled', 'lost') and arcjobs.id=ldmxjobs.arcjobid"
+        columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
+                   'description', 'template']
 
         jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns)
 
@@ -148,6 +151,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
+            self.cleanInputFiles(aj)
 
         for aj in lostjobs:
             select = f"id={aj['id']}"
@@ -155,6 +159,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
+            self.cleanInputFiles(aj)
 
         for aj in cancelledjobs:
             select = f"id={aj['id']}"
@@ -162,6 +167,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'cancelled',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
+            self.cleanInputFiles(aj)
 
         self.dbarc.Commit()
         self.dbldmx.Commit()
@@ -198,6 +204,18 @@ class aCTLDMXStatus(aCTLDMXProcess):
                 os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
+
+
+    def cleanInputFiles(self, job):
+        '''
+        Clean job input files in tmp dir
+        '''
+        try:
+            os.remove(job['description'])
+            os.remove(job['template'])
+            self.log.debug(f'Removed {job["description"]} and {job["template"]}')
+        except:
+            pass
 
 
     def process(self):
