@@ -47,7 +47,7 @@ class aCTDBLDMX(aCTDB):
         sitename VARCHAR(255),
         arcjobid integer,
         description VARCHAR(255),
-        template VARCHAR(255)
+        template VARCHAR(255),
         ldmxstatus VARCHAR(255),
         priority integer,
         starttime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
