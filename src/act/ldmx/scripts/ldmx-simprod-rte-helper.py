@@ -127,7 +127,7 @@ def collect_meta(conf_dict, mac_dict):
         'IsRecon': False
     }
     # conf
-    for fromconf in ['SampleId', 'PhysicsProcess', 'DetectorVersion']:
+    for fromconf in ['Scope', 'SampleId', 'PhysicsProcess', 'DetectorVersion']:
         meta[fromconf] = conf_dict[fromconf] if fromconf in conf_dict else None
     meta['ElectronNumber'] = int(conf_dict['ElectronNumber']) if 'ElectronNumber' in conf_dict else None
     meta['MagneticFieldmap'] = conf_dict['FieldMap'] if 'FieldMap' in conf_dict else None
@@ -213,9 +213,9 @@ def collect_meta(conf_dict, mac_dict):
     meta['DataLocation'] = data_location
 
     # Rucio metadata
-    meta['scope'] = 'test'
+    meta['scope'] = meta['Scope']
     meta['name'] = os.path.basename(data_location)
-    meta['datasetscope'] = 'test'
+    meta['datasetscope'] = meta['Scope']
     meta['datasetname'] = meta['SampleId']
 
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
