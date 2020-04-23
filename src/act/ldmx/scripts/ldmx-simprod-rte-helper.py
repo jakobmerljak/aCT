@@ -13,8 +13,6 @@ config_to_mac_substs = {
     'RandomSeed1': [('/random/setSeeds', '{RandomSeed1} {RandomSeed2}')],
     'NumberofEvents': [('/run/beamOn', '{NumberofEvents}')],
     'BeamEnergy': [('/gun/energy', '{BeamEnergy} GeV')],
-    'BiasingProcess': [('/ldmx/biasing/process', '{BiasingProcess}')],
-    'BiasingVolume': [('/ldmx/biasing/volume', '{BiasingVolume}')],
     'FileName': [('/ldmx/persistency/root/file', '{FileName}')],
     'Geant4BiasThreshold': [
         ('/ldmx/biasing/threshold', '{Geant4BiasThreshold}'),
@@ -244,11 +242,19 @@ if __name__ == '__main__':
     # config is parsed for any action
     conf_dict = parse_ldmx_config(cmd_args.config)
 
-    # template substitution (RTE stage 1)
+    # config processing substitution (RTE stage 1)
     if cmd_args.action == 'generate-mac':
-        mac_dict = parse_mac(cmd_args.template)
-        substitute_mac(mac_dict, conf_dict)
-        assemble_mac(mac_dict, cmd_args.mac)
+        if os.path.exists(cmd_args.mac):
+            # if mac file is already present in session directory -
+            # parse it and get the correct output FileName
+            mac_dict = parse_mac(cmd_args.mac)
+            if '/ldmx/persistency/root/file' in mac_dict:
+                conf_dict['FileName'] = mac_dict['/ldmx/persistency/root/file']
+        else:
+            # parse template, do substitutions and create mac
+            mac_dict = parse_mac(cmd_args.template)
+            substitute_mac(mac_dict, conf_dict)
+            assemble_mac(mac_dict, cmd_args.mac)
         # print values for bash eval
         print_eval(conf_dict)
     elif cmd_args.action == 'collect-metadata':
