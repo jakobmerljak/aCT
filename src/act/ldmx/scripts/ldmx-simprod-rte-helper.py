@@ -238,11 +238,19 @@ if __name__ == '__main__':
     # config is parsed for any action
     conf_dict = parse_ldmx_config(cmd_args.config)
 
-    # template substitution (RTE stage 1)
+    # config processing substitution (RTE stage 1)
     if cmd_args.action == 'generate-mac':
-        mac_dict = parse_mac(cmd_args.template)
-        substitute_mac(mac_dict, conf_dict)
-        assemble_mac(mac_dict, cmd_args.mac)
+        if os.path.exists(cmd_args.mac):
+            # if mac file is already present in session directory -
+            # parse it and get the correct output FileName
+            mac_dict = parse_mac(cmd_args.mac)
+            if '/ldmx/persistency/root/file' in mac_dict:
+                conf_dict['FileName'] = mac_dict['/ldmx/persistency/root/file']
+        else:
+            # parse template, do substitutions and create mac
+            mac_dict = parse_mac(cmd_args.template)
+            substitute_mac(mac_dict, conf_dict)
+            assemble_mac(mac_dict, cmd_args.mac)
         # print values for bash eval
         print_eval(conf_dict)
     elif cmd_args.action == 'collect-metadata':
