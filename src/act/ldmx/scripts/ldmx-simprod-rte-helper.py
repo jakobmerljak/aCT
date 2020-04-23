@@ -43,6 +43,10 @@ def parse_ldmx_config(config='ldmxjob.config'):
                 logger.error('Malformed %s line: %s', config, line)
                 continue
             conf_dict[kv[0]] = kv[1].strip()
+    # split physics process from config
+    if not 'PhysicsProcess' in conf_dict: 
+        logger.error('PhysicsProcess is not defined in the %s. Job aborted.', config)
+        sys.exit(1)
     # ensure both random seeds are set
     if 'RandomSeed1' in conf_dict and 'RandomSeed2' not in conf_dict:
         logger.error('RandomSeed1 is set without RandomSeed2 in %s. Job aborted.', config)
