@@ -1,5 +1,4 @@
 import os
-import shutil
 import tempfile
 import time
 
@@ -22,6 +21,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
         for n in range(njobs):
             config['RandomSeed1'] = randomseed1
             config['RandomSeed2'] = randomseed2
+            config['runNumber'] = n+1
             yield config
             randomseed1 += 1
             randomseed2 += 1
@@ -33,10 +33,12 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
 
         bufferdir = self.conf.get(['jobs', 'bufferdir'])
         configsdir = os.path.join(bufferdir, 'configs')
+        os.makedirs(configsdir, 0o755, exist_ok=True)
         jobs = [os.path.join(configsdir, j) for j in os.listdir(configsdir) if os.path.isfile(os.path.join(configsdir, j))]
         now = time.time()
         try:
-            proxyid = self.dbarc.getProxiesInfo("attribute=''", ['id'], expect_one=True)['id']
+            # Take the first proxy available
+            proxyid = self.dbarc.getProxiesInfo('TRUE', ['id'], expect_one=True)['id']
         except Exception:
             self.log.error('No proxies found in DB')
             return
@@ -54,31 +56,39 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                 try:
                     config = {l.split('=')[0]: l.split('=')[1].strip() for l in f}
                 except Exception as e:
-                    self.log.error(f'Failed to parse job config file {jobfile}: probably badly-formed lines or missing "Template": {e}')
+                    self.log.error(f'Failed to parse job config file {jobfile}: {e}')
                     os.remove(jobfile)
                     continue
 
-                try:
-                    templatefile = os.path.join(bufferdir, 'templates', config['Template'])
-                    with open(templatefile) as tf:
-                        pass
-                except Exception as e:
-                    self.log.error(f'Bad template file or template not defined in {jobfile}: {e}')
-                    os.remove(jobfile)
-                    continue
+            try:
+                templatefile = os.path.join(bufferdir, 'templates', config['MacTemplate'])
+                with open(templatefile) as tf:
+                    template = tf.read()
+            except Exception as e:
+                self.log.error(f'Bad template file or template not defined in {jobfile}: {e}')
+                os.remove(jobfile)
+                continue
 
-                try:
-                    for jobconfig in self.generateJobs(config):
-                        newjobfile = os.path.join(self.tmpdir, os.path.basename(jobfile))
-                        with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newjobfile}.', delete=False, encoding='utf-8') as f:
-                            newjobfile = f.name
-                            f.write('\n'.join(f'{k}={v}' for k,v in jobconfig.items()))
+            try:
+                # Generate copies of config and template
+                for jobconfig in self.generateJobs(config):
+                    newjobfile = os.path.join(self.tmpdir, os.path.basename(jobfile))
+                    with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newjobfile}.', delete=False, encoding='utf-8') as njf:
+                        newjobfile = njf.name
+                        njf.write('\n'.join(f'{k}={v}' for k,v in config.items()))
 
-                        self.dbldmx.insertJob(newjobfile, templatefile, proxyid)
-                        self.log.info(f'Inserted job from {newjobfile} into DB')
-                except Exception as e:
-                    raise
-                    self.log.error(f'Failed to create jobs from {jobfile}: {e}')
+                    newtemplatefile = os.path.join(self.tmpdir, os.path.basename(templatefile))
+                    with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
+                        newtemplatefile = ntf.name
+                        ntf.write(template)
+                        ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
+                        ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+
+                    self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid)
+                    self.log.info(f'Inserted job from {newjobfile} into DB')
+            except Exception as e:
+                raise
+                self.log.error(f'Failed to create jobs from {jobfile}: {e}')
             os.remove(jobfile)
 
 
