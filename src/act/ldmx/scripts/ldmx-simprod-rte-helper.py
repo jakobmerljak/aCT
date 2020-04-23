@@ -46,15 +46,9 @@ def parse_ldmx_config(config='ldmxjob.config'):
                 continue
             conf_dict[kv[0]] = kv[1].strip()
     # split physics process from config
-    if 'PhysicsProcess' in conf_dict:
-        vol_proc = conf_dict['PhysicsProcess'].split('-', 1)
-        if len(vol_proc) != 2:
-            logger.error('PhysicsProcess "%s" does not comply <volume>-<process> format. Job aborted.',
-                         conf_dict['PhysicsProcess'])
-            sys.exit(1)
-        else:
-            conf_dict['BiasingVolume'] = vol_proc[0]
-            conf_dict['BiasingProcess'] = vol_proc[1]
+    if not 'PhysicsProcess' in conf_dict: 
+        logger.error('PhysicsProcess is not defined in the %s. Job aborted.', config)
+        sys.exit(1)
     # ensure both random seeds are set
     if 'RandomSeed1' in conf_dict and 'RandomSeed2' not in conf_dict:
         logger.error('RandomSeed1 is set without RandomSeed2 in %s. Job aborted.', config)
