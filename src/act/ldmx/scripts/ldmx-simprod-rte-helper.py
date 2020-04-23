@@ -13,8 +13,6 @@ config_to_mac_substs = {
     'RandomSeed1': [('/random/setSeeds', '{RandomSeed1} {RandomSeed2}')],
     'NumberofEvents': [('/run/beamOn', '{NumberofEvents}')],
     'BeamEnergy': [('/gun/energy', '{BeamEnergy} GeV')],
-    'BiasingProcess': [('/ldmx/biasing/process', '{BiasingProcess}')],
-    'BiasingVolume': [('/ldmx/biasing/volume', '{BiasingVolume}')],
     'FileName': [('/ldmx/persistency/root/file', '{FileName}')],
     'Geant4BiasThreshold': [
         ('/ldmx/biasing/threshold', '{Geant4BiasThreshold}'),
@@ -45,16 +43,6 @@ def parse_ldmx_config(config='ldmxjob.config'):
                 logger.error('Malformed %s line: %s', config, line)
                 continue
             conf_dict[kv[0]] = kv[1].strip()
-    # split physics process from config
-    if 'PhysicsProcess' in conf_dict:
-        vol_proc = conf_dict['PhysicsProcess'].split('-', 1)
-        if len(vol_proc) != 2:
-            logger.error('PhysicsProcess "%s" does not comply <volume>-<process> format. Job aborted.',
-                         conf_dict['PhysicsProcess'])
-            sys.exit(1)
-        else:
-            conf_dict['BiasingVolume'] = vol_proc[0]
-            conf_dict['BiasingProcess'] = vol_proc[1]
     # ensure both random seeds are set
     if 'RandomSeed1' in conf_dict and 'RandomSeed2' not in conf_dict:
         logger.error('RandomSeed1 is set without RandomSeed2 in %s. Job aborted.', config)
