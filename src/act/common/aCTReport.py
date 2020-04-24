@@ -142,6 +142,8 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
+        if sum(rtot.values()) == 0:
+            return
         self.log(f"All ARC jobs: {sum(rtot.values())}")
         self.log(f"{'':39} {' '.join([f'{s:>9}' for s in states])}")
 
@@ -204,6 +206,8 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
+        if sum(rtot.values()) == 0:
+            return
         self.log(f"All Condor jobs: {sum(rtot.values())}")
         self.log(f"{'':39} {' '.join([f'{s:>9}' for s in condorjobstatemap])}")
         for k in sorted(rep, key=lambda x: x.split('.')[-1]):
