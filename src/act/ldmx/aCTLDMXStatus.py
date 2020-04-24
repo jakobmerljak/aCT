@@ -126,7 +126,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         # Look for failed final states in ARC which are still starting or running in LDMX
         select = "arcstate in ('donefailed', 'cancelled', 'lost') and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
-                   'description', 'template']
+                   'description', 'template', 'sitename']
 
         jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
 
@@ -175,7 +175,8 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
     def copyOutputFiles(self, arcjob):
         '''
-        Copy job stdout and errors log to final location
+        Copy job stdout and errors log to final location and make a copy
+        in the failed folder
         '''
 
         if not arcjob.get('JobID'):
@@ -184,24 +185,33 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         sessionid = arcjob['JobID'][arcjob['JobID'].rfind('/')+1:]
         date = arcjob['created'].strftime('%Y-%m-%d')
-        outd = os.path.join(self.conf.get(['joblog','dir']), date)
-        os.makedirs(outd, 0o755, exist_ok=True)
-
         localdir = os.path.join(self.tmpdir, sessionid)
         gmlogerrors = os.path.join(localdir, "gmlog", "errors")
-        arcjoblog = os.path.join(outd, "%s.log" % arcjob['id'])
+        jobstdout = arcjob['stdout']
+
+        outdir = os.path.join(self.conf.get(['joblog','dir']), date)
+        outdfailed = os.path.join(outdir, 'failed', arcjob['sitename'])
+        os.makedirs(outdir, 0o755, exist_ok=True)
+        os.makedirs(outdfailed, 0o755, exist_ok=True)
+
         try:
+            arcjoblog = os.path.join(outdir, "%s.log" % arcjob['id'])
+            shutil.copy(gmlogerrors, arcjoblog)
+            os.chmod(arcjoblog, 0o644)
+            arcjoblog = os.path.join(outdfailed, "%s.log" % arcjob['id'])
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
-        jobstdout = arcjob['stdout']
         if jobstdout:
             try:
+                shutil.copy(os.path.join(localdir, jobstdout),
+                            os.path.join(outdir, '%s.out' % arcjob['id']))
+                os.chmod(os.path.join(outdir, '%s.out' % arcjob['id']), 0o644)
                 shutil.move(os.path.join(localdir, jobstdout),
-                            os.path.join(outd, '%s.out' % arcjob['id']))
-                os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
+                            os.path.join(outdfailed, '%s.out' % arcjob['id']))
+                os.chmod(os.path.join(outdfailed, '%s.out' % arcjob['id']), 0o644)
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 
