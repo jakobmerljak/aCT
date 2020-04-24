@@ -63,7 +63,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             try:
                 templatefile = os.path.join(bufferdir, 'templates', config['MacTemplate'])
                 with open(templatefile) as tf:
-                    template = tf.read()
+                    template = tf.readlines()
             except Exception as e:
                 self.log.error(f'Bad template file or template not defined in {jobfile}: {e}')
                 os.remove(jobfile)
@@ -80,9 +80,13 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                     newtemplatefile = os.path.join(self.tmpdir, os.path.basename(templatefile))
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
                         newtemplatefile = ntf.name
-                        ntf.write(template)
-                        ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
-                        ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+                        for l in template:
+                            if l.startswith('/ldmx/persistency/root/runNumber '):
+                                ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
+                            elif l.startswith('/random/setSeeds '):
+                                ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+                            else:
+                                ntf.write(l)
 
                     self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
