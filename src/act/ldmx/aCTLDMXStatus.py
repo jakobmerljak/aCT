@@ -128,7 +128,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
                    'description', 'template']
 
-        jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns)
+        jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
 
         if not jobstoupdate:
             return
