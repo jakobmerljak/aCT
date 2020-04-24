@@ -200,8 +200,13 @@ def collect_meta(conf_dict, mac_dict):
     if '/random/setSavingFlag' in mac_dict and mac_dict['/random/setSavingFlag'][0] == '0':
         meta['SavingEnabled'] = False
 
+    if '/ldmx/persistency/root/runNumber' in mac_dict:
+        meta['RunNumber'] = int(mac_dict['/ldmx/persistency/root/runNumber'][0])
+    else:
+        meta['RunNumber'] = 0
+
     data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
+    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_{RunNumber}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
     # Rucio metadata
