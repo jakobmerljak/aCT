@@ -55,6 +55,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             with open(jobfile) as f:
                 try:
                     config = {l.split('=')[0]: l.split('=')[1].strip() for l in f}
+                    batchid = config.get('BatchID', f'Batch-{time.strftime("%Y-%m-%dT%H:%M:%S")}')
                 except Exception as e:
                     self.log.error(f'Failed to parse job config file {jobfile}: {e}')
                     os.remove(jobfile)
@@ -88,7 +89,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                             else:
                                 ntf.write(l)
 
-                    self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid)
+                    self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid, batchid=batchid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
             except Exception as e:
                 raise

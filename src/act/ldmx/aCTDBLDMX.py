@@ -53,7 +53,8 @@ class aCTDBLDMX(aCTDB):
         starttime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         endtime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         computingElement VARCHAR(255),
-        proxyid integer
+        proxyid integer,
+        batchid VARCHAR(255)
         )
 """
 
@@ -102,11 +103,12 @@ class aCTDBLDMX(aCTDB):
         return True
 
 
-    def insertJob(self, description, template, proxyid, priority=0):
+    def insertJob(self, description, template, proxyid, batchid=None, priority=0):
         '''Insert new job description'''
         desc = {'description': description,
                 'template': template,
                 'proxyid': proxyid,
+                'batchid': batchid,
                 'priority': priority,
                 'ldmxstatus': 'new'}
         s = f"insert into ldmxjobs ({','.join([k for k in desc.keys()])}) values ({','.join(['%s' for k in desc.keys()])})"
@@ -157,11 +159,16 @@ class aCTDBLDMX(aCTDB):
         rows = c.fetchall()
         return rows
 
-    def getNJobs(self, select):
+    def getNJobs(self, select, groupby=None):
         c = self.db.getCursor()
-        c.execute(f"select count(*) from ldmxjobs where {select}")
-        njobs = c.fetchone()['count(*)']
-        return int(njobs)
+        if groupby:
+            c.execute(f"SELECT count(*), {groupby} FROM ldmxjobs WHERE {select} GROUP BY {groupby}")
+            rows = c.fetchall()
+            return rows
+        else:
+            c.execute(f"SELECT count(*) FROM ldmxjobs WHERE {select}")
+            njobs = c.fetchone()['count(*)']
+            return int(njobs)
 
     def getNArchiveJobs(self, select, groupby):
         c = self.db.getCursor()
