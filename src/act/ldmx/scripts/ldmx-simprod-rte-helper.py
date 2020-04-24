@@ -249,7 +249,7 @@ if __name__ == '__main__':
             # parse it and get the correct output FileName
             mac_dict = parse_mac(cmd_args.mac)
             if '/ldmx/persistency/root/file' in mac_dict:
-                conf_dict['FileName'] = mac_dict['/ldmx/persistency/root/file']
+                conf_dict['FileName'] = mac_dict['/ldmx/persistency/root/file'][0]
         else:
             # parse template, do substitutions and create mac
             mac_dict = parse_mac(cmd_args.template)
