@@ -14,6 +14,27 @@ def report(actconfs):
               "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)
+    rows = db.getNJobs('True', groupby='batchid, ldmxstatus')
+    for r in rows:
+        count, state, site = (r['count(*)'], r['ldmxstatus'], r['batchid'] or 'None')
+        rep[site][state] += count
+        rtot[state] += count
+
+    log += f"LDMX job batches: {len(rep)}\n"
+    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+
+    for k in sorted(rep.keys(), key=lambda x: x != None):
+        log += f"{k:>28.28}:"
+        log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += '\n'
+
+    log += f'{"Totals":>28}:'
+    log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += '\n\n'
+
+    rep = defaultdict(lambda: defaultdict(int))
+    rtot = defaultdict(int)
+
     rows = db.getJobs('True', ['sitename', 'ldmxstatus'])
     for r in rows:
 
@@ -21,7 +42,7 @@ def report(actconfs):
         rep[site][state] += 1
         rtot[state] += 1
 
-    log += f"Active LDMX jobs: {sum(rtot.values())}\n"
+    log += f"Active LDMX jobs by site: {sum(rtot.values())}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
