@@ -76,7 +76,7 @@ The app config must contain at least
 </config>
 ```
 
-where `app` is the app-specific python module. It can contain any app-specific configuration.
+where `app` is the app-specific python module. The app config can also contain any app-specific configuration.
 
 Once configuration is set up, the `actbootstrap` tool should be used to create the necessary database tables.
 
