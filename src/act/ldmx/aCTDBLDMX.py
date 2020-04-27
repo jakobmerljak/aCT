@@ -85,7 +85,8 @@ class aCTDBLDMX(aCTDB):
         sitename VARCHAR(255),
         ldmxstatus VARCHAR(255),
         starttime TIMESTAMP NOT NULL,
-        endtime TIMESTAMP NOT NULL
+        endtime TIMESTAMP NOT NULL,
+        batchid VARCHAR(255)
         )
 """
 
@@ -159,20 +160,21 @@ class aCTDBLDMX(aCTDB):
         rows = c.fetchall()
         return rows
 
-    def getNJobs(self, select, groupby=None):
+    def getNJobs(self, select):
         c = self.db.getCursor()
-        if groupby:
-            c.execute(f"SELECT count(*), {groupby} FROM ldmxjobs WHERE {select} GROUP BY {groupby}")
-            rows = c.fetchall()
-            return rows
-        else:
-            c.execute(f"SELECT count(*) FROM ldmxjobs WHERE {select}")
-            njobs = c.fetchone()['count(*)']
-            return int(njobs)
+        c.execute(f"SELECT count(*) FROM ldmxjobs WHERE {select}")
+        njobs = c.fetchone()['count(*)']
+        return int(njobs)
 
-    def getNArchiveJobs(self, select, groupby):
+    def getGroupedJobs(self, groupby):
         c = self.db.getCursor()
-        c.execute(f"SELECT count(*), {groupby} FROM ldmxarchive WHERE {select} GROUP BY {groupby}")
+        c.execute(f"SELECT count(*), {groupby} FROM ldmxjobs GROUP BY {groupby}")
+        rows = c.fetchall()
+        return rows
+
+    def getGroupedArchiveJobs(self, groupby):
+        c = self.db.getCursor()
+        c.execute(f"SELECT count(*), {groupby} FROM ldmxarchive GROUP BY {groupby}")
         rows = c.fetchall()
         return rows
 

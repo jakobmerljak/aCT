@@ -14,7 +14,7 @@ def report(actconfs):
               "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)
-    rows = db.getNJobs('True', groupby='batchid, ldmxstatus')
+    rows = db.getGroupedJobs('batchid, ldmxstatus')
     for r in rows:
         count, state, site = (r['count(*)'], r['ldmxstatus'], r['batchid'] or 'None')
         rep[site][state] += count
@@ -58,7 +58,7 @@ def report(actconfs):
     states = ['finished', 'failed', 'cancelled']
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
-    rows = db.getNArchiveJobs('True', 'sitename, ldmxstatus')
+    rows = db.getGroupedArchiveJobs('sitename, ldmxstatus')
     for r in rows:
         count, state, site = (r['count(*)'], r['ldmxstatus'], r['sitename'] or 'None')
         rep[site][state] += count
