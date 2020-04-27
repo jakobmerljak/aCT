@@ -6,6 +6,10 @@ ARC Control Tower (aCT) is a system for submitting and managing payloads on ARC 
 
 (note that Travis build will fail until python3 ARC packages are available in Ubuntu)
 
+# Overview
+
+aCT consists of two related state-machines - one which controls job submission and management on Computing Elements (CEs) and another which manages an app-specific workflow. Normally the app-specific part creates jobs or pulls work from an external service, converts to ARC XRSL job descriptions, and passes them into the ARC-handling part. Then the ARC part submits jobs, queries their status and downloads the output when they finish. The app part can then do any post-processing of the result.
+
 # Installing
 
 aCT requires python >= 3.6 and is designed to run in a python virtual environment.
@@ -51,7 +55,7 @@ aCT requires a database. MySQL/MariaDB is the only officially supported database
 
 # Configuring
 
-aCT is configured with 2 configuration files, `aCTConfigARC.xml` and optional `aCTConfigAPP.xml`. These files are searched for in the following places in order until found:
+aCT is configured with 2 configuration files, `aCTConfigARC.xml` and optional `aCTConfigAPP.xml`. The former configures the ARC side of aCT and the latter configures the app-specific side. These files are searched for in the following places in order until found:
 ```
 $ACTCONFIGARC
 $VIRTUAL_ENV/etc/act/aCTConfigARC.xml
@@ -59,6 +63,20 @@ $VIRTUAL_ENV/etc/act/aCTConfigARC.xml
 ./aCTConfigARC.xml
 ```
 and the same for aCTConfigAPP.xml. Configuration templates can be found in etc/act in the virtualenv.
+
+The app config must contain at least
+
+```
+<config>
+
+<modules>
+  <app>act.app</app>
+</modules>
+
+</config>
+```
+
+where `app` is the app-specific python module. It can contain any app-specific configuration.
 
 Once configuration is set up, the `actbootstrap` tool should be used to create the necessary database tables.
 
@@ -84,3 +102,13 @@ Several tools exist to help administer aCT
 # Client tools
 
 __Experimental__ client tools exist which allow job management through simple command line tools (`actsub`, `actstat`, etc). These tools allow aCT to be used as a generic job submission engine, independent from the ATLAS part.
+
+# For developers
+
+Developing a new app for aCT is as easy as defining a new sub-module of `act`. Certain elements of the app files must follow a template:
+
+- `__init__.py` may define a list of agent processes that will be started by aCT with `app_processes = [...]`
+- `aCTBootstrap.py` may define a `bootstrap()` method which will be called by `actbootstrap` to peform any initialisation
+- `aCTReport.py` may define a `report()` method which will be called by `actreport` and can output any app-specific information
+
+Apart from these there is no limit to the naming or number of app agents.
