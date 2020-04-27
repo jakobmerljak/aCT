@@ -1,13 +1,10 @@
+import importlib
 import sys
 import os
 from act.common.aCTLogger import aCTLogger
 from act.common.aCTConfig import aCTConfigARC, aCTConfigAPP
 from act.arc.aCTDBArc import aCTDBArc
 from act.condor.aCTDBCondor import aCTDBCondor
-from act.atlas.aCTDBPanda import aCTDBPanda
-
-from act.client.clientdb import ClientDB
-
 
 def bootstrap_conf():
     '''Check config is ok'''
@@ -30,22 +27,33 @@ def bootstrap_dirs():
     os.makedirs(arcconf.get(['logger', 'logdir']), mode=0o755, exist_ok=True)
 
 def bootstrap_db():
-    '''Set up the DB tables'''
-    # TODO: setup only what is needed based on config and app
+    '''Set up the ARC and Condor DB tables'''
     logger = aCTLogger('aCTBootstrap')
     log = logger()
     dbarc = aCTDBArc(log)
-    dbclient = ClientDB(log)
     dbcondor = aCTDBCondor(log)
-    dbpanda = aCTDBPanda(log)
+    print('Setting up ARC tables...')
     if not dbarc.createTables():
         print('Error creating arc tables, see aCTBootstrap.log for details')
-    if not dbclient.createTables():
-        print('Error creating client tables, see aCTBootstrap.log for details')
+    print('Setting up Condor tables...')
     if not dbcondor.createTables():
         print('Error creating condor tables, see aCTBootstrap.log for details')
-    if not dbpanda.createTables():
-        print('Error creating panda tables, see aCTBootstrap.log for details')
+
+def bootstrap_app():
+    '''Set up app-specific things'''
+    appconf = aCTConfigAPP()
+    apps = appconf.getList(["modules", "app"])
+    for app in apps:
+        print(f'Setting up app from {app}...')
+        try:
+            ap = importlib.import_module(f'{app}.aCTBootstrap').bootstrap
+            ap()
+        except ModuleNotFoundError as e:
+            print(f'No bootstrap in module {app}')
+        except AttributeError:
+            print(f'aCTBootstrap.bootstrap() not found in {app}')
+        except Exception as e:
+            print(f'Exception running {app}.aCTBootstrap.bootstrap(): {e}')
 
 
 def main():
@@ -53,6 +61,7 @@ def main():
     bootstrap_conf()
     bootstrap_dirs()
     bootstrap_db()
+    bootstrap_app()
 
 
 if __name__ == '__main__':
