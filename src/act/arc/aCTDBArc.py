@@ -264,7 +264,6 @@ class aCTDBArc(aCTDB):
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
-        print(s)
         if job:
             c.execute(s, list(desc.values()) + list(self._job2db(job).values()))
         else:
@@ -349,12 +348,12 @@ class aCTDBArc(aCTDB):
             return None
         return row['jobdescription']
 
-    def getNArcJobs(self):
+    def getNArcJobs(self, select):
         '''
-        Return the total number of jobs in the table
+        Return the count of jobs in the table matching select
         '''
         c=self.db.getCursor()
-        c.execute("SELECT COUNT(*) FROM arcjobs")
+        c.execute("SELECT COUNT(*) FROM arcjobs WHERE "+select)
         row = c.fetchone()
         return row['COUNT(*)']
 
