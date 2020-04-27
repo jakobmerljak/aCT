@@ -20,7 +20,7 @@ def report(actconfs):
         rep[site][state] += count
         rtot[state] += count
 
-    log += f"LDMX job batches: {len(rep)}\n"
+    log += f"Active LDMX job batches: {len(rep)}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
@@ -58,13 +58,13 @@ def report(actconfs):
     states = ['finished', 'failed', 'cancelled']
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
-    rows = db.getGroupedArchiveJobs('sitename, ldmxstatus')
+    rows = db.getGroupedArchiveJobs('batchid, ldmxstatus')
     for r in rows:
-        count, state, site = (r['count(*)'], r['ldmxstatus'], r['sitename'] or 'None')
-        rep[site][state] += count
+        count, state, batch = (r['count(*)'], r['ldmxstatus'], r['batchid'] or 'None')
+        rep[batch][state] += count
         rtot[state] += count
 
-    log += f"Archived LDMX jobs: {sum(rtot.values())}\n"
+    log += f"Completed LDMX batches: {sum(rtot.values())}\n"
     log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
