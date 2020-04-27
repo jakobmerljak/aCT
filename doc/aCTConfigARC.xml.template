@@ -11,6 +11,14 @@
   <port>42</port>
 </db>
 
+<sites>
+  <site>
+    <endpoint>https://my.arc.ce/arex</endpoint>
+    <status>online</status
+    <maxjobs>50</maxjobs>
+  </site>
+<sites>
+
 <loop>
   <periodicrestart>
     <actsubmitter>120</actsubmitter>

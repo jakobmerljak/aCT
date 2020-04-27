@@ -179,6 +179,18 @@ class aCTSubmitter(aCTProcess):
             self.log.info('Submission suspended due to downtime')
             return 0
 
+        # check for any site-specific limits or status
+        clusterstatus = self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["status"]) or 'online'
+        if clusterstatus == 'offline':
+            self.log.info('Site status is offline')
+            return 0
+
+        clustermaxjobs = int(self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["maxjobs"]) or 999999)
+        nsubmitted = self.db.getNArcJobs(f"cluster='{self.cluster}'")
+        if nsubmitted >= clustermaxjobs:
+            self.log.info(f'{nsubmitted} submitted jobs is greater than or equal to max jobs {clustermaxjobs}')
+            return 0
+
         # Get cluster host and queue: cluster/queue
         clusterhost = clusterqueue = None
         if self.cluster:
@@ -207,17 +219,20 @@ class aCTSubmitter(aCTProcess):
 
         for fairshare, proxyid in fairshares:
 
+            # apply maxjobs limit (check above should make sure greater than zero)
+            # Note: relies on exit after first loop
+            limit = min(clustermaxjobs - nsubmitted, 10)
             try:
                 # catch any exceptions here to avoid leaving lock
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' and proxyid='{2}' limit 10".format(self.cluster, fairshare, proxyid),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' and proxyid='{2}' limit {3}".format(self.cluster, fairshare, proxyid, limit),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0} and proxyid={1}' limit 10".format(fairshare, proxyid),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0} and proxyid={1}' limit {2}".format(fairshare, proxyid, limit),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
