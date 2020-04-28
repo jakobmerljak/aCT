@@ -91,7 +91,7 @@ class aCTDBArc(aCTDB):
             tarcstate TIMESTAMP,
             tstate TIMESTAMP,
             cluster VARCHAR(48),
-            clusterlist VARCHAR(100),
+            clusterlist VARCHAR(255),
             jobdesc INT(11),
             attemptsleft INTEGER,
             downloadfiles VARCHAR(48),
