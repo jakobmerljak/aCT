@@ -98,7 +98,7 @@ class aCTDBArc(aCTDB):
             proxyid INTEGER,
             appjobid VARCHAR(16),
             priority SMALLINT,
-            fairshare VARCHAR(16),
+            fairshare VARCHAR(50),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
 
         # First check if table already exists

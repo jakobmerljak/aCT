@@ -30,7 +30,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
                                                        clusterlist=','.join(self.endpoints),
                                                        downloadfiles='gmlog/errors;stdout;rucio.metadata',
                                                        appjobid=str(job['id']),
-                                                       fairshare=job['batchid'][:15])
+                                                       fairshare=job['batchid'][:50])
 
             desc = {'ldmxstatus': 'waiting', 'arcjobid': arcid['LAST_INSERT_ID()']}
             self.dbldmx.updateJobLazy(job['id'], desc)
