@@ -18,8 +18,7 @@ class aCTDBLDMX(aCTDB):
            - ldmxstatus: LDMX job status
                  new: job has been entered but not processed yet
                  waiting: job is waiting to be submitted
-                 submitted: job is submitted to ARC CE
-                 queueing: job is queued in CE batch system
+                 queueing: job is submitted to CE
                  running: job is running in the site batch system
                  tovalidate: job has finished and is in aCT post-processing
                  finished: job finished successfully

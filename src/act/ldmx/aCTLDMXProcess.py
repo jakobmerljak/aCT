@@ -44,14 +44,12 @@ class aCTLDMXProcess:
         '''
         self.sites = {}
         self.endpoints = {} # Map of CE to site name
-        for sitename in self.conf.getList(["sites", "site", "name"]):
+        for sitename in self.arcconf.getList(["sites", "site", "name"]):
             siteinfo = {}
-            siteinfo['endpoints'] = self.conf.getListCond(["sites", "site"], f"name={sitename}", ["endpoints", "item"])
-            siteinfo['status'] = self.conf.getCond(["sites", "site"], f"name={sitename}", ["status"]) or 'online'
-            siteinfo['maxjobs'] = int(self.conf.getCond(["sites", "site"], f"name={sitename}", ["maxjobs"]) or 999999)
-            siteinfo['rse'] = self.conf.getCond(["sites", "site"], f"name={sitename}", ["rse"])
+            siteinfo['endpoint'] = self.arcconf.getCond(["sites", "site"], f"name={sitename}", ["endpoint"])
+            siteinfo['rse'] = self.arcconf.getCond(["sites", "site"], f"name={sitename}", ["rse"])
             self.sites[sitename] = siteinfo
-            self.endpoints.update({ce: sitename for ce in siteinfo['endpoints']})
+            self.endpoints[siteinfo['endpoint']] = sitename
 
     def process(self):
         '''

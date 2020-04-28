@@ -10,7 +10,7 @@ def report(actconfs):
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
     log = ''
-    states = ["new", "waiting", "submitted", "queueing", "running", "tovalidate", "toresubmit",
+    states = ["new", "waiting", "queueing", "running", "tovalidate", "toresubmit",
               "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)

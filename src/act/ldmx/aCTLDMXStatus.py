@@ -18,7 +18,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         Look for newly submitted or running jobs
         '''
 
-        select = "ldmxstatus='submitted' and arcstate in ('submitted', 'running') and arcjobs.id=ldmxjobs.arcjobid"
+        select = "ldmxstatus='waiting' and arcstate in ('submitted', 'running') and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcstate', 'cluster', 'ldmxjobs.id']
         submittedjobs = self.dbarc.getArcJobsInfo(select, columns, tables='arcjobs,ldmxjobs')
 
