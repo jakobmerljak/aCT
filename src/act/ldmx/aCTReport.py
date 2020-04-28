@@ -21,15 +21,17 @@ def report(actconfs):
         rtot[state] += count
 
     log += f"Active LDMX job batches: {len(rep)}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}   Total\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
         log += f"{k:>28.28}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += f"{sum(rep[k].values()):>10}"
         log += '\n'
 
     log += f'{"Totals":>28}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += f"{sum(rtot.values()):>10}"
     log += '\n\n'
 
     rep = defaultdict(lambda: defaultdict(int))
@@ -65,14 +67,16 @@ def report(actconfs):
         rtot[state] += count
 
     log += f"Completed LDMX batches: {sum(rtot.values())}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+    log += f"{'':29} {' '.join([f'{s:>9}' for s in states+['Total']])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
         log += f"{k:>28.28}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += f"{sum(rep[k].values()):>10}"
         log += '\n'
 
     log += f'{"Totals":>28}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += f"{sum(rtot.values()):>10}"
 
     return log+'\n\n'
