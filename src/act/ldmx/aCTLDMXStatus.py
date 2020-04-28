@@ -126,7 +126,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         # Look for failed final states in ARC which are still starting or running in LDMX
         select = "arcstate in ('donefailed', 'cancelled', 'lost') and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
-                   'description', 'template', 'sitename']
+                   'description', 'template', 'sitename', 'ldmxjobs.proxyid', 'batchid', 'Error']
 
         jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
 
@@ -146,12 +146,12 @@ class aCTLDMXStatus(aCTLDMXProcess):
         desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for aj in failedjobs:
             self.copyOutputFiles(aj)
+            self.checkForResubmission(aj)
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
-            self.cleanInputFiles(aj)
 
         for aj in lostjobs:
             select = f"id={aj['id']}"
@@ -163,7 +163,10 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         for aj in cancelledjobs:
             select = f"id={aj['id']}"
-            self.dbarc.updateArcJobsLazy(desc, select)
+            if aj['JobID']:
+                self.dbarc.updateArcJobsLazy(desc, select)
+            else: # job was not submitted so just delete
+                self.dbarc.deleteArcJob(aj['id'])
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'cancelled',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
@@ -171,6 +174,23 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         self.dbarc.Commit()
         self.dbldmx.Commit()
+
+
+    def checkForResubmission(self, arcjob):
+        '''
+        Check error message against retryable errors and submit a new job
+        '''
+
+        self.log.info(f"{arcjob['id']}: error: {arcjob['Error']}")
+        resub = [err for err in self.arcconf.getList(['errors','toresubmit','arcerrors','item']) if err in arcjob['Error']]
+        if not resub:
+            self.log.info(f"{arcjob['id']} failed with permanent error")
+            self.cleanInputFiles(arcjob)
+            return
+
+        self.log.info(f"{arcjob['id']} will be resubmitted")
+        self.dbldmx.insertJob(arcjob['description'], arcjob['template'],
+                              arcjob['proxyid'], batchid=arcjob['batchid'])
 
 
     def copyOutputFiles(self, arcjob):
