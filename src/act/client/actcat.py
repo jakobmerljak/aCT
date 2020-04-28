@@ -38,11 +38,11 @@ def main():
     parser.add_argument('-p', '--proxy', default=None,
             help='custom path to proxy certificate')
 
-    ## arguments passed directly to arccat
-    #parser.add_argument('-o', '--stdout', action='store_true',
-    #        help='show the stdout of the job (default)', default=True)
-    #parser.add_argument('-e', '--stderr', action='store_true',
-    #        help='show the stderr of the job')
+    # arguments passed directly to arccat
+    parser.add_argument('-o', '--stdout', action='store_true',
+            help='show the stdout of the job (default)', default=True)
+    parser.add_argument('-e', '--stderr', action='store_true',
+            help='show the stderr of the job')
     #parser.add_argument('-l', '--joblog', action='store_true',
     #        help='show A-REX\'s error log of the job')
     #parser.add_argument('-P', '--listplugins', action='store_true',
@@ -90,7 +90,7 @@ def main():
                 args.state,
                 args.find,
                 clicols=[],
-                arccols=['JobID'])
+                arccols=["JobID", "StdOut", "StdErr"])
     except Exception as e:
         print('error: {}'.format(str(e)))
         sys.exit(9)
@@ -99,10 +99,13 @@ def main():
         print('no jobs found that fit given filters')
         sys.exit(0)
 
-    JobIDs = [job['a_JobID'] for job in jobdicts]
-
-    for jobid in JobIDs:
-        subprocess.run(["arccp", jobid + "/stdout", "-"])
+    for job in jobdicts:
+        url = job["a_JobID"] + "/"
+        if args.stderr:
+            url += job["a_StdErr"]
+        elif args.stdout:
+            url += job["a_StdOut"]
+        subprocess.run(["arccp", url, "-"])
 
 
 if __name__ == '__main__':
