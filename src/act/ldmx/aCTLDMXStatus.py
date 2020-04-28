@@ -190,7 +190,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         jobstdout = arcjob['stdout']
 
         outdir = os.path.join(self.conf.get(['joblog','dir']), date)
-        outdfailed = os.path.join(outdir, 'failed', arcjob['sitename'])
+        outdfailed = os.path.join(outdir, 'failed', arcjob['sitename'] or 'None')
         os.makedirs(outdir, 0o755, exist_ok=True)
         os.makedirs(outdfailed, 0o755, exist_ok=True)
 
