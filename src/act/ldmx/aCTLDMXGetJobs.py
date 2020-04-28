@@ -112,11 +112,11 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                 continue
 
             # All jobs are finished, so archive
-            select = f"batchid='{batchid}'"
+            select = f"batchid='{batchid}'" if batchid else 'batchid is NULL'
             columns = ['id', 'sitename', 'ldmxstatus', 'starttime', 'endtime', 'batchid']
             jobs = self.dbldmx.getJobs(select, columns)
             if not jobs:
-                return
+                continue
 
             self.log.info(f'Archiving {len(jobs)} jobs for batch {batchid}')
             for job in jobs:
