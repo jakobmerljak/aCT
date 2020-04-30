@@ -33,6 +33,8 @@ def main():
             help='get only jobs with matching (sub)string in their name')
     parser.add_argument('-s', '--state', default='',
             help='get only jobs with certain state')
+    parser.add_argument('-n', '--name', default='',
+            help='get only jobs with given name')
     parser.add_argument('-v', '--verbose', action='store_true',
             help='show more information')
     parser.add_argument('-p', '--proxy', default=None,
@@ -90,7 +92,8 @@ def main():
                 args.state,
                 args.find,
                 clicols=[],
-                arccols=["JobID", "StdOut", "StdErr"])
+                arccols=["JobID", "StdOut", "StdErr"],
+                jobname=args.name)
     except Exception as e:
         print('error: {}'.format(str(e)))
         sys.exit(9)
