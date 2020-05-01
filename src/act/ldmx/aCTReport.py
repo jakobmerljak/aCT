@@ -20,16 +20,19 @@ def report(actconfs):
         rep[site][state] += count
         rtot[state] += count
 
+    # figure out batchid column length (min 10)
+    maxbatchlen = max([len(k) for k in rep]+[10]) + 1
+
     log += f"Active LDMX job batches: {len(rep)}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}   Total\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states])}   Total\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
-        log += f"{k:>28.28}:"
+        log += f"{k:>{maxbatchlen}.{maxbatchlen}}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += f"{sum(rep[k].values()):>10}"
         log += '\n'
 
-    log += f'{"Totals":>28}:'
+    log += f'{"Totals":>{maxbatchlen}}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
     log += f"{sum(rtot.values()):>10}"
     log += '\n\n'
@@ -45,14 +48,14 @@ def report(actconfs):
         rtot[state] += 1
 
     log += f"Active LDMX jobs by site: {sum(rtot.values())}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
-        log += f"{k:>28.28}:"
+        log += '{:>{width}.{width}}:'.format(k, width=maxbatchlen)
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += '\n'
 
-    log += f'{"Totals":>28}:'
+    log += f'{"Totals":>{maxbatchlen}}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
     log += '\n\n'
 
@@ -66,16 +69,19 @@ def report(actconfs):
         rep[batch][state] += count
         rtot[state] += count
 
-    log += f"Completed LDMX batches: {sum(rtot.values())}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states+['Total']])}\n"
+    # figure out batchid column length (min 10)
+    maxbatchlen = max([len(k) for k in rep]+[10]) + 1
+
+    log += f"Completed LDMX batches: {len(rep)}\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states+['Total']])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
-        log += f"{k:>28.28}:"
+        log += f"{k:>{maxbatchlen}.{maxbatchlen}}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += f"{sum(rep[k].values()):>10}"
         log += '\n'
 
-    log += f'{"Totals":>28}:'
+    log += f'{"Totals":>{maxbatchlen}}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
     log += f"{sum(rtot.values()):>10}"
 
