@@ -338,11 +338,11 @@ class aCTSubmitter(aCTProcess):
                         maxprioqueued = 0
                     self.log.info("Max priority queued: %d" % maxprioqueued)
 
-                    # Limit number of submitted jobs using configuration or default (0.15 + 100/num of shares)/num CEs
+                    # Limit number of submitted jobs using configuration or default (0.15 + 100/num of shares)
                     # Note: assumes only a few shares are used
                     qfraction = float(self.conf.get(['jobs', 'queuefraction'])) if self.conf.get(['jobs', 'queuefraction']) else 0.15
                     qoffset = int(self.conf.get(['jobs', 'queueoffset'])) if self.conf.get(['jobs', 'queueoffset']) else 100
-                    jlimit = (len(rjobs) * qfraction + qoffset/len(fairshares)) / len(jobs[0]['clusterlist'].split(','))
+                    jlimit = len(rjobs) * qfraction + qoffset/len(fairshares)
                     self.log.debug("running %d, queued %d, queue limit %d" % (len(rjobs), len(qjobs), jlimit))
                     if str(self.cluster).find('arc-boinc-0') != -1:
                         jlimit = len(rjobs)*0.15 + 400
