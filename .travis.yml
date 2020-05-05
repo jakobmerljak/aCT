@@ -10,7 +10,11 @@ notifications:
 virtualenv:
   system_site_packages: true
 before_install:
-  - sudo apt-get install -y nordugrid-arc-python
+# Install ARC 6 python3 bindings from nordugrid repo (not available in standard repo)
+  - wget -q https://download.nordugrid.org/DEB-GPG-KEY-nordugrid-6.asc -O- | sudo apt-key add -
+  - echo "deb https://download.nordugrid.org/repos/6/ubuntu bionic main" | sudo tee -a /etc/apt/sources.list
+  - echo "deb https://download.nordugrid.org/repos/6/ubuntu bionic-updates main" | sudo tee -a /etc/apt/sources.list
+  - sudo apt-get install -y python3-nordugrid-arc
 install:
   - pip install -r requirements.txt
 script:
