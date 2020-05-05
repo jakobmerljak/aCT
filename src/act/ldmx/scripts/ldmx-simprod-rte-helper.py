@@ -124,7 +124,12 @@ def collect_meta(conf_dict, mac_dict):
     meta['ElectronNumber'] = int(conf_dict['ElectronNumber']) if 'ElectronNumber' in conf_dict else None
     meta['MagneticFieldmap'] = conf_dict['FieldMap'] if 'FieldMap' in conf_dict else None
     # env
-    meta['LdmxImage'] = os.environ['ACCOUNTING_WN_INSTANCE'] if 'ACCOUNTING_WN_INSTANCE' in os.environ else None
+    if 'ACCOUNTING_WN_INSTANCE' in os.environ:
+        meta['LdmxImage'] = os.environ['ACCOUNTING_WN_INSTANCE']
+    elif 'SINGULARITY_IMAGE' in os.environ:
+        meta['LdmxImage'] = os.environ['SINGULARITY_IMAGE'].split('/')[-1]
+    else:
+        meta['LdmxImage'] = None
     meta['ARCCEJobID'] = os.environ['GRID_GLOBAL_JOBID'].split('/')[-1] if 'GRID_GLOBAL_JOBID' in os.environ else None
     meta['FileCreationTime'] = int(os.path.getmtime(conf_dict['FileName']))
     meta['Walltime'] = meta['FileCreationTime'] - mac_dict['createtime']
