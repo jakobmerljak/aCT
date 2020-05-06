@@ -4,8 +4,6 @@ ARC Control Tower (aCT) is a system for submitting and managing payloads on ARC 
 
 [![Build Status](https://travis-ci.com/ARCControlTower/aCT.svg?branch=master)](https://travis-ci.com/ARCControlTower/aCT)
 
-(note that Travis build will fail until python3 ARC packages are available in Ubuntu)
-
 # Installing
 
 aCT requires python >= 3.6 and is designed to run in a python virtual environment.
