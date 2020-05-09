@@ -148,7 +148,7 @@ class aCTProcessManager:
         for cluster in clusterlist:
             if cluster not in self.submitters:
                 procs = []
-                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"])) or 1):
+                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"]) or 1)):
                     self.log.info("Starting process aCTSubmitter for %s", cluster)
                     ph = self.aCTProcessHandler(self.arcsubmitter, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
@@ -225,7 +225,7 @@ class aCTProcessManager:
         for cluster in clusterlist:
             if cluster not in self.submitters:
                 procs = []
-                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"])) or 1):
+                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"]) or 1)):
                     self.log.info("Starting process aCTSubmitter for %s", cluster)
                     ph = self.aCTProcessHandler(self.condorsubmitter, self.logdir, cluster, actlocation=self.actlocation)
                     ph.start()
