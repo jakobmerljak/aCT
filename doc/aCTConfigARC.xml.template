@@ -16,6 +16,7 @@
     <endpoint>https://my.arc.ce/arex</endpoint>
     <status>online</status
     <maxjobs>50</maxjobs>
+    <submitters>5</submitters>
   </site>
 <sites>
 
