@@ -1,6 +1,6 @@
 import time
 import os
-import re
+import random
 import sys
 import arc
 import traceback
@@ -78,10 +78,10 @@ class aCTProcess:
                 self.conf.parse()
                 # Check if the site is in downtime
                 if self.cluster not in self.conf.getList(['downtime', 'item']):
+                    # sleep between 5 and 10 seconds
+                    time.sleep(5 + random.random()*5)
                     # do class-specific things
                     self.process()
-                # sleep
-                aCTUtils.sleep(10)
                 # restart periodically for gsiftp crash
                 ip=self.conf.get(['periodicrestart', self.name.lower()])
                 if not ip:
