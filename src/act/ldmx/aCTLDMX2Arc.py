@@ -14,7 +14,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
     def processNewJobs(self):
 
         # Submit new jobs
-        newjobs = self.dbldmx.getJobs("ldmxstatus='new' order by modified limit 10")
+        newjobs = self.dbldmx.getJobs("ldmxstatus='new' order by modified limit 100")
         for job in newjobs:
 
             xrsl = self.createXRSL(job['description'], job['template'])
