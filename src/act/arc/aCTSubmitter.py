@@ -444,7 +444,7 @@ class aCTSubmitter(aCTProcess):
 
     def checkFailedSubmissions(self):
 
-        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["id"])
+        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 60), ["id"])
 
         # TODO query GIIS for job name specified in description to see if job
         # was really submitted or not
