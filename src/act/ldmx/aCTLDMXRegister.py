@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 import json
 import os
 import shutil
@@ -26,7 +26,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
         Look for done jobs, and register output metadata in Rucio
         '''
 
-        select = "arcstate='done' and arcjobs.id=ldmxjobs.arcjobid limit 10"
+        select = "arcstate='done' and arcjobs.id=ldmxjobs.arcjobid limit 100"
         columns = ['arcjobs.id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'batchid',
                    'arcjobs.EndTime', 'stdout', 'ldmxjobs.created', 'description', 'template']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
@@ -44,8 +44,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
             select = f"id={int(aj['appjobid'])}"
             desc = {'computingelement': aj['cluster'],
                     'sitename': self.endpoints[aj['cluster']],
-                    'starttime': aj['EndTime'] - timedelta(0, aj['UsedTotalWallTime']),
-                    'endtime': aj['EndTime']}
+                    'starttime': (aj['EndTime'] or datetime.now(timezone.utc)) - timedelta(0, aj['UsedTotalWallTime']),
+                    'endtime': aj['EndTime'] or datetime.now(timezone.utc)}
             if not self.insertMetadata(aj):
                 # Safer to try again
                 self.log.info(f'Will try {aj["id"]} later')
@@ -54,7 +54,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
             self.dbldmx.updateJobsLazy(select, desc)
 
             # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
-            self.copyOutputFiles(aj)
+            # DC: logs taking too much space
+            # self.copyOutputFiles(aj)
 
             # Clean tmp dir
             self.cleanDownloadedJob(jobid)
