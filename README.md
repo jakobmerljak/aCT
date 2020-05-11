@@ -4,8 +4,6 @@ ARC Control Tower (aCT) is a system for submitting and managing payloads on ARC 
 
 [![Build Status](https://travis-ci.com/ARCControlTower/aCT.svg?branch=master)](https://travis-ci.com/ARCControlTower/aCT)
 
-(note that Travis build will fail until python3 ARC packages are available in Ubuntu)
-
 # Overview
 
 aCT consists of two related state-machines - one which controls job submission and management on Computing Elements (CEs) and another which manages an app-specific workflow. Normally the app-specific part creates jobs or pulls work from an external service, converts to ARC XRSL job descriptions, and passes them into the ARC-handling part. Then the ARC part submits jobs, queries their status and downloads the output when they finish. The app part can then do any post-processing of the result.

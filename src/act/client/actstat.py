@@ -40,7 +40,7 @@ def main():
             help='custom path to proxy certificate')
     parser.add_argument('--arc-cols', default='JobID,State,arcstate',
             help='columns from ARC table that should be fetched')
-    parser.add_argument('--client-cols', default='jobname',
+    parser.add_argument('--client-cols', default='id,jobname',
             help='columns from client table that should be fetched')
     parser.add_argument('--get-cols', action='store_true',
             help='print all available column names')
