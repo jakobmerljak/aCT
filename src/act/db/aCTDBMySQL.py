@@ -1,5 +1,5 @@
 import mysql.connector as mysql
-from _mysql_connector import MySQLInterfaceError
+from _mysql_connector import MySQLInterfaceError # pylint: disable=import-error
 from act.common import aCTUtils
 from act.db.aCTDBMS import aCTDBMS
 
