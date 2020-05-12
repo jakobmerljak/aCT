@@ -8,6 +8,7 @@ import os
 import json
 import hashlib
 import zlib
+import time
 
 config_to_mac_substs = {
     'RandomSeed1': [('/random/setSeeds', '{RandomSeed1} {RandomSeed2}')],
@@ -65,7 +66,6 @@ def parse_ldmx_config(config='ldmxjob.config'):
 def parse_mac(macfile='ldmxsim.mac.template'):
     mac_dict = {
         'order': [],
-        'createtime': int(os.path.getmtime(macfile))
     }
     with open(macfile, 'r') as conf_f:
         for line in conf_f:
@@ -113,6 +113,17 @@ def calculate_md5_adler32_checksum(file, chunk_size=524288):
     return (md5.hexdigest(), '{:08x}'.format(adler32))
 
 
+def job_starttime(starttime_f='.ldmx.job.starttime'):
+    if os.path.exists(starttime_f):
+        with open(starttime_f, 'r') as fd:
+            return int(fd.read())
+    else:
+        current_time = int(time.time())
+        with open(starttime_f, 'w') as fd:
+            fd.write('{0}'.format(current_time))
+            return current_time
+
+
 def collect_meta(conf_dict, mac_dict):
     meta = {
         'IsSimulation': True,
@@ -131,8 +142,8 @@ def collect_meta(conf_dict, mac_dict):
     else:
         meta['LdmxImage'] = None
     meta['ARCCEJobID'] = os.environ['GRID_GLOBAL_JOBID'].split('/')[-1] if 'GRID_GLOBAL_JOBID' in os.environ else None
-    meta['FileCreationTime'] = int(os.path.getmtime(conf_dict['FileName']))
-    meta['Walltime'] = meta['FileCreationTime'] - mac_dict['createtime']
+    meta['FileCreationTime'] = int(time.time())
+    meta['Walltime'] = meta['FileCreationTime'] - job_starttime()
     # mac (strings)
     for mackey, metakey in [
         ('/ldmx/biasing/xsec/particle', 'Geant4BiasParticle'),
@@ -265,6 +276,8 @@ if __name__ == '__main__':
             mac_dict = parse_mac(cmd_args.template)
             substitute_mac(mac_dict, conf_dict)
             assemble_mac(mac_dict, cmd_args.mac)
+        # store job start time
+        job_starttime()
         # print values for bash eval
         print_eval(conf_dict)
     elif cmd_args.action == 'collect-metadata':
