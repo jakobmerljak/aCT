@@ -22,6 +22,7 @@ class aCTPanda2Xrsl:
         self.defaults = {}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
+        self.memory = self.defaults['memory']
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
@@ -36,11 +37,13 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel.startswith('rc_'):
             self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
 
-        self.piloturl = atlasconf.get(["executable", "ptarurl"])
-        if 'pilot_url' in siteinfo.get('params', {}):
-            self.piloturl = siteinfo.get('params', {}).get('pilot_url')
-        elif self.prodSourceLabel.startswith('rc_test'):
-            self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        if not self.truepilot and not self.piloturl:
+            if self.prodSourceLabel.startswith('rc_test'):
+                self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
+            else:
+                self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -185,6 +188,7 @@ class aCTPanda2Xrsl:
             memory = 2000
 
         self.xrsl['memory'] = '(memory = %d)' % (memory)
+        self.memory = memory
 
     def setRTE(self):
 
@@ -253,15 +257,32 @@ class aCTPanda2Xrsl:
 
         self.xrsl['executable'] = "(executable = runpilot2-wrapper.sh)"
 
+    def getJobType(self):
+
+        return 'user' if self.prodSourceLabel in ['user', 'panda'] else 'managed'
+
+    def getResourceType(self):
+
+        resource = 'SCORE'
+        if self.ncores > 1:
+            resource = 'MCORE'
+        if self.memory > self.defaults['memory']:
+            resource += '_HIMEM'
+        return resource
+
     def setArguments(self):
 
-        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
+        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic" "--job-type" "%s" "--resource-type" "%s"' \
+                % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel, self.getJobType(), self.getResourceType())
         if self.prodSourceLabel == 'rc_alrb':
             pargs += ' "-i" "ALRB"'
         elif self.prodSourceLabel.startswith('rc_test'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            if self.piloturl:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            else:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--pilotversion" "%s"' % (self.pilotversion)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
