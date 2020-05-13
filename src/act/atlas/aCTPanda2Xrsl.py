@@ -37,11 +37,13 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel.startswith('rc_'):
             self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
 
-        self.piloturl = atlasconf.get(["executable", "ptarurl"])
-        if 'pilot_url' in siteinfo.get('params', {}):
-            self.piloturl = siteinfo.get('params', {}).get('pilot_url')
-        elif self.prodSourceLabel.startswith('rc_test'):
-            self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        if not self.truepilot and not self.piloturl:
+            if self.prodSourceLabel.startswith('rc_test'):
+                self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
+            else:
+                self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -277,7 +279,10 @@ class aCTPanda2Xrsl:
         elif self.prodSourceLabel.startswith('rc_test'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            if self.piloturl:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            else:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--pilotversion" "%s"' % (self.pilotversion)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
