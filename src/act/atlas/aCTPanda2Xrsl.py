@@ -22,6 +22,7 @@ class aCTPanda2Xrsl:
         self.defaults = {}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
+        self.memory = self.defaults['memory']
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
@@ -185,6 +186,7 @@ class aCTPanda2Xrsl:
             memory = 2000
 
         self.xrsl['memory'] = '(memory = %d)' % (memory)
+        self.memory = memory
 
     def setRTE(self):
 
@@ -253,9 +255,23 @@ class aCTPanda2Xrsl:
 
         self.xrsl['executable'] = "(executable = runpilot2-wrapper.sh)"
 
+    def getJobType(self):
+
+        return 'user' if self.prodSourceLabel in ['user', 'panda'] else 'managed'
+
+    def getResourceType(self):
+
+        resource = 'SCORE'
+        if self.ncores > 1:
+            resource = 'MCORE'
+        if self.memory > self.defaults['memory']:
+            resource += '_HIMEM'
+        return resource
+
     def setArguments(self):
 
-        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
+        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic" "--job-type" "%s" "--resource-type" "%s"' \
+                % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel, self.getJobType(), self.getResourceType())
         if self.prodSourceLabel == 'rc_alrb':
             pargs += ' "-i" "ALRB"'
         elif self.prodSourceLabel.startswith('rc_test'):
