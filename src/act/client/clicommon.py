@@ -7,6 +7,8 @@ import sys
 import act.client.proxymgr as proxymgr
 from act.client.errors import NoSuchProxyError
 from act.client.errors import NoProxyFileError
+from act.client.errors import ProxyFileExpiredError
+from act.client.errors import ProxyDBExpiredError
 
 
 def getProxyIdFromProxy(proxyPath):
@@ -30,8 +32,16 @@ def getProxyIdFromProxy(proxyPath):
         sys.exit(1)
 
     except NoProxyFileError as e:
-        print("error: path \"{}\" is not a proxy file; use arcproxy".format(e.path))
+        print("error: no proxy file \"{}\"; create proxy first".format(e.path))
         sys.exit(2)
+
+    except ProxyFileExpiredError:
+        print("error: proxy has expired; create new proxy")
+        sys.exit(3)
+
+    except ProxyDBExpiredError:
+        print("error: proxy entry in DB has expired; run actproxy")
+        sys.exit(4)
 
 
 def showHelpOnCommandOnly(argparser):

@@ -5,6 +5,7 @@ Insert proxy certificate into aCT.
 
 Returns:
     8: Error inserting or updating proxy.
+    9: Proxy has expired.
 """
 
 
@@ -15,6 +16,7 @@ import logging
 
 import act.client.proxymgr as proxymgr
 from act.client.errors import NoProxyFileError
+from act.client.errors import ProxyFileExpiredError
 
 
 def printProxyInfo(proxyInfo):
@@ -48,7 +50,10 @@ def main():
     try:
         manager.updateProxy(proxyPath)
     except NoProxyFileError as e:
-        print("error: path \"{}\" is not a proxy file; use arcproxy".format(e.path))
+        print("error: no proxy file \"{}\"; create proxy first".format(e.path))
+    except ProxyFileExpiredError:
+        print("error: proxy has expired; create new proxy")
+        sys.exit(9)
     except Exception as e:
         print('error: {}'.format(str(e)))
         sys.exit(8)

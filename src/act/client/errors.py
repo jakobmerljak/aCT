@@ -106,3 +106,13 @@ class NoProxyFileError(Exception):
         self.path = path
 
 
+class ProxyFileExpiredError(Exception):
+    """Error when expired proxy file is used."""
+    pass
+
+
+class ProxyDBExpiredError(Exception):
+    """Error when db entry for proxy is expired while the file is not."""
+    pass
+
+
