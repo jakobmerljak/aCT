@@ -1,5 +1,4 @@
 import os
-import errno
 import logging.handlers
 from . import aCTConfig
 
