@@ -1,4 +1,4 @@
-# Handler for fetching site info from AGIS. Fetches data and stores it in json file.
+# Handler for fetching site info from CRIC. Fetches data and stores it in json file.
 
 from datetime import datetime, timedelta
 import os
@@ -7,27 +7,28 @@ import urllib.request, urllib.error
 
 from act.atlas.aCTATLASProcess import aCTATLASProcess
 
-class aCTAGISFetcher(aCTATLASProcess):
+class aCTCRICFetcher(aCTATLASProcess):
 
     def __init__(self):
         aCTATLASProcess.__init__(self)
-        self.queues = self.conf.get(['agis','server'])
-        self.oses = self.conf.get(['agis','objectstores'])
-        self.queuesfile =self.conf.get(['agis', 'jsonfilename'])
-        self.osesfile =self.conf.get(['agis', 'osfilename'])
+        self.queues = self.conf.get(['cric','server'])
+        self.oses = self.conf.get(['cric','objectstores'])
+        self.queuesfile =self.conf.get(['cric', 'jsonfilename'])
+        self.osesfile =self.conf.get(['cric', 'osfilename'])
 
 
-    def fetchFromAgis(self, url, filename):
+    def fetchFromCRIC(self, url, filename):
         try:
+            self.log.debug("Downloading from %s" % url)
             response = urllib.request.urlopen(url, timeout=60)
         except urllib.error.URLError as e:
-            self.log.warning("Failed to contact AGIS: %s" % str(e))
+            self.log.warning("Failed to contact CRIC: %s" % str(e))
             # Check if the cached data is getting old, if so raise a critical error
             try:
                 mtime = os.stat(filename).st_mtime
                 if datetime.fromtimestamp(mtime) < datetime.now() - timedelta(hours=1):
-                    self.log.critical("AGIS info has not been updated since more than 1 hour ago")
-                    self.criticallog.critical("AGIS info has not been updated since more than 1 hour ago")
+                    self.log.critical("CRIC info has not been updated since more than 1 hour ago")
+                    self.criticallog.critical("CRIC info has not been updated since more than 1 hour ago")
             except:
                 # file may not have been created yet
                 pass
@@ -37,17 +38,17 @@ class aCTAGISFetcher(aCTATLASProcess):
         self.log.debug("Fetched %s" % url)
         return urldata
 
-    def storeToFile(self, agisjson, filename):
-        if not agisjson:
+    def storeToFile(self, cricjson, filename):
+        if not cricjson:
             return
         tmpfile=filename+'_'
         try:
             with open(tmpfile, 'w') as f:
-                f.write(agisjson)
+                f.write(cricjson)
         except:
             os.makedirs(tmpfile[:tmpfile.rfind('/')], 0o755)
             with open(tmpfile, 'w') as f:
-                f.write(agisjson)
+                f.write(cricjson)
 
         os.rename(tmpfile, filename)
         self.log.debug("Wrote "+filename)
@@ -57,16 +58,16 @@ class aCTAGISFetcher(aCTATLASProcess):
         Main loop
         """
         self.log.info("Running")
-        # todo: check if agis.json exists and return if too new
-        # fetch data from AGIS
-        queuesjson = self.fetchFromAgis(self.queues, self.queuesfile)
-        osesjson = self.fetchFromAgis(self.oses, self.osesfile)
+        # todo: check if cric.json exists and return if too new
+        # fetch data from CRIC
+        queuesjson = self.fetchFromCRIC(self.queues, self.queuesfile)
+        osesjson = self.fetchFromCRIC(self.oses, self.osesfile)
         # store data to file
         self.storeToFile(queuesjson, self.queuesfile)
         self.storeToFile(osesjson, self.osesfile)
-        # temporary hack to avoid too much agis fetching
+        # temporary hack to avoid too much cric fetching
         time.sleep(600)
 
 if __name__ == '__main__':
-    aaf=aCTAGISFetcher()
-    aaf.run()
+    acf=aCTCRICFetcher()
+    acf.run()

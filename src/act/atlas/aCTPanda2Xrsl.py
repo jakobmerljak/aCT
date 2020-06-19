@@ -26,7 +26,7 @@ class aCTPanda2Xrsl:
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
-        self.agisjsons = siteinfo.get('agisjsons', 0)
+        self.cricjsons = siteinfo.get('cricjsons', 0)
         self.osmap = osmap
         self.maxwalltime = siteinfo['maxwalltime']
         if self.maxwalltime == 0:
@@ -338,8 +338,9 @@ class aCTPanda2Xrsl:
         # Pilot tarball
         x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
-        # Special HPCs which cannot get agis files from cvmfs or over network
-        if self.agisjsons:
+        # Special HPCs which cannot get cric files from cvmfs or over network
+        # TODO sync with pilot changes to CRIC jsons
+        if self.cricjsons:
             x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
             x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
 
