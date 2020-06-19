@@ -177,19 +177,19 @@ class aCTSubmitter(aCTProcess):
         # check for stopsubmission flag
         if self.conf.get(['downtime','stopsubmission']) == "true":
             self.log.info('Submission suspended due to downtime')
-            return 0
+            return
 
         # check for any site-specific limits or status
         clusterstatus = self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["status"]) or 'online'
         if clusterstatus == 'offline':
             self.log.info('Site status is offline')
-            return 0
+            return
 
         clustermaxjobs = int(self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["maxjobs"]) or 999999)
         nsubmitted = self.db.getNArcJobs(f"cluster='{self.cluster}'")
         if nsubmitted >= clustermaxjobs:
             self.log.info(f'{nsubmitted} submitted jobs is greater than or equal to max jobs {clustermaxjobs}')
-            return 0
+            return
 
         # Get cluster host and queue: cluster/queue
         clusterhost = clusterqueue = None
@@ -209,13 +209,12 @@ class aCTSubmitter(aCTProcess):
 
         if not fairshares:
             self.log.info('Nothing to submit')
-            return 0
+            return
 
         # split by proxy for GU queues
         fairshares = list(set([(p['fairshare'], p['proxyid']) for p in fairshares]))
         # For proxy bug - see below
         shuffle(fairshares)
-        count = 0
 
         for fairshare, proxyid in fairshares:
 
@@ -378,7 +377,6 @@ class aCTSubmitter(aCTProcess):
                     self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                     continue
                 tasks.append((j['id'], j['appjobid'], jobdescstr, proxystring, int(self.conf.get(['atlasgiis','timeout'])) ))
-                count=count+1
 
             npools=1
             if any(s in self.cluster for s in self.conf.getList(['parallelsubmit','item'])):
@@ -434,24 +432,23 @@ class aCTSubmitter(aCTProcess):
             # commit transaction to release row locks
             self.db.Commit()
 
-            # still proxy bug
-            raise ExceptInterrupt(15)
+            # still proxy bug - exit if there are multiple proxies
+            if len(self.db.getProxiesInfo('TRUE', ['id'])) > 1:
+                raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
-        return count
+        return
 
 
     def checkFailedSubmissions(self):
 
-        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"' and "+self.db.timeStampLessThan("tarcstate", 60), ["id"])
+        jobs = self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["id"])
 
-        # TODO query GIIS for job name specified in description to see if job
-        # was really submitted or not
         for j in jobs:
-            # set to toresubmit and the application should figure out what to do
-            self.db.updateArcJob(j['id'], {"arcstate": "toresubmit",
-                                           "tarcstate": self.db.getTimeStamp()})
+            self.db.updateArcJob(j['id'], {"arcstate": "tosubmit",
+                                           "tarcstate": self.db.getTimeStamp(),
+                                           "cluster": None})
 
     def processToCancel(self):
 
@@ -592,8 +589,6 @@ class aCTSubmitter(aCTProcess):
 
     def process(self):
 
-        # check jobs which failed to submit the previous loop
-        self.checkFailedSubmissions()
         # process jobs which have to be cancelled
         self.processToCancel()
         # process jobs which have to be resubmitted
@@ -601,8 +596,9 @@ class aCTSubmitter(aCTProcess):
         # process jobs which have to be rerun
         self.processToRerun()
         # submit new jobs
-        while self.submit():
-            continue
+        self.submit()
+        # check jobs which failed to submit
+        self.checkFailedSubmissions()
 
 
 # Main
