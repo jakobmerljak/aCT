@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 from . import aCTLogger
 from . import aCTConfig
-from . import aCTUtils
 from . import aCTSignal
 from act.arc import aCTDBArc
 from act.condor.aCTDBCondor import aCTDBCondor
