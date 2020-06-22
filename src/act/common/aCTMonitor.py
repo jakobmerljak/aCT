@@ -20,7 +20,7 @@ class aCTPrometheusCollector:
         jobs = self.db.getGroupedJobs('cluster, arcstate')
 
         for job in jobs:
-            count, cluster, state = (job['count(*)'], job['cluster'], job['state'])
+            count, cluster, state = (job['count(*)'], job['cluster'], job['arcstate'])
             if state == 'submitted':
                 queued_arc_jobs.add_metric([cluster], count)
             if state == 'running':
