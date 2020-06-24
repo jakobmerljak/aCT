@@ -97,6 +97,18 @@ Several tools exist to help administer aCT
 - `actheartbeatwatchdog`: checks the database for jobs that have not sent heartbeats for a given time and manually send the heartbeat
 - `actcriticalmonitor`: checks logs for critical error messages in the last hour - can be run in a cron to send emails
 
+# Monitoring
+
+[Prometheus](https://prometheus.io/) monitoring can be enabled by setting the port number on which to expose metrics in `aCTConfigARC.xml`, eg
+
+```
+<monitor>
+  <prometheusport>8001</prometheusport>
+</monitor>
+```
+
+By default only ARC metrics are reported, but app-specific metrics can also be added - see the developers section below.
+
 # Client tools
 
 __Experimental__ client tools exist which allow job management through simple command line tools (`actsub`, `actstat`, etc). These tools allow aCT to be used as a generic job submission engine, independent from the ATLAS part.
@@ -108,5 +120,6 @@ Developing a new app for aCT is as easy as defining a new sub-module of `act`. C
 - `__init__.py` may define a list of agent processes that will be started by aCT with `app_processes = [...]`
 - `aCTBootstrap.py` may define a `bootstrap()` method which will be called by `actbootstrap` to peform any initialisation
 - `aCTReport.py` may define a `report()` method which will be called by `actreport` and can output any app-specific information
+- `aCTMonitor.py` may define a `collect()` method which yields app-specific Prometheus metrics.
 
 Apart from these there is no limit to the naming or number of app agents.
