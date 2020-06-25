@@ -65,7 +65,7 @@ class aCTAutopilotSent(aCTATLASProcess):
 
 
     def setSites(self):
-        self.sites = self.agisparser.getSites()
+        self.sites = self.cricparser.getSites()
 
 
     def getPanda(self, sitename):

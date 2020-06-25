@@ -17,14 +17,14 @@
   <dir>/data/user/act/www/jobs</dir>
 </joblog>
 
-<agis>
-  <server>http://atlas-agis-api.cern.ch/request/pandaqueue/query/list/&#63;json&#38;preset&#61;schedconf.all&#38;state&#61;ANY&#38;vo_name&#61;atlas&#38;is_virtual&#61;False</server>
-  <objectstores>http://atlas-agis-api.cern.ch/request/ddmendpoint/query/list/&#63;json&#38;type&#91;&#93;&#61;OS_LOGS&#38;type&#91;&#93;&#61;OS_ES</objectstores>
-  <jsonfilename>/data/user/atlact1/act-test1/tmp/agis.json</jsonfilename>
-  <osfilename>/home/dcameron/dev/aCT/tmp/oses.json</osfilename>
-  <pilotmanager>aCT</pilotmanager>
+<cric>
+  <server>https://atlas-cric.cern.ch/api/atlas/pandaqueue/query/&#63;json&#38;state&#61;ANY&#38;is_virtual&#61;False&#38;ce_state&#91;&#93;&#61;ACTIVE&#38;ce_state&#91;&#93;&#61;INACTIVE</server>
+  <objectstores>https://atlas-cric.cern.ch/api/atlas/ddmendpoint/query/&#63;json&#38;type&#91;&#93;&#61;OS_LOGS&#38;type&#91;&#93;&#61;OS_ES</objectstores>
+  <jsonfilename>/data/user/atlact1/act-test1/tmp/cric.json</jsonfilename>
+  <osfilename>/data/user/atlact1/act-test1/tmp/oses.json</osfilename>
+  <pilotmanager>all</pilotmanager>
   <maxjobs>0</maxjobs>
-</agis>
+</cric>
 
 <panda>
   <server>https://pandaserver.cern.ch:25443/server/panda/</server>

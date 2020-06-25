@@ -44,6 +44,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 pass
             if xrsl is not None:
                 endpoints = self.sites[job['siteName']]['endpoints']
+                if not endpoints: # No CEs, try later
+                    self.log.warning("%d: Cannot submit to %s because no CEs available" % (job['pandaid'], job['sitename']))
+                    continue
                 cl = []
                 for e in endpoints:
                     if e.find('://') == -1:
