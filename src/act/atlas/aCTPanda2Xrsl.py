@@ -18,6 +18,7 @@ class aCTPanda2Xrsl:
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
         self.prodSourceLabel = self.jobdesc['prodSourceLabel'][0]
+        self.resourcetype = self.jobdesc.get('resourceType', ['None'])[0]
 
         self.defaults = {}
         self.defaults['memory'] = 2000
@@ -263,6 +264,9 @@ class aCTPanda2Xrsl:
 
     def getResourceType(self):
 
+        if self.resourcetype != 'None':
+            return self.resourcetype
+
         resource = 'SCORE'
         if self.ncores > 1:
             resource = 'MCORE'
@@ -313,16 +317,17 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""
-        # create input file with job desc
-        pandaid = self.jobdesc['PandaID'][0]
-        try:
-            os.makedirs(self.inputjobdir)
-        except:
-            pass
-        tmpfile = self.inputjobdir+"/pandaJobData.out"
-        with open(tmpfile, "w") as f:
-            f.write(self.pandajob)
-        x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
+        if self.siteinfo['push']:
+            # create input file with job desc
+            pandaid = self.jobdesc['PandaID'][0]
+            try:
+                os.makedirs(self.inputjobdir)
+            except:
+                pass
+            tmpfile = self.inputjobdir+"/pandaJobData.out"
+            with open(tmpfile, "w") as f:
+                f.write(self.pandajob)
+            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if self.truepilot:
             x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
