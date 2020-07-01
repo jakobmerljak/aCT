@@ -49,8 +49,8 @@ def parse_ldmx_config(config='ldmxjob.config'):
         logger.error('PhysicsProcess is not defined in the %s. Job aborted.', config)
         sys.exit(1)
     # ensure both random seeds are set
-    if 'RandomSeed1' in conf_dict and 'RandomSeed2' not in conf_dict:
-        logger.error('RandomSeed1 is set without RandomSeed2 in %s. Job aborted.', config)
+    if 'RandomSeed1' not in conf_dict or 'RandomSeed2' not in conf_dict:
+        logger.error('RandomSeed1 and/or RandomSeed2 is not set in %s. Job aborted.', config)
         sys.exit(1)
     # mandatory options
     for opt in ['DetectorVersion', 'FieldMap']:
@@ -112,6 +112,120 @@ def calculate_md5_adler32_checksum(file, chunk_size=524288):
             adler32 = zlib.adler32(chunk, adler32) & 0xffffffff
     return (md5.hexdigest(), '{:08x}'.format(adler32))
 
+def job_starttime(starttime_f='.ldmx.job.starttime'):
+    if os.path.exists(starttime_f):
+        with open(starttime_f, 'r') as fd:
+            return int(fd.read())
+    else:
+        current_time = int(time.time())
+        with open(starttime_f, 'w') as fd:
+            fd.write('{0}'.format(current_time))
+            return current_time
+        
+
+def collect_from_json( infile ):
+    #function to convert json nested list to flat metadata list 
+    config_dict = {}
+    with open(infile, "r") as jf :
+        mjson = json.load(jf) 
+
+#    mjson = json.loads( infile )
+    if not mjson :
+        print "trouble"
+    else :
+        print "opened "+infile
+    config_dict['GunPositionX'] = mjson['sequence'][0]['generators'][0]['position'][0]
+    config_dict['GunPositionY'] = mjson['sequence'][0]['generators'][0]['position'][1]
+    config_dict['GunPositionZ'] = mjson['sequence'][0]['generators'][0]['position'][2]
+    config_dict['GunDirectionX'] = mjson['sequence'][0]['generators'][0]['direction'][0]
+    config_dict['GunDirectionY'] = mjson['sequence'][0]['generators'][0]['direction'][1]
+    config_dict['GunDirectionZ'] = mjson['sequence'][0]['generators'][0]['direction'][2]
+    config_dict['BeamSpotSizeX'] = mjson['sequence'][0]['beamSpotSmear'][0]
+    config_dict['BeamSpotSizeY'] = mjson['sequence'][0]['beamSpotSmear'][1]
+    config_dict['BeamSpotSizeZ'] = mjson['sequence'][0]['beamSpotSmear'][2]
+    config_dict['BeamEnergy'] = mjson['sequence'][0]['generators'][0]['energy']
+    config_dict['BeamParticle'] = mjson['sequence'][0]['generators'][0]['particle']
+    config_dict['RandomSeed1'] = mjson['sequence'][0]['randomSeeds'][0]
+    config_dict['RandomSeed2'] = mjson['sequence'][0]['randomSeeds'][1]
+    for params in mjson['sequence'][0]['actions'] :
+#        print params
+        p = params['class_name']
+        key=p.replace("ldmx::", "")
+#        print key
+        for k, val in params.iteritems() :
+            if 'threshold' in k :
+                keepKey=key+"_"+k
+#                print k
+                config_dict[keepKey]=val
+
+                
+    config_dict['ROOTCompressionSetting'] = mjson['compressionSetting']
+                
+    config_dict['Geant4BiasParticle'] = mjson['sequence'][0]['biasing_particle']
+    config_dict['Geant4BiasProcess'] = mjson['sequence'][0]['biasing_process']
+    config_dict['Geant4BiasVolume'] = mjson['sequence'][0]['biasing_volume']
+    config_dict['Geant4BiasThreshold'] = mjson['sequence'][0]['biasing_threshold']
+    config_dict['Geant4BiasFactor'] = mjson['sequence'][0]['biasing_factor']
+    config_dict['APrimeMass'] = mjson['sequence'][0]['APrimeMass']
+    config_dict['DarkBremMethod'] = mjson['sequence'][0]['darkbrem_method']
+    config_dict['DarkBremMethodXsecFactor'] = mjson['sequence'][0]['darkbrem_globalxsecfactor']
+
+
+    #ok. over reco stuff, where names can get confusing.
+
+    isRecon = False 
+    for seq in mjson['sequence'] :
+#        print seq
+        if seq['className'] != "ldmx::Simulator" :  #everything except simulation is reconstruction
+            isRecon = True 
+        if seq['className'] == "ldmx::EcalDigiProducer" :
+            config_dict['EcalDigiGain'] = seq['gain']
+            config_dict['EcalDigiPedestal'] = seq['pedestal']
+            config_dict['EcalDigiNoiseIntercept'] = seq['noiseIntercept']
+            config_dict['EcalDigiNoiseSlope'] = seq['noiseSlope']
+            config_dict['EcalDigiPadCapacitance'] = seq['padCapacitance']
+            config_dict['EcalDigiReadoutThreshold'] = seq['readoutThreshold']
+        elif seq['className'] == "ldmx::EcalVetoProcessor" :
+            config_dict['EcalLayers'] = seq['num_ecal_layers']
+            config_dict['EcalDiscriminatorCut'] = seq['disc_cut']
+        elif seq['className'] == "ldmx::HcalVetoProcessor" :
+            config_dict['HcalVetoMaxPE'] = seq['pe_threshold']
+            config_dict['HcalVetoMaxTime'] = seq['max_time']
+            config_dict['HcalVetoMaxDepth'] = seq['max_depth']
+            config_dict['HcalVetoBackMinPE'] = seq['back_min_pe']
+        elif seq['className'] == "ldmx::HcalDigiProducer" :
+            config_dict['HcalMeanNoiseSiPM'] = seq['meanNoise']
+            config_dict['HcalMeVPerMIP'] = seq['mev_per_mip']
+            config_dict['HcalPEPerMIP'] = seq['pe_per_mip']
+            config_dict['HcalAttLength'] = seq['strip_attenuation_length']
+            config_dict['HcalPosResolution'] = seq['strip_position_resolution']
+
+        elif seq['className'] == "ldmx::TrigScintDigiProducer" :
+            config_dict['TrigScintMeanNoiseSiPM'] = seq['mean_noise']
+            config_dict['TrigScintMeVPerMIP'] = seq['mev_per_mip']
+            config_dict['TrigScintPEPerMIP'] = seq['pe_per_mip']
+
+        elif seq['className'] == "ldmx::TrackerHitKiller" :
+            config_dict['TrackKillerEfficiency'] = seq['hitEfficiency']
+
+        elif seq['className'] == "ldmx::TriggerProcessor" :
+            config_dict['TriggerThreshold'] = seq['threshold']
+            config_dict['TriggerEcalEndLayer'] = seq['end_layer']
+            config_dict['TriggerEcalStartLayer'] = seq['start_layer']
+
+        elif seq['className'] == "ldmx::FindableTrackProcessor" :
+            config_dict['FindableTrackWasRun'] = 1
+        elif seq['className'] == "ldmx::TrackerVetoProcessor" :
+            config_dict['TrackerVetoWasRun'] = 1
+            
+    config_dict['IsRecon'] = isRecon
+                
+                
+#    print mjson['sequence'][0]['generators'][0]['position'][0]
+#    print config_dict
+    print(json.dumps(config_dict, indent = 4))
+    return config_dict
+
 
 def job_starttime(starttime_f='.ldmx.job.starttime'):
     if os.path.exists(starttime_f):
@@ -127,7 +241,6 @@ def job_starttime(starttime_f='.ldmx.job.starttime'):
 def collect_meta(conf_dict, mac_dict):
     meta = {
         'IsSimulation': True,
-        'IsRecon': False
     }
     # conf
     for fromconf in ['Scope', 'SampleId', 'PhysicsProcess', 'DetectorVersion']:
@@ -249,7 +362,7 @@ def get_parser():
                         help='LDMX Production simulation macro-definition file')
     parser.add_argument('-j', '--json-metadata', action='store', default='rucio.metadata',
                         help='LDMX Production simulation JSON metadata file')
-    parser.add_argument('action', choices=['generate-mac', 'collect-metadata'],
+    parser.add_argument('action', choices=['generate-mac', 'collect-metadata', 'test'],
                         help='Helper action to perform')
     return parser
 
@@ -261,7 +374,7 @@ if __name__ == '__main__':
     logger.setLevel(loglevel)
 
     # config is parsed for any action
-    conf_dict = parse_ldmx_config(cmd_args.config)
+#    conf_dict = parse_ldmx_config(cmd_args.config)
 
     # config processing substitution (RTE stage 1)
     if cmd_args.action == 'generate-mac':
@@ -280,6 +393,8 @@ if __name__ == '__main__':
         job_starttime()
         # print values for bash eval
         print_eval(conf_dict)
+    elif cmd_args.action == 'test' :
+        collect_from_json( "metadata_ldmx_v12_ecal_pn_run0.json" )
     elif cmd_args.action == 'collect-metadata':
         mac_dict = parse_mac(cmd_args.mac)
         meta = collect_meta(conf_dict, mac_dict)
