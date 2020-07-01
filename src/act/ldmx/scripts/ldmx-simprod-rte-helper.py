@@ -114,6 +114,16 @@ def calculate_md5_adler32_checksum(file, chunk_size=524288):
             adler32 = zlib.adler32(chunk, adler32) & 0xffffffff
     return (md5.hexdigest(), '{:08x}'.format(adler32))
 
+def job_starttime(starttime_f='.ldmx.job.starttime'):
+    if os.path.exists(starttime_f):
+        with open(starttime_f, 'r') as fd:
+            return int(fd.read())
+    else:
+        current_time = int(time.time())
+        with open(starttime_f, 'w') as fd:
+            fd.write('{0}'.format(current_time))
+            return current_time
+        
 
 def collect_from_json( infile ):
     #function to convert json nested list to flat metadata list 
