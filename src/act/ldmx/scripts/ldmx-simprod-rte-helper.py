@@ -90,9 +90,18 @@ def collect_from_json( infile ):
         config_dict['BeamSpotSizeY'] = mjson['sequence'][0]['beamSpotSmear'][1]
         config_dict['BeamSpotSizeZ'] = mjson['sequence'][0]['beamSpotSmear'][2]
         
+    if 'runNumber' in mjson['sequence'][0] :
+        config_dict['RunNumber'] = mjson['sequence'][0]['runNumber']
+    else :
+        logger.error('RunNumber is not set in %s. Job aborted.', infile)                                                                 
+        sys.exit(1) 
+        
     if 'randomSeeds' in mjson['sequence'][0] :
         config_dict['RandomSeed1'] = mjson['sequence'][0]['randomSeeds'][0]
         config_dict['RandomSeed2'] = mjson['sequence'][0]['randomSeeds'][1]
+    else :
+        logger.error('RandomSeed1 and/or RandomSeed2 is not set in %s. Job aborted.', infile)                                                                 
+        sys.exit(1) 
 
     if 'actions' in mjson['sequence'][0] :
         for params in mjson['sequence'][0]['actions'] :
