@@ -10,10 +10,36 @@ def report(actconfs):
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
     log = ''
-    states = ["new", "waiting", "submitted", "queueing", "running", "tovalidate", "toresubmit",
+    states = ["new", "waiting", "queueing", "running", "tovalidate", "toresubmit",
               "toclean", "finished", "failed", "tocancel", "cancelling", "cancelled"]
 
     db = aCTDBLDMX(logger)
+    rows = db.getGroupedJobs('batchid, ldmxstatus')
+    for r in rows:
+        count, state, site = (r['count(*)'], r['ldmxstatus'], r['batchid'] or 'None')
+        rep[site][state] += count
+        rtot[state] += count
+
+    # figure out batchid column length (min 10)
+    maxbatchlen = max([len(k) for k in rep]+[10]) + 1
+
+    log += f"Active LDMX job batches: {len(rep)}\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states])}   Total\n"
+
+    for k in sorted(rep.keys(), key=lambda x: x != None):
+        log += f"{k:>{maxbatchlen}.{maxbatchlen}}:"
+        log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += f"{sum(rep[k].values()):>10}"
+        log += '\n'
+
+    log += f'{"Totals":>{maxbatchlen}}:'
+    log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += f"{sum(rtot.values()):>10}"
+    log += '\n\n'
+
+    rep = defaultdict(lambda: defaultdict(int))
+    rtot = defaultdict(int)
+
     rows = db.getJobs('True', ['sitename', 'ldmxstatus'])
     for r in rows:
 
@@ -21,15 +47,15 @@ def report(actconfs):
         rep[site][state] += 1
         rtot[state] += 1
 
-    log += f"Active LDMX jobs: {sum(rtot.values())}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+    log += f"Active LDMX jobs by site: {sum(rtot.values())}\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
-        log += f"{k:>28.28}:"
+        log += '{:>{width}.{width}}:'.format(k, width=maxbatchlen)
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
         log += '\n'
 
-    log += f'{"Totals":>28}:'
+    log += f'{"Totals":>{maxbatchlen}}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
     log += '\n\n'
 
@@ -37,21 +63,26 @@ def report(actconfs):
     states = ['finished', 'failed', 'cancelled']
     rep = defaultdict(lambda: defaultdict(int))
     rtot = defaultdict(int)
-    rows = db.getNArchiveJobs('True', 'sitename, ldmxstatus')
+    rows = db.getGroupedArchiveJobs('batchid, ldmxstatus')
     for r in rows:
-        count, state, site = (r['count(*)'], r['ldmxstatus'], r['sitename'] or 'None')
-        rep[site][state] += count
+        count, state, batch = (r['count(*)'], r['ldmxstatus'], r['batchid'] or 'None')
+        rep[batch][state] += count
         rtot[state] += count
 
-    log += f"Archived LDMX jobs: {sum(rtot.values())}\n"
-    log += f"{'':29} {' '.join([f'{s:>9}' for s in states])}\n"
+    # figure out batchid column length (min 10)
+    maxbatchlen = max([len(k) for k in rep]+[10]) + 1
+
+    log += f"Completed LDMX batches: {len(rep)}\n"
+    log += f"{'':{maxbatchlen+1}} {' '.join([f'{s:>9}' for s in states+['Total']])}\n"
 
     for k in sorted(rep.keys(), key=lambda x: x != None):
-        log += f"{k:>28.28}:"
+        log += f"{k:>{maxbatchlen}.{maxbatchlen}}:"
         log += ''.join([f'{(rep[k][s] or "-"):>10}' for s in states])
+        log += f"{sum(rep[k].values()):>10}"
         log += '\n'
 
-    log += f'{"Totals":>28}:'
+    log += f'{"Totals":>{maxbatchlen}}:'
     log += ''.join([f'{(rtot[s] or "-"):>10}' for s in states])
+    log += f"{sum(rtot.values()):>10}"
 
     return log+'\n\n'

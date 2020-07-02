@@ -18,7 +18,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         Look for newly submitted or running jobs
         '''
 
-        select = "ldmxstatus='submitted' and arcstate in ('submitted', 'running') and arcjobs.id=ldmxjobs.arcjobid"
+        select = "ldmxstatus='waiting' and arcstate in ('submitted', 'running') and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcstate', 'cluster', 'ldmxjobs.id']
         submittedjobs = self.dbarc.getArcJobsInfo(select, columns, tables='arcjobs,ldmxjobs')
 
@@ -126,9 +126,9 @@ class aCTLDMXStatus(aCTLDMXProcess):
         # Look for failed final states in ARC which are still starting or running in LDMX
         select = "arcstate in ('donefailed', 'cancelled', 'lost') and arcjobs.id=ldmxjobs.arcjobid"
         columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
-                   'description', 'template']
+                   'description', 'template', 'sitename', 'ldmxjobs.proxyid', 'batchid', 'Error']
 
-        jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns)
+        jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
 
         if not jobstoupdate:
             return
@@ -146,12 +146,12 @@ class aCTLDMXStatus(aCTLDMXProcess):
         desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
         for aj in failedjobs:
             self.copyOutputFiles(aj)
+            self.checkForResubmission(aj)
             select = f"id={aj['id']}"
             self.dbarc.updateArcJobsLazy(desc, select)
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'failed',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
-            self.cleanInputFiles(aj)
 
         for aj in lostjobs:
             select = f"id={aj['id']}"
@@ -163,7 +163,10 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         for aj in cancelledjobs:
             select = f"id={aj['id']}"
-            self.dbarc.updateArcJobsLazy(desc, select)
+            if aj['JobID']:
+                self.dbarc.updateArcJobsLazy(desc, select)
+            else: # job was not submitted so just delete
+                self.dbarc.deleteArcJob(aj['id'])
             self.dbldmx.updateJobsLazy(f"arcjobid={aj['id']}", {'ldmxstatus': 'cancelled',
                                                                 'computingelement': aj.get('cluster'),
                                                                 'sitename': self.endpoints.get(aj.get('cluster'))})
@@ -173,9 +176,27 @@ class aCTLDMXStatus(aCTLDMXProcess):
         self.dbldmx.Commit()
 
 
+    def checkForResubmission(self, arcjob):
+        '''
+        Check error message against retryable errors and submit a new job
+        '''
+
+        self.log.info(f"{arcjob['id']}: error: {arcjob['Error']}")
+        resub = [err for err in self.arcconf.getList(['errors','toresubmit','arcerrors','item']) if err in arcjob['Error']]
+        if not resub:
+            self.log.info(f"{arcjob['id']} failed with permanent error")
+            self.cleanInputFiles(arcjob)
+            return
+
+        self.log.info(f"{arcjob['id']} will be resubmitted")
+        self.dbldmx.insertJob(arcjob['description'], arcjob['template'],
+                              arcjob['proxyid'], batchid=arcjob['batchid'])
+
+
     def copyOutputFiles(self, arcjob):
         '''
-        Copy job stdout and errors log to final location
+        Copy job stdout and errors log to final location and make a copy
+        in the failed folder
         '''
 
         if not arcjob.get('JobID'):
@@ -184,24 +205,33 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         sessionid = arcjob['JobID'][arcjob['JobID'].rfind('/')+1:]
         date = arcjob['created'].strftime('%Y-%m-%d')
-        outd = os.path.join(self.conf.get(['joblog','dir']), date)
-        os.makedirs(outd, 0o755, exist_ok=True)
-
         localdir = os.path.join(self.tmpdir, sessionid)
         gmlogerrors = os.path.join(localdir, "gmlog", "errors")
-        arcjoblog = os.path.join(outd, "%s.log" % arcjob['id'])
+        jobstdout = arcjob['stdout']
+
+        outdir = os.path.join(self.conf.get(['joblog','dir']), date)
+        outdfailed = os.path.join(outdir, 'failed', arcjob['sitename'] or 'None')
+        os.makedirs(outdir, 0o755, exist_ok=True)
+        os.makedirs(outdfailed, 0o755, exist_ok=True)
+
         try:
+            arcjoblog = os.path.join(outdir, "%s.log" % arcjob['id'])
+            shutil.copy(gmlogerrors, arcjoblog)
+            os.chmod(arcjoblog, 0o644)
+            arcjoblog = os.path.join(outdfailed, "%s.log" % arcjob['id'])
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
-        jobstdout = arcjob['stdout']
         if jobstdout:
             try:
+                shutil.copy(os.path.join(localdir, jobstdout),
+                            os.path.join(outdir, '%s.out' % arcjob['id']))
+                os.chmod(os.path.join(outdir, '%s.out' % arcjob['id']), 0o644)
                 shutil.move(os.path.join(localdir, jobstdout),
-                            os.path.join(outd, '%s.out' % arcjob['id']))
-                os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
+                            os.path.join(outdfailed, '%s.out' % arcjob['id']))
+                os.chmod(os.path.join(outdfailed, '%s.out' % arcjob['id']), 0o644)
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 

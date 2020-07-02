@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import tempfile
 import time
@@ -55,6 +56,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             with open(jobfile) as f:
                 try:
                     config = {l.split('=')[0]: l.split('=')[1].strip() for l in f}
+                    batchid = config.get('BatchID', f'Batch-{time.strftime("%Y-%m-%dT%H:%M:%S")}')
                 except Exception as e:
                     self.log.error(f'Failed to parse job config file {jobfile}: {e}')
                     os.remove(jobfile)
@@ -63,7 +65,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             try:
                 templatefile = os.path.join(bufferdir, 'templates', config['MacTemplate'])
                 with open(templatefile) as tf:
-                    template = tf.read()
+                    template = tf.readlines()
             except Exception as e:
                 self.log.error(f'Bad template file or template not defined in {jobfile}: {e}')
                 os.remove(jobfile)
@@ -80,11 +82,15 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                     newtemplatefile = os.path.join(self.tmpdir, os.path.basename(templatefile))
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
                         newtemplatefile = ntf.name
-                        ntf.write(template)
-                        ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
-                        ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+                        for l in template:
+                            if l.startswith('/ldmx/persistency/root/runNumber '):
+                                ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
+                            elif l.startswith('/random/setSeeds '):
+                                ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+                            else:
+                                ntf.write(l)
 
-                    self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid)
+                    self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid, batchid=batchid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
             except Exception as e:
                 raise
@@ -92,35 +98,31 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             os.remove(jobfile)
 
 
-    def archiveOldJobs(self):
-        '''Move old jobs to the archive table'''
+    def archiveBatches(self):
+        '''Move completed batches to the archive table'''
 
-        # modified column is reported in local time so may not be exactly one day
-        select = self.dbldmx.timeStampLessThan('modified', 60*60*24)
-        select += ' and ldmxstatus in ("finished", "failed", "cancelled")'
-        columns = ['id', 'sitename', 'ldmxstatus', 'starttime', 'endtime', 'modified']
-        jobs = self.dbldmx.getJobs(select, columns)
-        if not jobs:
-            return
+        # Find out batch statuses
+        batches = self.dbldmx.getGroupedJobs('batchid, ldmxstatus')
+        batchdict = defaultdict(lambda: defaultdict(str))
+        for batch in batches:
+            batchdict[batch['batchid']][batch['ldmxstatus']] = batch['count(*)']
 
-        self.log.info('Archiving %d jobs' % len(jobs))
-        for job in jobs:
-            self.log.debug('Archiving LDMX job %d' % job['id'])
-            # Fill out empty start/end time
-            if job['starttime']:
-                if not job['endtime']:
-                    job['endtime'] = job['modified']
-            elif job['endtime']:
-                job['starttime'] = job['endtime']
-            else:
-                job['starttime'] = self.dbldmx.getTimeStamp()
-                job['endtime'] = self.dbldmx.getTimeStamp()
+        for batchid, statuses in batchdict.items():
+            if [s for s in statuses if s not in ['finished', 'failed', 'cancelled']]:
+                continue
 
-            # archive table doesn't have modified
-            jobarchive = job.copy()
-            del jobarchive['modified']
-            self.dbldmx.insertJobArchiveLazy(jobarchive)
-            self.dbldmx.deleteJob(job['id']) # commit is called here
+            # All jobs are finished, so archive
+            select = f"batchid='{batchid}'" if batchid else 'batchid is NULL'
+            columns = ['id', 'sitename', 'ldmxstatus', 'starttime', 'endtime', 'batchid']
+            jobs = self.dbldmx.getJobs(select, columns)
+            if not jobs:
+                continue
+
+            self.log.info(f'Archiving {len(jobs)} jobs for batch {batchid}')
+            for job in jobs:
+                self.log.debug(f'Archiving LDMX job {job["id"]}')
+                self.dbldmx.insertJobArchiveLazy(job)
+                self.dbldmx.deleteJob(job['id']) # commit is called here
 
 
     def process(self):
@@ -130,7 +132,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
         # Move old jobs to archive - every hour
         if time.time() - self.starttime > 3600:
             self.log.info("Checking for jobs to archive")
-            self.archiveOldJobs()
+            self.archiveBatches()
             self.starttime = time.time()
 
 

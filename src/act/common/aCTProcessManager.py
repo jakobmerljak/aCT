@@ -1,4 +1,5 @@
 import importlib
+import itertools
 import subprocess
 import os
 
@@ -13,10 +14,11 @@ class aCTProcessManager:
 
     def __init__(self, log, conf, appconf):
 
+        self.conf = conf
         # logger
         self.log = log
-        self.actlocation = conf.get(["actlocation","dir"])
-        self.logdir = conf.get(["logger", "logdir"])
+        self.actlocation = self.conf.get(["actlocation","dir"])
+        self.logdir = self.conf.get(["logger", "logdir"])
         # DB connection
         self.dbarc = aCTDBArc.aCTDBArc(self.log)
         self.dbcondor = aCTDBCondor.aCTDBCondor(self.log)
@@ -27,7 +29,8 @@ class aCTProcessManager:
         self.arcsubmitter = 'act/arc/aCTSubmitter'
         self.condorsubmitter = 'act/condor/aCTSubmitter'
         # dictionary of processes:aCTProcessHandler of which to run a single instance
-        self.processes_single = {'act/common/aCTProxyHandler': None}
+        self.processes_single = {'act/common/aCTProxyHandler': None,
+                                 'act/common/aCTMonitor': None}
         apps = appconf.getList(["modules", "app"])
         for app in apps:
             try:
@@ -43,7 +46,7 @@ class aCTProcessManager:
 
         # dictionary of cluster to list of aCTProcessHandlers
         self.running = {}
-        # dictionary of cluster to Submitter processes handlers, there should
+        # dictionary of cluster to list of Submitter processes handlers, there should
         # be one per unique cluster in clusterlist
         self.submitters = {}
 
@@ -60,9 +63,10 @@ class aCTProcessManager:
             for proc in procs:
                 self.log.info('Terminating %s for %s' % (proc.name, cluster))
                 proc.terminate()
-        for cluster, proc in self.submitters.items():
-            self.log.info('Terminating aCTSubmitter for %s' % cluster)
-            proc.terminate()
+        for cluster, procs in self.submitters.items():
+            for proc in procs:
+                self.log.info('Terminating aCTSubmitter for %s' % cluster)
+                proc.terminate()
         for appproc, proc in self.processes_single.items():
             self.log.info('Terminating %s' % appproc)
             proc.terminate()
@@ -89,6 +93,8 @@ class aCTProcessManager:
         Get the list of current clusters and (re)start necessary processes
         '''
 
+        self.conf.parse()
+
         clusters = self.dbarc.getActiveClusters()
         activeclusters = dict((k, v) for (k, v) in zip([c['cluster'] for c in clusters],
                                                        [c['COUNT(*)'] for c in clusters]))
@@ -100,7 +106,7 @@ class aCTProcessManager:
         # All running per-cluster processes
         procs = [p for c in self.running for p in self.running[c]]
         # Submitter processes
-        procs.extend(list(self.submitters.values()))
+        procs.extend(itertools.chain(*self.submitters.values()))
         # Single instance processes
         procs.extend(list(self.processes_single.values()))
 
@@ -111,7 +117,8 @@ class aCTProcessManager:
             elif proc.cluster and proc.cluster not in activeclusters.keys():
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.arcsubmitter:
-                    del self.submitters[proc.cluster]
+                    if proc.cluster in self.submitters:
+                        del self.submitters[proc.cluster]
                 elif proc.cluster in self.running:
                     del self.running[proc.cluster]
             else:
@@ -141,10 +148,13 @@ class aCTProcessManager:
         # Start any new submitters required
         for cluster in clusterlist:
             if cluster not in self.submitters:
-                self.log.info("Starting process aCTSubmitter for %s", cluster)
-                ph = self.aCTProcessHandler(self.arcsubmitter, self.logdir, cluster, actlocation=self.actlocation)
-                ph.start()
-                self.submitters[cluster] = ph
+                procs = []
+                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"]) or 1)):
+                    self.log.info("Starting process aCTSubmitter for %s", cluster)
+                    ph = self.aCTProcessHandler(self.arcsubmitter, self.logdir, cluster, actlocation=self.actlocation)
+                    ph.start()
+                    procs.append(ph)
+                self.submitters[cluster] = procs
 
     def checkCondorClusters(self):
         '''
@@ -163,7 +173,7 @@ class aCTProcessManager:
         # All running per-cluster processes
         procs = [p for c in self.running for p in self.running[c]]
         # Submitter processes
-        procs.extend(list(self.submitters.values()))
+        procs.extend(itertools.chain(*self.submitters.values()))
 
         for proc in procs:
             rc = proc.check()
@@ -172,7 +182,8 @@ class aCTProcessManager:
             elif proc.cluster and proc.cluster not in activeclusters.keys():
                 self.log.info("Not restarting %s for %s as not needed", proc.name, proc.cluster)
                 if proc.name == self.condorsubmitter:
-                    del self.submitters[proc.cluster]
+                    if proc.cluster in self.submitters:
+                        del self.submitters[proc.cluster]
                 elif proc.cluster in self.running:
                     del self.running[proc.cluster]
             else:
@@ -214,10 +225,13 @@ class aCTProcessManager:
         # Start any new submitters required
         for cluster in clusterlist:
             if cluster not in self.submitters:
-                self.log.info("Starting process aCTSubmitter for %s", cluster)
-                ph = self.aCTProcessHandler(self.condorsubmitter, self.logdir, cluster, actlocation=self.actlocation)
-                ph.start()
-                self.submitters[cluster] = ph
+                procs = []
+                for nprocs in range(int(self.conf.getCond(["sites", "site"], f"endpoint={cluster}", ["submitters"]) or 1)):
+                    self.log.info("Starting process aCTSubmitter for %s", cluster)
+                    ph = self.aCTProcessHandler(self.condorsubmitter, self.logdir, cluster, actlocation=self.actlocation)
+                    ph.start()
+                    procs.append(ph)
+                self.submitters[cluster] = procs
 
 
     class aCTProcessHandler:

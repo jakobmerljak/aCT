@@ -15,6 +15,7 @@ setup(name='aCT',
         'htcondor',                 # bindings to use HTCondor to submit jobs
         'pylint',                   # for travis automatic tests
         'requests',                 # for APF mon calls
+        'prometheus_client',        # Prometheus monitoring
 
         'pyopenssl',
         'flask',

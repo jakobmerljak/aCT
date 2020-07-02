@@ -87,18 +87,18 @@ class aCTDBArc(aCTDB):
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             modified TIMESTAMP,
             created TIMESTAMP,
-            arcstate VARCHAR(255),
+            arcstate VARCHAR(12),
             tarcstate TIMESTAMP,
             tstate TIMESTAMP,
-            cluster VARCHAR(255),
-            clusterlist VARCHAR(1024),
+            cluster VARCHAR(48),
+            clusterlist VARCHAR(255),
             jobdesc INT(11),
             attemptsleft INTEGER,
-            downloadfiles VARCHAR(255),
+            downloadfiles VARCHAR(48),
             proxyid INTEGER,
-            appjobid VARCHAR(255),
+            appjobid VARCHAR(16),
             priority SMALLINT,
-            fairshare VARCHAR(255),
+            fairshare VARCHAR(50),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
 
         # First check if table already exists
@@ -264,7 +264,6 @@ class aCTDBArc(aCTDB):
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
-        print(s)
         if job:
             c.execute(s, list(desc.values()) + list(self._job2db(job).values()))
         else:
@@ -349,14 +348,23 @@ class aCTDBArc(aCTDB):
             return None
         return row['jobdescription']
 
-    def getNArcJobs(self):
+    def getNArcJobs(self, select):
         '''
-        Return the total number of jobs in the table
+        Return the count of jobs in the table matching select
         '''
         c=self.db.getCursor()
-        c.execute("SELECT COUNT(*) FROM arcjobs")
+        c.execute("SELECT COUNT(*) FROM arcjobs WHERE "+select)
         row = c.fetchone()
         return row['COUNT(*)']
+
+    def getGroupedJobs(self, groupby):
+        '''
+        Return counts of jobs grouped by given column(s)
+        '''
+        c = self.db.getCursor()
+        c.execute(f"SELECT count(*), {groupby} FROM arcjobs GROUP BY {groupby}")
+        rows = c.fetchall()
+        return rows
 
     def getActiveClusters(self):
         '''

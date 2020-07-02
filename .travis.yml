@@ -9,9 +9,17 @@ notifications:
 # force the virtualenv to use system packages
 virtualenv:
   system_site_packages: true
-before_install:
-  - sudo apt-get install -y nordugrid-arc-python
+# Install ARC 6 python3 bindings from nordugrid repo (not available in standard repo)
+addons:
+  apt:
+    sources:
+      - sourceline: 'deb https://download.nordugrid.org/repos/6/ubuntu bionic main'
+      - sourceline: 'deb https://download.nordugrid.org/repos/6/ubuntu bionic-updates main'
+        keyurl: https://download.nordugrid.org/DEB-GPG-KEY-nordugrid-6.asc
+    packages:
+      - python3-nordugrid-arc
 install:
   - pip install -r requirements.txt
+  - pip install rucio-clients
 script:
   - pylint --extension-pkg-whitelist=htcondor,classad --errors-only src/act

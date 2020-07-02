@@ -215,10 +215,10 @@ class aCTMain:
         with tempfile.NamedTemporaryFile() as temp:
             temp.write(logrotateconf.encode('utf-8'))
             temp.flush()
-            command = ['/usr/sbin/logrotate', '-s', logrotatestatus, temp.name]
+            command = ['logrotate', '-s', logrotatestatus, temp.name]
             try:
-                subprocess.call(command)
-            except subprocess.CalledProcessError as e:
+                subprocess.run(command, check=True)
+            except (FileNotFoundError, subprocess.CalledProcessError) as e:
                 self.log.warning("Failed to run logrotate: %s" % str(e))
 
 
