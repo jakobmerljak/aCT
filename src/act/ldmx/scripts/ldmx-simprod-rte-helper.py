@@ -8,7 +8,7 @@ import os
 import json
 import hashlib
 import zlib
-
+import time
 
 # logging
 logger = logging.getLogger('LDMX.SimProd.Helper')
@@ -194,13 +194,18 @@ def collect_meta(conf_dict, json_file):
     meta['ElectronNumber'] = int(conf_dict['ElectronNumber']) if 'ElectronNumber' in conf_dict else None
     meta['MagneticFieldmap'] = conf_dict['FieldMap'] if 'FieldMap' in conf_dict else None
     # env
-    meta['LdmxImage'] = os.environ['ACCOUNTING_WN_INSTANCE'] if 'ACCOUNTING_WN_INSTANCE' in os.environ else None
+    if 'ACCOUNTING_WN_INSTANCE' in os.environ:
+        meta['LdmxImage'] = os.environ['ACCOUNTING_WN_INSTANCE']
+    elif 'SINGULARITY_IMAGE' in os.environ:
+        meta['LdmxImage'] = os.environ['SINGULARITY_IMAGE'].split('/')[-1]
+    else:
+        meta['LdmxImage'] = None
     meta['ARCCEJobID'] = os.environ['GRID_GLOBAL_JOBID'].split('/')[-1] if 'GRID_GLOBAL_JOBID' in os.environ else None
     meta['FileCreationTime'] = int(time.time())
     meta['Walltime'] = meta['FileCreationTime'] - job_starttime()
-    
+
     data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
+    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_{RunNumber}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
     # Rucio metadata

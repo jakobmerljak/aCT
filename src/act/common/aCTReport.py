@@ -74,7 +74,7 @@ class aCTReport:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
-                elif not re.match(r'\d\d:\d\d$', runningtime):
+                elif not re.match(r'0\d:\d\d$', runningtime):
                     # Check for overrunning processes
                     longprocesses.append((process, pid, cluster, runningtime))
                 if cluster in cluster_procs:
@@ -83,7 +83,7 @@ class aCTReport:
                     cluster_procs[cluster] = [process]
 
         for proc in longprocesses:
-            self.log('WARNING: %s (pid %s) for %s running for more than one hour (%s), this process will be killed' % proc)
+            self.log('WARNING: %s (pid %s) for %s running for more than 10 mins (%s), this process will be killed' % proc)
             # Kill process and log a critical message to send email
             # Too many emails, disable
             #self.criticallog.critical('Killing process %s (pid %s) for %s running for more than one hour (%s)' % proc)
@@ -142,6 +142,8 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
+        if sum(rtot.values()) == 0:
+            return
         self.log(f"All ARC jobs: {sum(rtot.values())}")
         self.log(f"{'':39} {' '.join([f'{s:>9}' for s in states])}")
 
@@ -204,6 +206,8 @@ class aCTReport:
                 except:
                     rtot[jid]=1
 
+        if sum(rtot.values()) == 0:
+            return
         self.log(f"All Condor jobs: {sum(rtot.values())}")
         self.log(f"{'':39} {' '.join([f'{s:>9}' for s in condorjobstatemap])}")
         for k in sorted(rep, key=lambda x: x.split('.')[-1]):

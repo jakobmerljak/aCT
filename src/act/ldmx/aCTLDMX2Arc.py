@@ -10,43 +10,12 @@ class aCTLDMX2Arc(aCTLDMXProcess):
     def __init__(self):
         aCTLDMXProcess.__init__(self)
 
+
     def processNewJobs(self):
-        '''
-        Get new jobs in the DB
-        '''
-        # Set all new jobs to waiting
-        newjobs = self.dbldmx.getJobs("ldmxstatus='new'")
+
+        # Submit new jobs
+        newjobs = self.dbldmx.getJobs("ldmxstatus='new' order by modified limit 100")
         for job in newjobs:
-            self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'waiting'})
-        if newjobs:
-            self.dbldmx.Commit()
-
-    def processWaitingJobs(self):
-
-        # Thottle submission to not have too big a queue of unsubmitted jobs
-        maxsubmitted = self.conf.get(['jobs', 'maxsubmitted']) or 50
-        nsubmitted = self.dbldmx.getNJobs("ldmxstatus='submitted'")
-        if nsubmitted >= int(maxsubmitted):
-            self.log.info(f'{nsubmitted} jobs already submitted, not submitting more')
-            return
-
-        # Get CE endpoints, filter by status and maxjobs
-        onlinesites = [s for s, i in self.sites.items() if i['status'] == 'online' and i['maxjobs'] > 0]
-        sitejobs = {s: self.dbldmx.getNJobs(f"ldmxstatus in ('submitted', 'queueing', 'running') AND sitename='{s}'") for s in onlinesites}
-        if sitejobs:
-            self.log.debug(', '.join([f'{s}: submitted jobs {n}, maxjobs {self.sites[s]["maxjobs"]}' for (s, n) in sitejobs.items()]))
-        onlinesites = [s for s in onlinesites if sitejobs[s] < self.sites[s]['maxjobs']]
-        onlineendpoints = [ep for ep, s in self.endpoints.items() if s in onlinesites]
-
-        if not onlineendpoints:
-            self.log.debug('No available CEs')
-            return
-
-        self.log.debug(f'Available CEs: {", ".join([f"{self.endpoints[ce]}: {ce}" for ce in onlineendpoints])}')
-
-        # Submit waiting jobs
-        waitingjobs = self.dbldmx.getJobs("ldmxstatus='waiting' order by modified limit 10")
-        for job in waitingjobs:
 
             xrsl = self.createXRSL(job['description'], job['template'])
             if not xrsl:
@@ -55,14 +24,15 @@ class aCTLDMX2Arc(aCTLDMXProcess):
                 self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'new'})
                 continue
 
-            self.log.info(f'Inserting job {job["id"]} with xrsl {xrsl}')
+            self.log.info(f'Inserting job {job["id"]} to CEs {",".join(self.endpoints)}\n with xrsl {xrsl}')
             arcid = self.dbarc.insertArcJobDescription(xrsl,
                                                        proxyid=job['proxyid'],
-                                                       clusterlist=','.join(onlineendpoints),
+                                                       clusterlist=','.join(self.endpoints),
                                                        downloadfiles='gmlog/errors;stdout;rucio.metadata',
-                                                       appjobid=str(job['id']))
+                                                       appjobid=str(job['id']),
+                                                       fairshare=job['batchid'][:50])
 
-            desc = {'ldmxstatus': 'submitted', 'arcjobid': arcid['LAST_INSERT_ID()']}
+            desc = {'ldmxstatus': 'waiting', 'arcjobid': arcid['LAST_INSERT_ID()']}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
             # Dump job description
@@ -74,12 +44,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
                 f.write(xrsl)
                 self.log.debug(f'Wrote description to {xrslfile}')
 
-            nsubmitted += 1
-            if nsubmitted >= int(maxsubmitted):
-                self.log.info(f'Reached maximum {maxsubmitted} submitted jobs')
-                break
-
-        if waitingjobs:
+        if newjobs:
             self.dbldmx.Commit()
 
 
@@ -103,6 +68,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['executable'] = f"(executable = {os.path.basename(wrapper)})"
         xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
                                              (ldmxjob.config {descriptionfile}) \
+                                             (ldmxsim.mac {templatefile}) \
                                              (ldmxsim.mac.template {templatefile}) \
                                              (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
         xrsl['stdout'] = '(stdout = stdout)'
@@ -119,7 +85,6 @@ class aCTLDMX2Arc(aCTLDMXProcess):
     def process(self):
 
         self.processNewJobs()
-        self.processWaitingJobs()
 
 
 if __name__ == '__main__':

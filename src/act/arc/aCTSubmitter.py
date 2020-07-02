@@ -177,7 +177,19 @@ class aCTSubmitter(aCTProcess):
         # check for stopsubmission flag
         if self.conf.get(['downtime','stopsubmission']) == "true":
             self.log.info('Submission suspended due to downtime')
-            return 0
+            return
+
+        # check for any site-specific limits or status
+        clusterstatus = self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["status"]) or 'online'
+        if clusterstatus == 'offline':
+            self.log.info('Site status is offline')
+            return
+
+        clustermaxjobs = int(self.conf.getCond(["sites", "site"], f"endpoint={self.cluster}", ["maxjobs"]) or 999999)
+        nsubmitted = self.db.getNArcJobs(f"cluster='{self.cluster}'")
+        if nsubmitted >= clustermaxjobs:
+            self.log.info(f'{nsubmitted} submitted jobs is greater than or equal to max jobs {clustermaxjobs}')
+            return
 
         # Get cluster host and queue: cluster/queue
         clusterhost = clusterqueue = None
@@ -197,27 +209,29 @@ class aCTSubmitter(aCTProcess):
 
         if not fairshares:
             self.log.info('Nothing to submit')
-            return 0
+            return
 
         # split by proxy for GU queues
         fairshares = list(set([(p['fairshare'], p['proxyid']) for p in fairshares]))
         # For proxy bug - see below
         shuffle(fairshares)
-        count = 0
 
         for fairshare, proxyid in fairshares:
 
+            # apply maxjobs limit (check above should make sure greater than zero)
+            # Note: relies on exit after first loop
+            limit = min(clustermaxjobs - nsubmitted, 10)
             try:
                 # catch any exceptions here to avoid leaving lock
                 if self.cluster:
                     # Lock row for update in case multiple clusters are specified
                     #jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' order by priority desc limit 10".format(self.cluster, fairshare),
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' and proxyid='{2}' limit 10".format(self.cluster, fairshare, proxyid),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and ( clusterlist like '%{0}' or clusterlist like '%{0},%' ) and fairshare='{1}' and proxyid='{2}' limit {3}".format(self.cluster, fairshare, proxyid, limit),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"], lock=True)
                     if jobs:
                         self.log.debug("started lock for writing %d jobs"%len(jobs))
                 else:
-                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0} and proxyid={1}' limit 10".format(fairshare, proxyid),
+                    jobs=self.db.getArcJobsInfo("arcstate='tosubmit' and clusterlist='' and fairshare='{0} and proxyid={1}' limit {2}".format(fairshare, proxyid, limit),
                                                 columns=["id", "jobdesc", "appjobid", "priority", "proxyid", "clusterlist"])
                 # mark submitting in db
                 jobs_taken=[]
@@ -323,11 +337,11 @@ class aCTSubmitter(aCTProcess):
                         maxprioqueued = 0
                     self.log.info("Max priority queued: %d" % maxprioqueued)
 
-                    # Limit number of submitted jobs using configuration or default (0.15 + 100/num of shares)/num CEs
+                    # Limit number of submitted jobs using configuration or default (0.15 + 100/num of shares)
                     # Note: assumes only a few shares are used
                     qfraction = float(self.conf.get(['jobs', 'queuefraction'])) if self.conf.get(['jobs', 'queuefraction']) else 0.15
                     qoffset = int(self.conf.get(['jobs', 'queueoffset'])) if self.conf.get(['jobs', 'queueoffset']) else 100
-                    jlimit = (len(rjobs) * qfraction + qoffset/len(fairshares)) / len(jobs[0]['clusterlist'].split(','))
+                    jlimit = len(rjobs) * qfraction + qoffset/len(fairshares)
                     self.log.debug("running %d, queued %d, queue limit %d" % (len(rjobs), len(qjobs), jlimit))
                     if str(self.cluster).find('arc-boinc-0') != -1:
                         jlimit = len(rjobs)*0.15 + 400
@@ -363,7 +377,6 @@ class aCTSubmitter(aCTProcess):
                     self.log.error("%s: Failed to prepare job description" % j['appjobid'])
                     continue
                 tasks.append((j['id'], j['appjobid'], jobdescstr, proxystring, int(self.conf.get(['atlasgiis','timeout'])) ))
-                count=count+1
 
             npools=1
             if any(s in self.cluster for s in self.conf.getList(['parallelsubmit','item'])):
@@ -403,6 +416,7 @@ class aCTSubmitter(aCTProcess):
                 jd['arcstate']='submitted'
                 # initial offset to 1 minute to force first status check
                 jd['tarcstate']=self.db.getTimeStamp(time.time()-int(self.conf.get(['jobs','checkinterval']))+120)
+                jd['tstate']=self.db.getTimeStamp()
                 # extract hostname of cluster (depends on JobID being a URL)
                 self.log.info("%s: job id %s" % (task[1], job.JobID))
                 jd['cluster']=self.cluster
@@ -418,24 +432,23 @@ class aCTSubmitter(aCTProcess):
             # commit transaction to release row locks
             self.db.Commit()
 
-            # still proxy bug
-            raise ExceptInterrupt(15)
+            # still proxy bug - exit if there are multiple proxies
+            if len(self.db.getProxiesInfo('TRUE', ['id'])) > 1:
+                raise ExceptInterrupt(15)
 
         self.log.info("end submitting")
 
-        return count
+        return
 
 
     def checkFailedSubmissions(self):
 
-        jobs=self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["id"])
+        jobs = self.db.getArcJobsInfo("arcstate='submitting' and cluster='"+self.cluster+"'", ["id"])
 
-        # TODO query GIIS for job name specified in description to see if job
-        # was really submitted or not
         for j in jobs:
-            # set to toresubmit and the application should figure out what to do
-            self.db.updateArcJob(j['id'], {"arcstate": "toresubmit",
-                                           "tarcstate": self.db.getTimeStamp()})
+            self.db.updateArcJob(j['id'], {"arcstate": "tosubmit",
+                                           "tarcstate": self.db.getTimeStamp(),
+                                           "cluster": None})
 
     def processToCancel(self):
 
@@ -576,8 +589,6 @@ class aCTSubmitter(aCTProcess):
 
     def process(self):
 
-        # check jobs which failed to submit the previous loop
-        self.checkFailedSubmissions()
         # process jobs which have to be cancelled
         self.processToCancel()
         # process jobs which have to be resubmitted
@@ -585,8 +596,9 @@ class aCTSubmitter(aCTProcess):
         # process jobs which have to be rerun
         self.processToRerun()
         # submit new jobs
-        while self.submit():
-            continue
+        self.submit()
+        # check jobs which failed to submit
+        self.checkFailedSubmissions()
 
 
 # Main

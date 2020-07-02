@@ -18,8 +18,7 @@ class aCTDBLDMX(aCTDB):
            - ldmxstatus: LDMX job status
                  new: job has been entered but not processed yet
                  waiting: job is waiting to be submitted
-                 submitted: job is submitted to ARC CE
-                 queueing: job is queued in CE batch system
+                 queueing: job is submitted to CE
                  running: job is running in the site batch system
                  tovalidate: job has finished and is in aCT post-processing
                  finished: job finished successfully
@@ -53,7 +52,8 @@ class aCTDBLDMX(aCTDB):
         starttime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         endtime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         computingElement VARCHAR(255),
-        proxyid integer
+        proxyid integer,
+        batchid VARCHAR(255)
         )
 """
 
@@ -84,7 +84,8 @@ class aCTDBLDMX(aCTDB):
         sitename VARCHAR(255),
         ldmxstatus VARCHAR(255),
         starttime TIMESTAMP NOT NULL,
-        endtime TIMESTAMP NOT NULL
+        endtime TIMESTAMP NOT NULL,
+        batchid VARCHAR(255)
         )
 """
 
@@ -102,11 +103,12 @@ class aCTDBLDMX(aCTDB):
         return True
 
 
-    def insertJob(self, description, template, proxyid, priority=0):
+    def insertJob(self, description, template, proxyid, batchid=None, priority=0):
         '''Insert new job description'''
         desc = {'description': description,
                 'template': template,
                 'proxyid': proxyid,
+                'batchid': batchid,
                 'priority': priority,
                 'ldmxstatus': 'new'}
         s = f"insert into ldmxjobs ({','.join([k for k in desc.keys()])}) values ({','.join(['%s' for k in desc.keys()])})"
@@ -159,13 +161,19 @@ class aCTDBLDMX(aCTDB):
 
     def getNJobs(self, select):
         c = self.db.getCursor()
-        c.execute(f"select count(*) from ldmxjobs where {select}")
+        c.execute(f"SELECT count(*) FROM ldmxjobs WHERE {select}")
         njobs = c.fetchone()['count(*)']
         return int(njobs)
 
-    def getNArchiveJobs(self, select, groupby):
+    def getGroupedJobs(self, groupby):
         c = self.db.getCursor()
-        c.execute(f"SELECT count(*), {groupby} FROM ldmxarchive WHERE {select} GROUP BY {groupby}")
+        c.execute(f"SELECT count(*), {groupby} FROM ldmxjobs GROUP BY {groupby}")
+        rows = c.fetchall()
+        return rows
+
+    def getGroupedArchiveJobs(self, groupby):
+        c = self.db.getCursor()
+        c.execute(f"SELECT count(*), {groupby} FROM ldmxarchive GROUP BY {groupby}")
         rows = c.fetchall()
         return rows
 
