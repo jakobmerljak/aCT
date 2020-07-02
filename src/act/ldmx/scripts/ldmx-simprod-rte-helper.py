@@ -65,17 +65,6 @@ def calculate_md5_adler32_checksum(file, chunk_size=524288):
             adler32 = zlib.adler32(chunk, adler32) & 0xffffffff
     return (md5.hexdigest(), '{:08x}'.format(adler32))
 
-def job_starttime(starttime_f='.ldmx.job.starttime'):
-    if os.path.exists(starttime_f):
-        with open(starttime_f, 'r') as fd:
-            return int(fd.read())
-    else:
-        current_time = int(time.time())
-        with open(starttime_f, 'w') as fd:
-            fd.write('{0}'.format(current_time))
-            return current_time
-        
-
 def collect_from_json( infile ):
     #function to convert json nested list to flat metadata list 
     config_dict = {}
@@ -175,6 +164,17 @@ def collect_from_json( infile ):
     return config_dict
 
 
+def job_starttime(starttime_f='.ldmx.job.starttime'):
+    if os.path.exists(starttime_f):
+        with open(starttime_f, 'r') as fd:
+            return int(fd.read())
+    else:
+        current_time = int(time.time())
+        with open(starttime_f, 'w') as fd:
+            fd.write('{0}'.format(current_time))
+            return current_time
+
+
 def collect_meta(conf_dict, json_file):
     meta = collect_from_json(json_file)
 
@@ -187,9 +187,9 @@ def collect_meta(conf_dict, json_file):
     # env
     meta['LdmxImage'] = os.environ['ACCOUNTING_WN_INSTANCE'] if 'ACCOUNTING_WN_INSTANCE' in os.environ else None
     meta['ARCCEJobID'] = os.environ['GRID_GLOBAL_JOBID'].split('/')[-1] if 'GRID_GLOBAL_JOBID' in os.environ else None
-    meta['FileCreationTime'] = int(os.path.getmtime(conf_dict['FileName']))
-    meta['Walltime'] = meta['FileCreationTime'] - mac_dict['createtime']
-
+    meta['FileCreationTime'] = int(time.time())
+    meta['Walltime'] = meta['FileCreationTime'] - job_starttime()
+    
     data_location = os.environ['LDMX_STORAGE_BASE']
     data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
