@@ -32,6 +32,11 @@ class aCTLDMX2Arc(aCTLDMXProcess):
                                                        appjobid=str(job['id']),
                                                        fairshare=job['batchid'][:50])
 
+            if not arcid:
+                self.log.error('Failed to insert arc job')
+                self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'failed'})
+                continue
+
             desc = {'ldmxstatus': 'waiting', 'arcjobid': arcid['LAST_INSERT_ID()']}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
@@ -62,14 +67,13 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             xrsl['runtimeenvironment'] = ''
             if 'RunTimeEnvironment' in config:
                 xrsl['runtimeenvironment'] = f"(runtimeenvironment = APPS/{config.get('RunTimeEnvironment')})"
-            xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-1.0)"
+            xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.0)"
 
         wrapper = self.conf.get(['executable', 'wrapper'])
         xrsl['executable'] = f"(executable = {os.path.basename(wrapper)})"
         xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
-                                             (ldmxjob.config {descriptionfile}) \
+                                             (ldmxproduction.config {descriptionfile}) \
                                              (ldmxjob.py {templatefile}) \
-                                             (ldmxjob.py.tpl {templatefile}) \
                                              (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
         xrsl['stdout'] = '(stdout = stdout)'
         xrsl['gmlog'] = '(gmlog = gmlog)'
