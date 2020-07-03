@@ -20,12 +20,10 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
         njobs = int(config['NumberofJobs'])
         self.log.info(f'Creating {njobs} jobs')
         for n in range(njobs):
-            config['RandomSeed1'] = randomseed1
-            config['RandomSeed2'] = randomseed2
-            config['runNumber'] = n+1
+            config['RandomSeed1'] = randomseed1+n
+            config['RandomSeed2'] = randomseed2+n
+            config['runNumber']   = randomseed1+n
             yield config
-            randomseed1 += 1
-            randomseed2 += 1
 
     def getNewJobs(self):
         '''
@@ -83,13 +81,13 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
                         newtemplatefile = ntf.name
                         for l in template:
-                            if l.startswith('/ldmx/persistency/root/runNumber '):
-                                ntf.write(f'/ldmx/persistency/root/runNumber {jobconfig["runNumber"]}\n')
-                            elif l.startswith('/random/setSeeds '):
-                                ntf.write(f'/random/setSeeds {jobconfig["RandomSeed1"]} {jobconfig["RandomSeed2"]}\n')
+                            if l.startswith('sim.runNumber'):
+                                ntf.write(f'sim.runNumber = {jobconfig["runNumber"]}\n')
+                            elif l.startswith('sim.randomSeeds'):
+                                ntf.write(f'sim.randomSeeds = [ {jobconfig["RandomSeed1"]}, {jobconfig["RandomSeed2"]} ]\n')
                             else:
                                 ntf.write(l)
-
+                                
                     self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid, batchid=batchid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
             except Exception as e:

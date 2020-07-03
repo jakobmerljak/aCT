@@ -68,8 +68,8 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['executable'] = f"(executable = {os.path.basename(wrapper)})"
         xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
                                              (ldmxjob.config {descriptionfile}) \
-                                             (ldmxsim.mac {templatefile}) \
-                                             (ldmxsim.mac.template {templatefile}) \
+                                             (ldmxjob.py {templatefile}) \
+                                             (ldmxjob.py.tpl {templatefile}) \
                                              (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
         xrsl['stdout'] = '(stdout = stdout)'
         xrsl['gmlog'] = '(gmlog = gmlog)'

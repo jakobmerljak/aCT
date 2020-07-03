@@ -44,6 +44,11 @@ def parse_ldmx_config(config='ldmxjob.config'):
     # ensure FileName is set to something
     if 'FileName' not in conf_dict:
         conf_dict['FileName'] = 'output.root'
+    #batch id will be used for storage directory structure. Should always be set.
+    if 'BatchID' not in conf_dict:
+        logger.error('BatchID is not defined in the %s. Needed for storage directory structure. Job aborted.', config)
+        sys.exit(1)
+        
     return conf_dict
 
 
@@ -189,7 +194,7 @@ def collect_meta(conf_dict, json_file):
 
     # conf
     meta['IsSimulation'] = True
-    for fromconf in ['Scope', 'SampleId', 'PhysicsProcess', 'DetectorVersion']:
+    for fromconf in ['Scope', 'SampleId', 'BatchID', 'PhysicsProcess', 'DetectorVersion']:
         meta[fromconf] = conf_dict[fromconf] if fromconf in conf_dict else None
     meta['ElectronNumber'] = int(conf_dict['ElectronNumber']) if 'ElectronNumber' in conf_dict else None
     meta['MagneticFieldmap'] = conf_dict['FieldMap'] if 'FieldMap' in conf_dict else None
@@ -205,7 +210,8 @@ def collect_meta(conf_dict, json_file):
     meta['Walltime'] = meta['FileCreationTime'] - job_starttime()
 
     data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/mc_{SampleId}_{RunNumber}_t{FileCreationTime}.root'.format(**meta)
+
+    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
     # Rucio metadata
