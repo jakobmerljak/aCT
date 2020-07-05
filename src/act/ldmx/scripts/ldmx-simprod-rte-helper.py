@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import logging
@@ -48,7 +48,7 @@ def parse_ldmx_config(config='ldmxjob.config'):
     if 'BatchID' not in conf_dict:
         logger.error('BatchID is not defined in the %s. Needed for storage directory structure. Job aborted.', config)
         sys.exit(1)
-        
+
     return conf_dict
 
 
@@ -73,13 +73,13 @@ def calculate_md5_adler32_checksum(file, chunk_size=524288):
 def collect_from_json( infile ):
     #function to convert json nested list to flat metadata list 
     config_dict = {}
-    with open(infile, "r") as jf :
-        mjson = json.load(jf) 
+    try:
+        with open(infile, "r") as jf :
+            mjson = json.load(jf)
+    except Exception as e:
+        logger.error('Failed to open {}: {}'.format(infile, str(e))) 
 
-    if not mjson :
-        print "trouble"
-    else :
-        print "opened "+infile
+    logger.info('Opened {}'.format(infile))
     if 'generators' in mjson['sequence'][0] :
         config_dict['GunPositionX']  = mjson['sequence'][0]['generators'][0]['position'][0] if 'position' in mjson['sequence'][0]['generators'][0] else None
         config_dict['GunPositionY']  = mjson['sequence'][0]['generators'][0]['position'][1] if 'position' in mjson['sequence'][0]['generators'][0] else None
@@ -94,19 +94,19 @@ def collect_from_json( infile ):
         config_dict['BeamSpotSizeX'] = mjson['sequence'][0]['beamSpotSmear'][0]
         config_dict['BeamSpotSizeY'] = mjson['sequence'][0]['beamSpotSmear'][1]
         config_dict['BeamSpotSizeZ'] = mjson['sequence'][0]['beamSpotSmear'][2]
-        
+
     if 'runNumber' in mjson['sequence'][0] :
         config_dict['RunNumber'] = mjson['sequence'][0]['runNumber']
     else :
-        logger.error('RunNumber is not set in %s. Job aborted.', infile)                                                                 
-        sys.exit(1) 
-        
+        logger.error('RunNumber is not set in %s. Job aborted.', infile)
+        sys.exit(1)
+
     if 'randomSeeds' in mjson['sequence'][0] :
         config_dict['RandomSeed1'] = mjson['sequence'][0]['randomSeeds'][0]
         config_dict['RandomSeed2'] = mjson['sequence'][0]['randomSeeds'][1]
     else :
-        logger.error('RandomSeed1 and/or RandomSeed2 is not set in %s. Job aborted.', infile)                                                                 
-        sys.exit(1) 
+        logger.error('RandomSeed1 and/or RandomSeed2 is not set in %s. Job aborted.', infile)
+        sys.exit(1)
 
     if 'actions' in mjson['sequence'][0] :
         for params in mjson['sequence'][0]['actions'] :
@@ -169,12 +169,12 @@ def collect_from_json( infile ):
             config_dict['FindableTrackWasRun'] = 1
         elif seq['className'] == "ldmx::TrackerVetoProcessor" :
             config_dict['TrackerVetoWasRun'] = 1
-            
+
     config_dict['IsRecon'] = isRecon
 
     config_dict['ROOTCompressionSetting'] = mjson['compressionSetting'] if 'compressionSetting' in mjson else None 
-                
-    print(json.dumps(config_dict, indent = 2))
+
+    logger.info(json.dumps(config_dict, indent = 2))
     return config_dict
 
 
@@ -209,8 +209,12 @@ def collect_meta(conf_dict, json_file):
     meta['FileCreationTime'] = int(time.time())
     meta['Walltime'] = meta['FileCreationTime'] - job_starttime()
 
-    data_location = os.environ['LDMX_STORAGE_BASE']
+    # Check output file actually exists
+    if not os.path.exists(conf_dict.get('FileName', '')):
+        logger.error('Output file {} does not exist!'.format(conf_dict.get('FileName', '')))
+        return meta
 
+    data_location = os.environ['LDMX_STORAGE_BASE']
     data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
@@ -234,7 +238,7 @@ def get_parser():
                         help='LDMX Production simulation job config file')
     parser.add_argument('-t', '--template', action='store', default='ldmxsim.mac.template',
                         help='LDMX Production simulation macro-definition file template')
-    parser.add_argument('-m', '--metaDump', action='store', default='metadata_ldmx_v12_ecal_pn_run0.json',
+    parser.add_argument('-m', '--metaDump', action='store', default='parameterDump.json',
                         help='LDMX Production simulation parameter dump JSON file')
     parser.add_argument('-j', '--json-metadata', action='store', default='rucio.metadata',
                         help='LDMX Production simulation JSON metadata file')
@@ -257,7 +261,7 @@ if __name__ == '__main__':
         collect_from_json( "metadata_ldmx_v12_ecal_pn_run0.json" )
     elif cmd_args.action == 'collect-metadata':
         meta = collect_meta(conf_dict, cmd_args.metaDump)
-        print(meta['DataLocation'])
+        print(meta.get('DataLocation', ''))
         with open(cmd_args.json_metadata, 'w') as meta_f:
             json.dump(meta, meta_f)
 
