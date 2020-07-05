@@ -77,7 +77,8 @@ def collect_from_json( infile ):
         with open(infile, "r") as jf :
             mjson = json.load(jf)
     except Exception as e:
-        logger.error('Failed to open {}: {}'.format(infile, str(e))) 
+        logger.error('Failed to open {}: {}'.format(infile, str(e)))
+        sys.exit(1)
 
     logger.info('Opened {}'.format(infile))
     if 'generators' in mjson['sequence'][0] :
