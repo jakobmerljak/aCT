@@ -65,8 +65,8 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-1.0)"
 
         wrapper = self.conf.get(['executable', 'wrapper'])
-        xrsl['executable'] = f"(executable = {os.path.basename(wrapper)})"
-        xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
+        xrsl['executable'] = f"(executable = ldmxsim.sh)"
+        xrsl['inputfiles'] = f'(inputfiles = (ldmxsim.sh {wrapper}) \
                                              (ldmxproduction.config {descriptionfile}) \
                                              (ldmxjob.py {templatefile}) \
                                              (ldmxjob.py.tpl {templatefile}) \

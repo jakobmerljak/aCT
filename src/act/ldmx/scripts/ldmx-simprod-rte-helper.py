@@ -255,9 +255,17 @@ if __name__ == '__main__':
     # metadata extraction from job parameter dump
     if cmd_args.action == 'test' :
         collect_from_json( "parameterDump.json" )
+    elif cmd_args.action == 'init':
+        # store job start time
+        job_starttime()
+        # print values for bash eval
+        print_eval(conf_dict)
     elif cmd_args.action == 'collect-metadata':
         meta = collect_meta(conf_dict, cmd_args.metaDump)
-        print(meta['DataLocation'])
+        if 'DataLocation' not in meta:
+            sys.exit(1)
+        print('export FINALOUTPUTFILE={DataLocation}'.format(**meta))
         with open(cmd_args.json_metadata, 'w') as meta_f:
             json.dump(meta, meta_f)
+
 
