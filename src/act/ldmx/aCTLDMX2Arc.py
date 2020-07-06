@@ -70,8 +70,9 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.0)"
 
         wrapper = self.conf.get(['executable', 'wrapper'])
-        xrsl['executable'] = f"(executable = ldmxjob.py)"
-        xrsl['inputfiles'] = f'(inputfiles = (ldmxproduction.config {descriptionfile}) \
+        xrsl['executable'] = f"(executable = ldmxsim.sh)"
+        xrsl['inputfiles'] = f'(inputfiles = (ldmxsim.sh {wrapper}) \
+                                             (ldmxproduction.config {descriptionfile}) \
                                              (ldmxjob.py {templatefile}) \
                                              (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
         xrsl['stdout'] = '(stdout = stdout)'
