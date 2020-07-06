@@ -87,7 +87,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                                 ntf.write(f'sim.randomSeeds = [ {jobconfig["RandomSeed1"]}, {jobconfig["RandomSeed2"]} ]\n')
                             else:
                                 ntf.write(l)
-                                
+
                     self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid, batchid=batchid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
             except Exception as e:

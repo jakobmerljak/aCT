@@ -54,8 +54,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             self.dbldmx.updateJobsLazy(select, desc)
 
             # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
-            # DC: logs taking too much space
-            # self.copyOutputFiles(aj)
+            self.copyOutputFiles(aj)
 
             # Clean tmp dir
             self.cleanDownloadedJob(jobid)
