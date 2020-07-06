@@ -234,7 +234,7 @@ def get_parser():
                         help='LDMX Production simulation job config file')
     parser.add_argument('-t', '--template', action='store', default='ldmxsim.mac.template',
                         help='LDMX Production simulation macro-definition file template')
-    parser.add_argument('-m', '--metaDump', action='store', default='metadata_ldmx_v12_ecal_pn_run0.json',
+    parser.add_argument('-m', '--metaDump', action='store', default='parameterDump.json',
                         help='LDMX Production simulation parameter dump JSON file')
     parser.add_argument('-j', '--json-metadata', action='store', default='rucio.metadata',
                         help='LDMX Production simulation JSON metadata file')
@@ -252,9 +252,9 @@ if __name__ == '__main__':
     # config is parsed for any action
     conf_dict = parse_ldmx_config(cmd_args.config)
 
-    # template substitution (RTE stage 1)
+    # metadata extraction from job parameter dump
     if cmd_args.action == 'test' :
-        collect_from_json( "metadata_ldmx_v12_ecal_pn_run0.json" )
+        collect_from_json( "parameterDump.json" )
     elif cmd_args.action == 'collect-metadata':
         meta = collect_meta(conf_dict, cmd_args.metaDump)
         print(meta['DataLocation'])

@@ -61,7 +61,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                     continue
 
             try:
-                templatefile = os.path.join(bufferdir, 'templates', config['MacTemplate'])
+                templatefile = os.path.join(bufferdir, 'templates', config['JobTemplate'])
                 with open(templatefile) as tf:
                     template = tf.readlines()
             except Exception as e:

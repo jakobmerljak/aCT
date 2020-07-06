@@ -67,7 +67,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         wrapper = self.conf.get(['executable', 'wrapper'])
         xrsl['executable'] = f"(executable = {os.path.basename(wrapper)})"
         xrsl['inputfiles'] = f'(inputfiles = ({os.path.basename(wrapper)} {wrapper}) \
-                                             (ldmxjob.config {descriptionfile}) \
+                                             (ldmxproduction.config {descriptionfile}) \
                                              (ldmxjob.py {templatefile}) \
                                              (ldmxjob.py.tpl {templatefile}) \
                                              (ldmx-simprod-rte-helper.py {self.conf.get(["executable", "ruciohelper"])}))'
