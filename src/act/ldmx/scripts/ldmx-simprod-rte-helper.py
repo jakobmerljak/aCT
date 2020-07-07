@@ -225,7 +225,9 @@ def collect_meta(conf_dict, json_file):
     meta['scope'] = meta['Scope']
     meta['name'] = os.path.basename(data_location)
     meta['datasetscope'] = meta['Scope']
-    meta['datasetname'] = meta['SampleId']
+    meta['datasetname'] = meta['BatchID']
+    meta['containerscope'] = meta['Scope']
+    meta['containername'] = meta['SampleId']
 
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
     (meta['md5'], meta['adler32']) = calculate_md5_adler32_checksum(conf_dict['FileName'])

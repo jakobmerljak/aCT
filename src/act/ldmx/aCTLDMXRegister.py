@@ -134,6 +134,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
             name = metadata['name']
             dscope = metadata['datasetscope']
             dname = metadata['datasetname']
+            cscope = metadata['containerscope']
+            cname = metadata['containername']
             nevents = int(metadata.get('NumberofEvents', 0))
             self.log.info(f'Inserting metadata info for {scope}:{name}: {metadata}')
             # Add replica
@@ -151,10 +153,21 @@ class aCTLDMXRegister(aCTLDMXProcess):
                     self.log.error(f'Dataset {dscope}:{dname} does not exist and failed to create it: {e}')
                 else:
                     self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
+                    # Add new dataset to container
+                    try:
+                        self.rucio.attach_dids(cscope, cname, [{'scope': dscope, 'name': dname}])
+                    except DataIdentifierNotFound:
+                        try:
+                            self.rucio.add_container(cscope, cname)
+                        except RucioException as e:
+                            self.log.error(f'Container {cscope}:{cname} does not exist and failed to create it: {e}')
+                        else:
+                            self.rucio.attach_dids(cscope, cname, [{'scope': dscope, 'name': dname}])
 
             # Add metadata, removing all rucio "native" metadata
             native_metadata = ['scope', 'name', 'bytes', 'md5', 'adler32',
-                               'rse', 'datasetscope', 'datasetname']
+                               'rse', 'datasetscope', 'datasetname',
+                               'containerscope', 'containername']
             # Metadata values must be strings to be searchable
             self.rucio.add_did_meta(scope, name,
                                     {x: str(y) for x, y in metadata.items() if x not in native_metadata})
