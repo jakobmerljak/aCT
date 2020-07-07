@@ -257,8 +257,9 @@ if __name__ == '__main__':
     # config is parsed for any action
     conf_dict = parse_ldmx_config(cmd_args.config)
 
+    # metadata extraction from job parameter dump
     if cmd_args.action == 'test' :
-        collect_from_json( "metadata_ldmx_v12_ecal_pn_run0.json" )
+        collect_from_json( "parameterDump.json" )
     elif cmd_args.action == 'init':
         # store job start time
         job_starttime()
@@ -271,4 +272,5 @@ if __name__ == '__main__':
         print('export FINALOUTPUTFILE={DataLocation}'.format(**meta))
         with open(cmd_args.json_metadata, 'w') as meta_f:
             json.dump(meta, meta_f)
+
 
