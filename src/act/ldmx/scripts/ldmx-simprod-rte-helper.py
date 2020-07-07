@@ -175,6 +175,8 @@ def collect_from_json( infile ):
 
     config_dict['ROOTCompressionSetting'] = mjson['compressionSetting'] if 'compressionSetting' in mjson else None 
 
+    config_dict['NumberOfEvents'] = mjson['maxEvents'] if 'maxEvents' in mjson else None 
+
     logger.info(json.dumps(config_dict, indent = 2))
     return config_dict
 
