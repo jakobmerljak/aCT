@@ -67,7 +67,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             xrsl['runtimeenvironment'] = ''
             if 'RunTimeEnvironment' in config:
                 xrsl['runtimeenvironment'] = f"(runtimeenvironment = APPS/{config.get('RunTimeEnvironment')})"
-            xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.0)"
+            xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.1)"
 
         wrapper = self.conf.get(['executable', 'wrapper'])
         xrsl['executable'] = f"(executable = ldmxsim.sh)"
