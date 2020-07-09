@@ -2,6 +2,11 @@ from datetime import datetime, timezone, timedelta
 import json
 import os
 import shutil
+try:
+    import selinux
+except:
+    selinux = None
+
 from urllib.parse import urlparse
 
 from rucio.client import Client
@@ -85,6 +90,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
         try:
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
+            if selinux:
+                selinux.restorecon(arcjoblog)
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
@@ -94,6 +101,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
                 shutil.move(os.path.join(localdir, jobstdout),
                             os.path.join(outd, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
+                if selinux:
+                    selinux.restorecon(os.path.join(outd, '%s.out' % arcjob['id']))
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 

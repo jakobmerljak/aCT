@@ -30,6 +30,8 @@ ARC python bindings are not available in pip so must be installed as a system pa
 
 `# yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
 
+`# yum install python3-libselinux` - if SELinux is enabled
+
 ## Setting up the virtualenv
 
 ```

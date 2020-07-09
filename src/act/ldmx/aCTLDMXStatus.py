@@ -1,5 +1,9 @@
 import os
 import shutil
+try:
+    import selinux
+except:
+    selinux = None
 
 from act.ldmx.aCTLDMXProcess import aCTLDMXProcess
 
@@ -218,9 +222,13 @@ class aCTLDMXStatus(aCTLDMXProcess):
             arcjoblog = os.path.join(outdir, "%s.log" % arcjob['id'])
             shutil.copy(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
+            if selinux:
+                selinux.restorecon(arcjoblog)
             arcjoblog = os.path.join(outdfailed, "%s.log" % arcjob['id'])
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
+            if selinux:
+                selinux.restorecon(arcjoblog)
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
@@ -229,9 +237,13 @@ class aCTLDMXStatus(aCTLDMXProcess):
                 shutil.copy(os.path.join(localdir, jobstdout),
                             os.path.join(outdir, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outdir, '%s.out' % arcjob['id']), 0o644)
+                if selinux:
+                    selinux.restorecon(os.path.join(outdir, '%s.out' % arcjob['id']))
                 shutil.move(os.path.join(localdir, jobstdout),
                             os.path.join(outdfailed, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outdfailed, '%s.out' % arcjob['id']), 0o644)
+                if selinux:
+                    selinux.restorecon(os.path.join(outdfailed, '%s.out' % arcjob['id']))
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 

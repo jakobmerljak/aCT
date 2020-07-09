@@ -16,6 +16,7 @@ setup(name='aCT',
         'pylint',                   # for travis automatic tests
         'requests',                 # for APF mon calls
         'prometheus_client',        # Prometheus monitoring
+        'selinux',                  # SELinux context handling
 
         'pyopenssl',
         'flask',
