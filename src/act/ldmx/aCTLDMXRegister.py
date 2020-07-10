@@ -9,7 +9,6 @@ except:
 
 from urllib.parse import urlparse
 
-from rucio.client import Client
 from rucio.common.exception import RucioException, DataIdentifierNotFound
 
 from act.ldmx.aCTLDMXProcess import aCTLDMXProcess
@@ -23,9 +22,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
     def __init__(self):
 
         aCTLDMXProcess.__init__(self)
-        self.rucio = Client()
 
- 
+
     def processDoneJobs(self):
         '''
         Look for done jobs, and register output metadata in Rucio
@@ -152,6 +150,11 @@ class aCTLDMXRegister(aCTLDMXProcess):
             meta = {'events': nevents}
             self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
                                    metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+            if 'remote_output' in metadata:
+                self.rucio.add_replica(metadata['remote_output']['rse'], scope, name, metadata['bytes'],
+                                       metadata['adler32'], pfn=metadata['remote_output']['pfn'],
+                                       md5=metadata['md5'], meta=meta)
+
             try:
                 # Attach to dataset
                 self.rucio.attach_dids(dscope, dname, [{'scope': scope, 'name': name}])
@@ -176,7 +179,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Add metadata, removing all rucio "native" metadata
             native_metadata = ['scope', 'name', 'bytes', 'md5', 'adler32',
                                'rse', 'datasetscope', 'datasetname',
-                               'containerscope', 'containername']
+                               'containerscope', 'containername', 'remote_output']
             # Metadata values must be strings to be searchable
             self.rucio.add_did_meta(scope, name,
                                     {x: str(y) for x, y in metadata.items() if x not in native_metadata})

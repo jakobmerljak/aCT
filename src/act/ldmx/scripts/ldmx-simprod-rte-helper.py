@@ -191,6 +191,18 @@ def job_starttime(starttime_f='.ldmx.job.starttime'):
             fd.write('{0}'.format(current_time))
             return current_time
 
+def set_remote_output(conf_dict, meta):
+    # Check for remote location and construct URL
+    if 'FinalOutputDestination' in conf_dict and 'FinalOutputBasePath' in conf_dict:
+        pfn = conf_dict['FinalOutputBasePath']
+        while pfn.endswith('/'):
+            pfn = pfn[:-1]
+        pfn += '/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
+        meta['remote_output'] = {'rse': conf_dict['FinalOutputDestination'],
+                                 'pfn': pfn}
+        # Add to ARC output list
+        with open('output.files', 'w') as f:
+            f.write('{} {}'.format(conf_dict['FileName'], pfn))
 
 def collect_meta(conf_dict, json_file):
     meta = collect_from_json(json_file)
@@ -232,6 +244,7 @@ def collect_meta(conf_dict, json_file):
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
     (meta['md5'], meta['adler32']) = calculate_md5_adler32_checksum(conf_dict['FileName'])
 
+    set_remote_output(conf_dict, meta)
     return meta
 
 def get_parser():
@@ -273,7 +286,7 @@ if __name__ == '__main__':
         meta = collect_meta(conf_dict, cmd_args.metaDump)
         if 'DataLocation' not in meta:
             sys.exit(1)
-        print('export FINALOUTPUTFILE={DataLocation}'.format(**meta))
+        print('export FINALOUTPUTFILE="{DataLocation}"'.format(**meta))
         with open(cmd_args.json_metadata, 'w') as meta_f:
             json.dump(meta, meta_f)
 

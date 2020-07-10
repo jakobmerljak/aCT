@@ -10,7 +10,6 @@ class aCTLDMX2Arc(aCTLDMXProcess):
     def __init__(self):
         aCTLDMXProcess.__init__(self)
 
-
     def processNewJobs(self):
 
         # Submit new jobs
@@ -68,6 +67,10 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             if 'RunTimeEnvironment' in config:
                 xrsl['runtimeenvironment'] = f"(runtimeenvironment = APPS/{config.get('RunTimeEnvironment')})"
             xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.1)"
+            if config.get('FinalOutputDestination'):
+                xrsl['outputfiles'] = '(outputfiles = ("rucio.metadata" "")("@output.files" ""))'
+            else:
+                xrsl['outputfiles'] = '(outputfiles = ("rucio.metadata" ""))'
 
         wrapper = self.conf.get(['executable', 'wrapper'])
         xrsl['executable'] = f"(executable = ldmxsim.sh)"
@@ -80,11 +83,9 @@ class aCTLDMX2Arc(aCTLDMXProcess):
         xrsl['join'] = '(join = yes)'
         xrsl['rerun'] = '(rerun = 2)'
         xrsl['count'] = '(count = 1)'
-        xrsl['outputfiles'] = '(outputfiles = ("rucio.metadata" ""))'
         xrsl['jobName'] = '(jobname = "LDMX Prod Simulation")'
 
         return '&' + '\n'.join(xrsl.values())
-
 
     def process(self):
 

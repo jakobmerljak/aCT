@@ -2,6 +2,7 @@ import time
 import os
 import sys
 import traceback
+from rucio.client import Client
 
 from act.common import aCTLogger
 from act.common import aCTConfig
@@ -33,6 +34,8 @@ class aCTLDMXProcess:
         # database
         self.dbarc = aCTDBArc.aCTDBArc(self.log)
         self.dbldmx = aCTDBLDMX.aCTDBLDMX(self.log)
+        # Rucio client
+        self.rucio = Client()
 
         # start time for periodic restart
         self.starttime = time.time()

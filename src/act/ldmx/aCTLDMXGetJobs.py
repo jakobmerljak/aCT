@@ -25,6 +25,19 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
             config['runNumber']   = randomseed1+n
             yield config
 
+    def getOutputBase(self, config):
+
+        output_rse = config.get('FinalOutputDestination')
+        if not output_rse:
+            return None
+
+        # Get RSE URL with basepath. Exceptions will be caught by the caller
+        rse_info = self.rucio.get_protocols(output_rse)
+        if not rse_info or len(rse_info) < 1:
+            raise f"Empty info returned by Rucio for RSE {output_rse}"
+
+        return '{scheme}://{hostname}:{port}{prefix}'.format(**rse_info[0])
+
     def getNewJobs(self):
         '''
         Read new job files in buffer dir and create necessary job descriptions
@@ -53,7 +66,7 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
 
             with open(jobfile) as f:
                 try:
-                    config = {l.split('=')[0]: l.split('=')[1].strip() for l in f}
+                    config = {l.split('=')[0]: l.split('=')[1].strip() for l in f if '=' in l}
                     batchid = config.get('BatchID', f'Batch-{time.strftime("%Y-%m-%dT%H:%M:%S")}')
                 except Exception as e:
                     self.log.error(f'Failed to parse job config file {jobfile}: {e}')
@@ -70,12 +83,17 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                 continue
 
             try:
+                # Get base path for output storage if necessary
+                output_base = self.getOutputBase(config)
+
                 # Generate copies of config and template
                 for jobconfig in self.generateJobs(config):
                     newjobfile = os.path.join(self.tmpdir, os.path.basename(jobfile))
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newjobfile}.', delete=False, encoding='utf-8') as njf:
                         newjobfile = njf.name
                         njf.write('\n'.join(f'{k}={v}' for k,v in config.items()))
+                        if output_base:
+                            njf.write(f'\nFinalOutputBasePath={output_base}')
 
                     newtemplatefile = os.path.join(self.tmpdir, os.path.basename(templatefile))
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
@@ -91,7 +109,6 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                     self.dbldmx.insertJob(newjobfile, newtemplatefile, proxyid, batchid=batchid)
                     self.log.info(f'Inserted job from {newjobfile} into DB')
             except Exception as e:
-                raise
                 self.log.error(f'Failed to create jobs from {jobfile}: {e}')
             os.remove(jobfile)
 
