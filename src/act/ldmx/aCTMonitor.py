@@ -31,7 +31,7 @@ def collect(log):
             log.debug(f"{row['count(*)']} waiting jobs for batch {row['batchid']}")
             waiting.add_metric([row['batchid']], row['count(*)'])
 
-        if row['ldmxstatus'] == 'queued':
+        if row['ldmxstatus'] == 'queueing':
             log.debug(f"{row['count(*)']} queued jobs for batch {row['batchid']}")
             queued.add_metric([row['batchid']], row['count(*)'])
 
