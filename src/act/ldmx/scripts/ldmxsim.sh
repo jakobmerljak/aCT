@@ -59,11 +59,11 @@ if [ -z "$FINALOUTPUTFILE" ]; then
   exit 1
 fi
 
-echo "Moving $OUTPUTDATAFILE to $FINALOUTPUTFILE"
+echo "Copying $OUTPUTDATAFILE to $FINALOUTPUTFILE"
 mkdir -p "${FINALOUTPUTFILE%/*}"
-mv "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
+cp "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
 if [ $? -ne 0 ]; then
-  echo "Failed to move output to final destination"
+  echo "Failed to copy output to final destination"
   exit 1
 fi
 
