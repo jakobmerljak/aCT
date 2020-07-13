@@ -15,6 +15,10 @@ def collect(log):
                                 'Running jobs in LDMX',
                                 labels=['batchid'])
 
+    finishing = GaugeMetricFamily('ldmx_finishing_jobs',
+                                  'Finishing jobs in LDMX',
+                                  labels=['batchid'])
+
     finished = GaugeMetricFamily('ldmx_finished_jobs',
                                  'Finished jobs in LDMX',
                                  labels=['batchid'])
@@ -39,6 +43,10 @@ def collect(log):
             log.debug(f"{row['count(*)']} running jobs for batch {row['batchid']}")
             running.add_metric([row['batchid']], row['count(*)'])
 
+        if row['ldmxstatus'] == 'finishing':
+            log.debug(f"{row['count(*)']} finishing jobs for batch {row['batchid']}")
+            finishing.add_metric([row['batchid']], row['count(*)'])
+
         if row['ldmxstatus'] == 'finished':
             log.debug(f"{row['count(*)']} finished jobs for batch {row['batchid']}")
             finished.add_metric([row['batchid']], row['count(*)'])
@@ -50,5 +58,6 @@ def collect(log):
     yield waiting
     yield queued
     yield running
+    yield finishing
     yield finished
     yield failed
