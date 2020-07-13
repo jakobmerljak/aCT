@@ -85,7 +85,7 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='holding') and " \
+        jobstocheck=self.db.getArcJobs("arcstate in ('submitted', 'running', 'finishing', 'cancelling', 'holding') and " \
                                        "jobid not like '' and cluster='"+self.cluster+"' and "+ \
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
@@ -141,9 +141,10 @@ class aCTStatus(aCTProcess):
                     arcstate = self.processJobErrors(id, appjobid, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
                     arcstate = 'cancelled'
-                elif updatedjob.State == arc.JobState.RUNNING or \
-                     updatedjob.State == arc.JobState.FINISHING:
+                elif updatedjob.State == arc.JobState.RUNNING:
                     arcstate = 'running'
+                elif updatedjob.State == arc.JobState.FINISHING:
+                    arcstate = 'finishing'
                 elif updatedjob.State == arc.JobState.HOLD:
                     arcstate = 'holding'
                 elif updatedjob.State == arc.JobState.DELETED or \

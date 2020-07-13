@@ -19,26 +19,37 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
     def checkSubmittedJobs(self):
         '''
-        Look for newly submitted or running jobs
+        Look for newly submitted, running or finishing jobs
         '''
 
-        select = "ldmxstatus='waiting' and arcstate in ('submitted', 'running') and arcjobs.id=ldmxjobs.arcjobid"
-        columns = ['arcstate', 'cluster', 'ldmxjobs.id']
+        select = "ldmxstatus='waiting' and arcstate in ('submitted', 'running', 'finishing') and arcjobs.id=ldmxjobs.arcjobid"
+        columns = ['arcstate', 'cluster', 'state', 'ldmxjobs.id']
         submittedjobs = self.dbarc.getArcJobsInfo(select, columns, tables='arcjobs,ldmxjobs')
 
         for job in submittedjobs:
             self.log.info(f"Job {job['id']} now in state {job['arcstate']}")
-            desc = {'ldmxstatus': 'queueing' if job['arcstate'] == 'submitted' else 'running',
+            desc = {'ldmxstatus': 'queueing' if job['arcstate'] == 'submitted' else job['arcstate'],
                     'computingelement': job['cluster'],
                     'sitename': self.endpoints[job['cluster']]}
             self.dbldmx.updateJobLazy(job['id'], desc)
 
-        select = "ldmxstatus='queueing' and arcstate = 'running' and arcjobs.id=ldmxjobs.arcjobid"
+        select = "ldmxstatus='queueing' and arcstate in ('running', 'finishing') and arcjobs.id=ldmxjobs.arcjobid"
         queueingjobs = self.dbarc.getArcJobsInfo(select, columns, tables='arcjobs,ldmxjobs')
 
         for job in queueingjobs:
             self.log.info(f"Job {job['id']} now in state {job['arcstate']}")
-            desc = {'ldmxstatus': 'running',
+            desc = {'ldmxstatus': job['arcstate'],
+                    'computingelement': job['cluster'],
+                    'sitename': self.endpoints[job['cluster']]}
+            self.dbldmx.updateJobLazy(job['id'], desc)
+
+        # Get post-batch ARC statuses
+        select = "ldmxstatus='running' and arcstate in ('finishing', 'finished', 'failed') and arcjobs.id=ldmxjobs.arcjobid"
+        finishingjobs = self.dbarc.getArcJobsInfo(select, columns, tables='arcjobs,ldmxjobs')
+
+        for job in finishingjobs:
+            self.log.info(f"Job {job['id']} now in state finishing (ARC state {job['state']})")
+            desc = {'ldmxstatus': 'finishing',
                     'computingelement': job['cluster'],
                     'sitename': self.endpoints[job['cluster']]}
             self.dbldmx.updateJobLazy(job['id'], desc)

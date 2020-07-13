@@ -47,7 +47,7 @@ class aCTDBArc(aCTDB):
           - id:
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
-          - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
+          - arcstate: tosubmit, submitting, submitted, running, finishing, tocancel,
                       cancelling, cancelled, finished, failed, tofetch, torerun,
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
@@ -382,7 +382,7 @@ class aCTDBArc(aCTDB):
         c=self.db.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate in ('tosubmit', 'submitting', 'torerun', 'toresubmit', 'tocancel', 'cancelling') GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
 

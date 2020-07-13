@@ -140,7 +140,7 @@ class aCTATLASStatus(aCTATLASProcess):
         # do an inner join to pick up all jobs that should be set to running
         # todo: pandajobs.starttime will not be updated if a job is resubmitted
         # internally by the ARC part.
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus in ('starting', 'sent')"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate in ('running', 'finishing') and pandajobs.actpandastatus in ('starting', 'sent')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
 
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",

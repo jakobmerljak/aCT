@@ -14,7 +14,7 @@ class aCTDBCondor(aCTDB):
           - id: unique (internal) id of job
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
-          - condorstate: tosubmit, submitting, submitted, running, stalled, tocancel,
+          - condorstate: tosubmit, submitting, submitted, running, finishing, tocancel,
                       cancelling, cancelled, finished, failed, tofetch, torerun,
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or Condor engine for retries

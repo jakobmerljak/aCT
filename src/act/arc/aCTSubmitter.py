@@ -583,7 +583,7 @@ class aCTSubmitter(aCTProcess):
                     # Force a wait before next status check, to allow the
                     # infosys to update and avoid the failed state being picked
                     # up again
-                    self.db.updateArcJob(id, {"arcstate": "submitted",
+                    self.db.updateArcJob(id, {"arcstate": "finishing" if job.RestartState == arc.JobState.FINISHING else 'submitted',
                                               "tarcstate": self.db.getTimeStamp(time.time()+3600)})
 
 
