@@ -9,7 +9,6 @@ import json
 import hashlib
 import zlib
 import time
-import socket
 
 # logging
 logger = logging.getLogger('LDMX.SimProd.Helper')
@@ -18,8 +17,6 @@ log_handler_stderr = logging.StreamHandler()
 log_handler_stderr.setFormatter(
     logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] [%(process)d] [%(message)s]'))
 logger.addHandler(log_handler_stderr)
-
-hostname = socket.getfqdn()
 
 # read ldmx.config to dict
 def parse_ldmx_config(config='ldmxjob.config'):
@@ -196,8 +193,9 @@ def job_starttime(starttime_f='.ldmx.job.starttime'):
 
 def set_remote_output(conf_dict, meta):
     # Check for remote location and construct URL
+    jobid = os.environ.get('GRID_GLOBAL_JOBID')
     if 'FinalOutputDestination' in conf_dict and 'FinalOutputBasePath' in conf_dict \
-      and not [x for x in conf_dict.get('NoUploadSites', '').split(',') if hostname in x]:
+      and not [x for x in conf_dict.get('NoUploadSites', '').split(',') if jobid and jobid[:jobid.rfind(':')] in x]:
         pfn = conf_dict['FinalOutputBasePath']
         while pfn.endswith('/'):
             pfn = pfn[:-1]
