@@ -94,6 +94,11 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                         njf.write('\n'.join(f'{k}={v}' for k,v in config.items()))
                         if output_base:
                             njf.write(f'\nFinalOutputBasePath={output_base}')
+ 
+                        nouploadsites = self.arcconf.getListCond(["sites", "site"], "noupload=1", ["endpoint"])
+                        self.log.debug(nouploadsites)
+                        if nouploadsites:
+                            njf.write(f'\nNoUploadSites={",".join(nouploadsites)}')
 
                     newtemplatefile = os.path.join(self.tmpdir, os.path.basename(templatefile))
                     with tempfile.NamedTemporaryFile(mode='w', prefix=f'{newtemplatefile}.', delete=False, encoding='utf-8') as ntf:
