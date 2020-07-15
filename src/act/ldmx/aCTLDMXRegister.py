@@ -143,7 +143,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             dname = metadata['datasetname']
             cscope = metadata['containerscope']
             cname = metadata['containername']
-            nevents = int(metadata.get('NumberofEvents', 0))
+            nevents = int(metadata.get('NumberOfEvents', 0))
             self.log.info(f'Inserting metadata info for {scope}:{name}: {metadata}')
             # Add replica
             pfn = f'file://{metadata["DataLocation"]}'
