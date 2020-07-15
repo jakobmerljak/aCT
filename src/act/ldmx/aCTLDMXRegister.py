@@ -9,7 +9,9 @@ except:
 
 from urllib.parse import urlparse
 
-from rucio.common.exception import RucioException, DataIdentifierNotFound
+from rucio.common.exception import RucioException, DataIdentifierNotFound, \
+                                   FileAlreadyExists, FileReplicaAlreadyExists, \
+                                   DataIdentifierAlreadyExists
 
 from act.ldmx.aCTLDMXProcess import aCTLDMXProcess
 
@@ -49,12 +51,16 @@ class aCTLDMXRegister(aCTLDMXProcess):
                     'sitename': self.endpoints[aj['cluster']],
                     'starttime': (aj['EndTime'] or datetime.now(timezone.utc)) - timedelta(0, aj['UsedTotalWallTime']),
                     'endtime': aj['EndTime'] or datetime.now(timezone.utc)}
-            if not self.insertMetadata(aj):
-                # Safer to try again
+            res = self.insertMetadata(aj)
+            if res is None: # retry
                 self.log.info(f'Will try {aj["id"]} later')
                 continue
-            desc['ldmxstatus'] = 'finished'
-            self.dbldmx.updateJobsLazy(select, desc)
+            elif not res: # fail
+                desc['ldmxstatus'] = 'failed'
+                self.dbldmx.updateJobsLazy(select, desc)
+            else: # success
+                desc['ldmxstatus'] = 'finished'
+                self.dbldmx.updateJobsLazy(select, desc)
 
             # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
             self.copyOutputFiles(aj)
@@ -186,9 +192,13 @@ class aCTLDMXRegister(aCTLDMXProcess):
         except KeyError as e:
             self.log.info(f'key missing in metadata json: {e}')
             return False
-        except RucioException as e:
-            self.log.warning(f'Rucio exception: {e}')
+        except (FileAlreadyExists, FileReplicaAlreadyExists, DataIdentifierAlreadyExists) as e:
+            self.log.error(f'Rucio exception: {e}')
             return False
+        except RucioException as e:
+            # Any other Rucio exception should be retried
+            self.log.warning(f'Rucio exception: {e}')
+            return None
 
         return True
 
