@@ -136,7 +136,6 @@ def collect_from_json( infile ):
     for seq in mjson['sequence'] :
         if seq['className'] != "ldmx::Simulator" :  #everything except simulation is reconstruction
             isRecon = True 
-        else :
             procName=seq['className']
             procName=procName.replace("ldmx::", "")
             procName=procName.replace("Producer", "")
@@ -148,6 +147,8 @@ def collect_from_json( infile ):
             config_dict[procName+'NoiseSlope'] = seq['noiseSlope']
             config_dict[procName+'PadCapacitance'] = seq['padCapacitance']
             config_dict[procName+'ReadoutThreshold'] = seq['readoutThreshold']
+        elif seq['className'] == "ldmx::EcalRecProducer" :
+            config_dict[procName+'SecondOrderEnergyCorrection'] = seq['secondOrderEnergyCorrection']
         elif seq['className'] == "ldmx::EcalVetoProcessor" :
             config_dict[procName+'Layers'] = seq['num_ecal_layers']
             config_dict[procName+'DiscriminatorCut'] = seq['disc_cut']
