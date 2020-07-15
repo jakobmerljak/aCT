@@ -82,19 +82,19 @@ def collect_from_json( infile ):
 
     logger.info('Opened {}'.format(infile))
     if 'generators' in mjson['sequence'][0] :
-        config_dict['GunPositionX']  = mjson['sequence'][0]['generators'][0]['position'][0] if 'position' in mjson['sequence'][0]['generators'][0] else None
-        config_dict['GunPositionY']  = mjson['sequence'][0]['generators'][0]['position'][1] if 'position' in mjson['sequence'][0]['generators'][0] else None
-        config_dict['GunPositionZ']  = mjson['sequence'][0]['generators'][0]['position'][2] if 'position' in mjson['sequence'][0]['generators'][0] else None
+        config_dict['GunPositionX[mm]']  = mjson['sequence'][0]['generators'][0]['position'][0] if 'position' in mjson['sequence'][0]['generators'][0] else None
+        config_dict['GunPositionY[mm]']  = mjson['sequence'][0]['generators'][0]['position'][1] if 'position' in mjson['sequence'][0]['generators'][0] else None
+        config_dict['GunPositionZ[mm]']  = mjson['sequence'][0]['generators'][0]['position'][2] if 'position' in mjson['sequence'][0]['generators'][0] else None
         config_dict['MomentumVectorX'] = mjson['sequence'][0]['generators'][0]['direction'][0] if 'direction' in mjson['sequence'][0]['generators'][0] else None
         config_dict['MomentumVectorY'] = mjson['sequence'][0]['generators'][0]['direction'][1] if 'direction' in mjson['sequence'][0]['generators'][0] else None
         config_dict['MomentumVectorZ'] = mjson['sequence'][0]['generators'][0]['direction'][2] if 'direction' in mjson['sequence'][0]['generators'][0] else None
-        config_dict['BeamEnergy']    = mjson['sequence'][0]['generators'][0]['energy'] if 'energy' in mjson['sequence'][0]['generators'][0] else None
+        config_dict['BeamEnergy']    = mjson['sequence'][0]['generators'][0]['energy']  if 'energy' in mjson['sequence'][0]['generators'][0] else None
         config_dict['BeamParticle']  = mjson['sequence'][0]['generators'][0]['particle'] if 'particle' in mjson['sequence'][0]['generators'][0] else None
 
     if 'beamSpotSmear' in mjson['sequence'][0] :
-        config_dict['BeamSpotSizeX'] = mjson['sequence'][0]['beamSpotSmear'][0]
-        config_dict['BeamSpotSizeY'] = mjson['sequence'][0]['beamSpotSmear'][1]
-        config_dict['BeamSpotSizeZ'] = mjson['sequence'][0]['beamSpotSmear'][2]
+        config_dict['BeamSpotSizeX[mm]'] = mjson['sequence'][0]['beamSpotSmear'][0]
+        config_dict['BeamSpotSizeY[mm]'] = mjson['sequence'][0]['beamSpotSmear'][1]
+        config_dict['BeamSpotSizeZ[mm]'] = mjson['sequence'][0]['beamSpotSmear'][2]
 
     if 'runNumber' in mjson['sequence'][0] :
         config_dict['RunNumber'] = mjson['sequence'][0]['runNumber']
@@ -115,13 +115,13 @@ def collect_from_json( infile ):
             key=p.replace("ldmx::", "")
             for k, val in params.iteritems() :
                 if 'threshold' in k :
-                    keepKey=key+"_"+k
+                    keepKey=key+"_"+k+'[MeV]'
                     config_dict[keepKey]=val
 
     config_dict['Geant4BiasParticle']  = mjson['sequence'][0]['biasing_particle'] if 'biasing_particle' in  mjson['sequence'][0] else None
     config_dict['Geant4BiasProcess']   = mjson['sequence'][0]['biasing_process'] if 'biasing_process' in  mjson['sequence'][0] else None
     config_dict['Geant4BiasVolume']    = mjson['sequence'][0]['biasing_volume'] if 'biasing_volume' in  mjson['sequence'][0] else None
-    config_dict['Geant4BiasThreshold'] = mjson['sequence'][0]['biasing_threshold'] if 'biasing_threshold' in  mjson['sequence'][0] else None
+    config_dict['Geant4BiasThreshold[MeV]'] = mjson['sequence'][0]['biasing_threshold'] if 'biasing_threshold' in  mjson['sequence'][0] else None
     config_dict['Geant4BiasFactor']    = mjson['sequence'][0]['biasing_factor'] if 'biasing_factor' in  mjson['sequence'][0] else None
     config_dict['APrimeMass']          = mjson['sequence'][0]['APrimeMass'] if 'APrimeMass' in  mjson['sequence'][0] else None
     #let these depend on if we are actually generating signal 
@@ -136,41 +136,46 @@ def collect_from_json( infile ):
     for seq in mjson['sequence'] :
         if seq['className'] != "ldmx::Simulator" :  #everything except simulation is reconstruction
             isRecon = True 
+        else :
+            procName=seq['className']
+            procName=procName.replace("ldmx::", "")
+            procName=procName.replace("Producer", "")
+            procName=procName.replace("Processor", "")
         if seq['className'] == "ldmx::EcalDigiProducer" :
-            config_dict['EcalDigiGain'] = seq['gain']
-            config_dict['EcalDigiPedestal'] = seq['pedestal']
-            config_dict['EcalDigiNoiseIntercept'] = seq['noiseIntercept']
-            config_dict['EcalDigiNoiseSlope'] = seq['noiseSlope']
-            config_dict['EcalDigiPadCapacitance'] = seq['padCapacitance']
-            config_dict['EcalDigiReadoutThreshold'] = seq['readoutThreshold']
+            config_dict[procName+'Gain'] = seq['gain']
+            config_dict[procName+'Pedestal'] = seq['pedestal']
+            config_dict[procName+'NoiseIntercept'] = seq['noiseIntercept']
+            config_dict[procName+'NoiseSlope'] = seq['noiseSlope']
+            config_dict[procName+'PadCapacitance'] = seq['padCapacitance']
+            config_dict[procName+'ReadoutThreshold'] = seq['readoutThreshold']
         elif seq['className'] == "ldmx::EcalVetoProcessor" :
-            config_dict['EcalLayers'] = seq['num_ecal_layers']
-            config_dict['EcalDiscriminatorCut'] = seq['disc_cut']
+            config_dict[procName+'Layers'] = seq['num_ecal_layers']
+            config_dict[procName+'DiscriminatorCut'] = seq['disc_cut']
         elif seq['className'] == "ldmx::HcalVetoProcessor" :
-            config_dict['HcalVetoMaxPE'] = seq['pe_threshold']
-            config_dict['HcalVetoMaxTime'] = seq['max_time']
-            config_dict['HcalVetoMaxDepth'] = seq['max_depth']
-            config_dict['HcalVetoBackMinPE'] = seq['back_min_pe']
+            config_dict[procName+'MaxPE'] = seq['pe_threshold']
+            config_dict[procName+'MaxTime[ns]'] = seq['max_time']
+            config_dict[procName+'MaxDepth[cm]'] = seq['max_depth']
+            config_dict[procName+'BackMinPE'] = seq['back_min_pe']
         elif seq['className'] == "ldmx::HcalDigiProducer" :
-            config_dict['HcalMeanNoiseSiPM'] = seq['meanNoise']
-            config_dict['HcalMeVPerMIP'] = seq['mev_per_mip']
-            config_dict['HcalPEPerMIP'] = seq['pe_per_mip']
-            config_dict['HcalAttLength'] = seq['strip_attenuation_length']
-            config_dict['HcalPosResolution'] = seq['strip_position_resolution']
+            config_dict[procName+'MeanNoiseSiPM'] = seq['meanNoise']
+            config_dict[procName+'MeVPerMIP'] = seq['mev_per_mip']
+            config_dict[procName+'PEPerMIP'] = seq['pe_per_mip']
+            config_dict[procName+'AttLength[m]'] = seq['strip_attenuation_length']
+            config_dict[procName+'PosResolution[mm]'] = seq['strip_position_resolution']
         elif seq['className'] == "ldmx::TrigScintDigiProducer" :
-            config_dict['TrigScintMeanNoiseSiPM'] = seq['mean_noise']
-            config_dict['TrigScintMeVPerMIP'] = seq['mev_per_mip']
-            config_dict['TrigScintPEPerMIP'] = seq['pe_per_mip']
+            config_dict[procName+'MeanNoiseSiPM'] = seq['mean_noise']
+            config_dict[procName+'MeVPerMIP'] = seq['mev_per_mip']
+            config_dict[procName+'PEPerMIP'] = seq['pe_per_mip']
         elif seq['className'] == "ldmx::TrackerHitKiller" :
-            config_dict['TrackKillerEfficiency'] = seq['hitEfficiency']
+            config_dict[procName+'Efficiency'] = seq['hitEfficiency']
         elif seq['className'] == "ldmx::TriggerProcessor" :
-            config_dict['TriggerThreshold'] = seq['threshold']
-            config_dict['TriggerEcalEndLayer'] = seq['end_layer']
-            config_dict['TriggerEcalStartLayer'] = seq['start_layer']
+            config_dict[procName+'Threshold[MeV]'] = seq['threshold']
+            config_dict[procName+'EcalEndLayer'] = seq['end_layer']
+            config_dict[procName+'EcalStartLayer'] = seq['start_layer']
         elif seq['className'] == "ldmx::FindableTrackProcessor" :
-            config_dict['FindableTrackWasRun'] = 1
+            config_dict[procName+'WasRun'] = 1
         elif seq['className'] == "ldmx::TrackerVetoProcessor" :
-            config_dict['TrackerVetoWasRun'] = 1
+            config_dict[procName+'WasRun'] = 1
 
     config_dict['IsRecon'] = isRecon
     config_dict['IsTriggerSkim'] = isTriggerSkim
