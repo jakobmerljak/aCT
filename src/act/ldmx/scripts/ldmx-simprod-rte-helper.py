@@ -132,6 +132,7 @@ def collect_from_json( infile ):
     # add here as more processors are included
     # not putting in protections here for every possible parameter name, better to let a test job fail if the parameter naming has changed
     isRecon = False 
+    isTriggerSkim = False 
     for seq in mjson['sequence'] :
         if seq['className'] != "ldmx::Simulator" :  #everything except simulation is reconstruction
             isRecon = True 
@@ -172,6 +173,7 @@ def collect_from_json( infile ):
             config_dict['TrackerVetoWasRun'] = 1
 
     config_dict['IsRecon'] = isRecon
+    config_dict['IsTriggerSkim'] = isTriggerSkim
 
     config_dict['ROOTCompressionSetting'] = mjson['compressionSetting'] if 'compressionSetting' in mjson else None 
 
@@ -218,7 +220,7 @@ def collect_meta(conf_dict, json_file):
         return meta
 
     data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
+    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
     # Rucio metadata
