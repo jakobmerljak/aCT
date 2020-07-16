@@ -207,7 +207,7 @@ def set_remote_output(conf_dict, meta):
         pfn = conf_dict['FinalOutputBasePath']
         while pfn.endswith('/'):
             pfn = pfn[:-1]
-        pfn += '/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_t{FileCreationTime}.root'.format(**meta)
+        pfn += '/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
         meta['remote_output'] = {'rse': conf_dict['FinalOutputDestination'],
                                  'pfn': pfn}
         # Add to ARC output list
