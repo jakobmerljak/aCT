@@ -18,6 +18,8 @@ addons:
         keyurl: https://download.nordugrid.org/DEB-GPG-KEY-nordugrid-6.asc
     packages:
       - python3-nordugrid-arc
+before_install:
+  - sudo apt-get -y libselinux-python
 install:
   - pip install -r requirements.txt
   - pip install rucio-clients
