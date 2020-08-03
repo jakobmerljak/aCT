@@ -37,6 +37,10 @@ class aCTPrometheusCollector:
                                              'Running jobs per ARC CE',
                                              labels=['ce_endpoint'])
 
+        finishing_arc_jobs = GaugeMetricFamily('arc_finishing_jobs',
+                                               'Finishing jobs per ARC CE',
+                                               labels=['ce_endpoint'])
+
         jobs = self.db.getGroupedJobs('cluster, arcstate')
 
         for job in jobs:
@@ -45,9 +49,12 @@ class aCTPrometheusCollector:
                 queued_arc_jobs.add_metric([cluster], count)
             if state == 'running':
                 running_arc_jobs.add_metric([cluster], count)
+            if state == 'finishing':
+                finishing_arc_jobs.add_metric([cluster], count)
 
         yield queued_arc_jobs
         yield running_arc_jobs
+        yield finishing_arc_jobs
         yield from self.app_collect()
 
 class aCTMonitor(aCTProcess):
