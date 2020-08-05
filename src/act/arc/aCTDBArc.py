@@ -438,7 +438,7 @@ class aCTDBArc(aCTDB):
 
     def _writeProxyFile(self, proxypath, proxy):
         with open(proxypath, 'w') as f:
-            f.write(proxy.decode('utf-8'))
+            f.write(proxy)
         # make sure permissions are correct
         os.chmod(proxypath, 0o600)
 
@@ -503,7 +503,7 @@ class aCTDBArc(aCTDB):
         row = c.fetchone()
         try:
             proxy = row['proxy']
-            return proxy
+            return str(proxy, encoding='utf-8') if type(proxy) == bytes else proxy
         except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
 
