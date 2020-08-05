@@ -8,6 +8,7 @@ import kibanaXML
 import subprocess
 import sys
 import time
+from datetime import datetime
 from act.arc.aCTDBArc import aCTDBArc
 from act.atlas.aCTDBPanda import aCTDBPanda
 from act.common.aCTLogger import aCTLogger
@@ -55,7 +56,11 @@ def getAvailability():
     try:
         mtime = os.stat('%s/aCTAutopilot.log' % logdir).st_mtime
     except:
-        return 'degraded', 'Autopilot log not available'
+        # Check previous log (in case it was just rotated)
+        try:
+            mtime = os.stat('%s/aCTAutopilot.log-%s' % (logdir, datetime.now().strftime('%Y%m%d'))).st_mtime
+        except:
+            return 'degraded', 'Autopilot log not available'
     if time.time() - mtime > 900:
         return 'degraded', 'Autopilot log not updated in %d seconds' % (time.time() - mtime)
 
