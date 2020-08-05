@@ -437,11 +437,8 @@ class aCTDBArc(aCTDB):
         return d
 
     def _writeProxyFile(self, proxypath, proxy):
-        if os.path.isfile(proxypath):
-            os.remove(proxypath)
-        f=open(proxypath,'w')
-        f.write(proxy)
-        f.close()
+        with open(proxypath, 'w') as f:
+            f.write(proxy.decode('utf-8'))
         # make sure permissions are correct
         os.chmod(proxypath, 0o600)
 
