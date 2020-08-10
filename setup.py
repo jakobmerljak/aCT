@@ -30,6 +30,7 @@ setup(name='aCT',
             'actreport = act.common.aCTReport:main',
             'actcriticalmonitor = act.common.aCTCriticalMonitor:main',
             'actheartbeatwatchdog = act.atlas.aCTHeartbeatWatchdog:main',
+            'actldmxadmin = act.ldmx.aCTLDMXAdmin:main',
 
             'actbulksub = act.client.actbulksub:main',
             'actclean   = act.client.actclean:main',
