@@ -115,7 +115,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
             else:
                 self.log.info(f"Job {job['id']} has no arc job")
 
-            ldmxdesc = {'ldmxstatus': 'waiting', 'arcjobid': None,
+            ldmxdesc = {'ldmxstatus': 'new', 'arcjobid': None,
                         'sitename': None, 'computingelement': None}
             self.dbldmx.updateJobLazy(job['id'], ldmxdesc)
 
@@ -189,6 +189,36 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         self.dbarc.Commit()
         self.dbldmx.Commit()
+
+    def cleanupLeftovers(self):
+        """
+        Clean jobs left behind in arcjobs table:
+         - arcstate=tocancel or cancelling when cluster is empty
+         - arcstate=done or cancelled or lost or donefailed when id not in ldmxjobs
+        """
+        select = "arcstate in ('tocancel', 'cancelling', 'toclean') and (cluster='' or cluster is NULL)"
+        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
+        for job in jobs:
+            self.log.info("%s: Deleting from arcjobs unsubmitted job %d", job['appjobid'], job['id'])
+            self.dbarc.deleteArcJob(job['id'])
+
+        select = "(arcstate='done' or arcstate='lost' or arcstate='cancelled' or arcstate='donefailed') \
+                  and arcjobs.id not in (select arcjobid from ldmxjobs where arcjobid is not NULL)"
+        jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid', 'arcstate', 'JobID'])
+        cleandesc = {"arcstate":"toclean", "tarcstate": self.dbarc.getTimeStamp()}
+        for job in jobs:
+            # done jobs should not be there, log a warning
+            if job['arcstate'] == 'done':
+                self.log.warning("%s: Removing orphaned done job %d", job['appjobid'], job['id'])
+            else:
+                self.log.info("%s: Cleaning left behind %s job %d", job['appjobid'], job['arcstate'], job['id'])
+            self.dbarc.updateArcJobLazy(job['id'], cleandesc)
+            if job['JobID'] and job['JobID'].rfind('/') != -1:
+                sessionid = job['JobID'][job['JobID'].rfind('/'):]
+                localdir = self.tmpdir + sessionid
+                shutil.rmtree(localdir, ignore_errors=True)
+        if jobs:
+            self.dbarc.Commit()
 
 
     def checkForResubmission(self, arcjob):
@@ -277,6 +307,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         self.checkToResubmitJobs()
         self.checkSubmittedJobs()
         self.checkFailedJobs()
+        self.cleanupLeftovers()
 
 
 if __name__ == '__main__':
