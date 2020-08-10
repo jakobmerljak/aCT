@@ -46,6 +46,41 @@ def cancel(args):
     logger.info(f'Cancelled {jobs} jobs')
     return 0
 
+def resubmit(args):
+
+    if not (args.batchid or args.site):
+        logger.error("BatchID or site must be specified")
+        return 1
+
+    constraints = []
+    if args.batchid:
+        if not sanitise(args.batchid):
+            logger.error(f"Illegal batchID: {args.batchid}")
+            return 1
+        constraints.append(f"batchid='{args.batchid}'")
+    if args.site:
+        if not sanitise(args.site):
+            logger.error(f"Illegal site name: {args.site}")
+            return 1
+        constraints.append(f"sitename='{args.site}'")
+
+    dbldmx = aCTDBLDMX.aCTDBLDMX(logger)
+    jobs = dbldmx.getNJobs(f"ldmxstatus in {job_not_final_states()} AND {' AND '.join(constraints)}")
+
+    if not jobs:
+        logger.error('No matching jobs found')
+        return 0
+
+    answer = input(f'This will resubmit {jobs} jobs, are you sure? (y/n) ')
+    if answer != 'y':
+        logger.info('Aborting..')
+        return 0
+
+    dbldmx.updateJobs(f"ldmxstatus in {job_not_final_states()} AND {' AND '.join(constraints)}",
+                      {'ldmxstatus': 'toresubmit'})
+    logger.info(f'Resubmitted {jobs} jobs')
+    return 0
+
 def job_not_final_states():
     """
     Return db states which are not final
@@ -71,6 +106,11 @@ def get_parser():
     cancel_parser.set_defaults(function=cancel)
     cancel_parser.add_argument('--batchid', dest='batchid', action='store', help='Batch ID')
     cancel_parser.add_argument('--site', dest='site', action='store', help='Site name')
+
+    resubmit_parser = subparsers.add_parser('resubmit', help='Resubmit jobs')
+    resubmit_parser.set_defaults(function=resubmit)
+    resubmit_parser.add_argument('--batchid', dest='batchid', action='store', help='Batch ID')
+    resubmit_parser.add_argument('--site', dest='site', action='store', help='Site name')
 
     return oparser
 
