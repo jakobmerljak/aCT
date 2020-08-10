@@ -114,14 +114,14 @@ def get_parser():
 
     return oparser
 
-def main(arguments):
+def main():
     oparser = get_parser()
 
     if len(sys.argv) == 1:
         oparser.print_help()
         sys.exit(1)
 
-    args = oparser.parse_args(arguments)
+    args = oparser.parse_args(sys.argv[1:])
 
     if not hasattr(args, 'function'):
         oparser.print_help()
@@ -137,4 +137,4 @@ def main(arguments):
         sys.exit(1)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
