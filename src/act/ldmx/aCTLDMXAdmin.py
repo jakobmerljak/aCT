@@ -2,14 +2,54 @@ import argparse
 import logging
 import os
 import re
+import shutil
 import sys
 
 from act.ldmx import aCTDBLDMX
+from act.common.aCTConfig import aCTConfigAPP
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 hdlr = logging.StreamHandler()
 logger.addHandler(hdlr)
+
+def submit(args):
+
+    try:
+        with open(args.conffile) as f:
+            try:
+                config = {l.split('=')[0]: l.split('=')[1].strip() for l in f if '=' in l}
+            except IndexError:
+                logger.error(f"Error: Badly formed line in {args.conffile}")
+                return 1
+    except OSError as e:
+        logger.error(f"Error: Failed to open job configuration file {args.conffile}: {str(e)}")
+        return 1
+
+    if 'JobTemplate' not in config:
+        logger.error(f"Error: No JobTemplate defined in {args.conffile}")
+        return 1
+
+    actconf = aCTConfigAPP()
+    bufferdir = actconf.get(['jobs', 'bufferdir'])
+    if not bufferdir:
+        logger.error(f"Error: bufferdir not found in aCT configuration")
+        return 1
+
+    template_file = os.path.join(bufferdir, 'templates', config['JobTemplate'])
+    if not os.path.exists(template_file):
+        logger.error(f"Error: template not found at {template_file}")
+        return 1
+
+    # Everything looks ok, so submit the job
+    try:
+        shutil.copy(args.conffile, os.path.join(bufferdir, 'configs'))
+    except Exception as e:
+        logger.error(f"Failed to copy {args.conffile} to {os.path.join(bufferdir, 'configs')}: {str(e)}")
+        return 1
+
+    logger.info(f"Submitted job configuration at {args.conffile}")
+    return 0
 
 def cancel(args):
 
@@ -101,6 +141,10 @@ def get_parser():
     oparser.add_argument('-v', '--verbose', default=False, action='store_true', help="Print more verbose output")
 
     subparsers = oparser.add_subparsers()
+
+    submit_parser = subparsers.add_parser('submit', help='Submit jobs')
+    submit_parser.set_defaults(function=submit)
+    submit_parser.add_argument(dest='conffile', action='store', help='Job configuration file')
 
     cancel_parser = subparsers.add_parser('cancel', help='Cancel jobs')
     cancel_parser.set_defaults(function=cancel)
