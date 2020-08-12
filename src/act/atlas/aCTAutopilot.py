@@ -386,7 +386,7 @@ class aCTAutopilot(aCTATLASProcess):
 
                 # Check if we are running in harvester mode
                 try:
-                    smeta = json.loads(str(j['metadata']))
+                    smeta = json.loads(j['metadata'].decode())
                     harvesteraccesspoint = smeta.get('harvesteraccesspoint')
                 except:
                     harvesteraccesspoint = None

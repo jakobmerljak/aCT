@@ -53,7 +53,7 @@ class aCTPanda2Xrsl:
         self.traces = []
 
         try:
-            self.schedulerid = json.loads(pandadbjob['metadata'])['schedulerid']
+            self.schedulerid = json.loads(pandadbjob['metadata'].decode())['schedulerid']
         except:
             self.schedulerid = atlasconf.get(["panda", "schedulerid"])
 
