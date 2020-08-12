@@ -39,11 +39,10 @@ class aCTPanda2Xrsl:
             self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
 
         self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        if self.prodSourceLabel.startswith('rc_test'):
+            self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
         if not self.truepilot and not self.piloturl:
-            if self.prodSourceLabel.startswith('rc_test'):
-                self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
-            else:
-                self.piloturl = atlasconf.get(["executable", "ptarurl"])
+            self.piloturl = atlasconf.get(["executable", "ptarurl"])
         self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
@@ -134,6 +133,10 @@ class aCTPanda2Xrsl:
 
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
+
+        # for large core count
+        if self.getNCores() > 20:
+            walltime = walltime * 1.5
 
         # JEDI analysis hack
         walltime = max(60, walltime)
