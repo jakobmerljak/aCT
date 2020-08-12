@@ -135,6 +135,10 @@ class aCTPanda2Xrsl:
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
 
+        # for large core count
+        if self.getNCores() > 20:
+            walltime = walltime * 1.5
+
         # JEDI analysis hack
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
