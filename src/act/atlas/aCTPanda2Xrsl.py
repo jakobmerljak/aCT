@@ -39,11 +39,10 @@ class aCTPanda2Xrsl:
             self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
 
         self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        if self.prodSourceLabel.startswith('rc_test'):
+            self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
         if not self.truepilot and not self.piloturl:
-            if self.prodSourceLabel.startswith('rc_test'):
-                self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
-            else:
-                self.piloturl = atlasconf.get(["executable", "ptarurl"])
+            self.piloturl = atlasconf.get(["executable", "ptarurl"])
         self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
