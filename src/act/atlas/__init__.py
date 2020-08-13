@@ -1,4 +1,4 @@
-app_processes = ['aCTAGISFetcher',
+app_processes = ['aCTCRICFetcher',
                  'aCTATLASStatus',
                  'aCTATLASStatusCondor',
                  'aCTAutopilot',

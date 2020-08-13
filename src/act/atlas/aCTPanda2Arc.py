@@ -17,7 +17,7 @@ class aCTPanda2Arc(aCTATLASProcess):
 
     def createArcJobs(self):
 
-        jobs = self.dbpanda.getJobs("arcjobid is NULL and siteName in %s limit 10000" % self.sitesselect)
+        jobs = self.dbpanda.getJobs("arcjobid is NULL and actpandastatus in ('sent', 'starting') and siteName in %s limit 10000" % self.sitesselect)
         proxies_map = {}
 
         for job in jobs:
@@ -44,6 +44,9 @@ class aCTPanda2Arc(aCTATLASProcess):
                 pass
             if xrsl is not None:
                 endpoints = self.sites[job['siteName']]['endpoints']
+                if not endpoints: # No CEs, try later
+                    self.log.warning("%d: Cannot submit to %s because no CEs available" % (job['pandaid'], job['siteName']))
+                    continue
                 cl = []
                 for e in endpoints:
                     if e.find('://') == -1:

@@ -9,7 +9,7 @@ from act.common import aCTUtils
 from act.common import aCTSignal
 from act.arc import aCTDBArc
 from act.condor import aCTDBCondor
-from act.atlas import aCTAGISParser
+from act.atlas import aCTCRICParser
 from act.atlas import aCTAPFMon
 from act.atlas import aCTDBPanda
 
@@ -43,9 +43,9 @@ class aCTATLASProcess:
         # APFMon
         self.apfmon = aCTAPFMon.aCTAPFMon(self.conf)
 
-        # AGIS info
+        # CRIC info
         self.flavour = ceflavour
-        self.agisparser = aCTAGISParser.aCTAGISParser(self.log)
+        self.cricparser = aCTCRICParser.aCTCRICParser(self.log)
         self.sites = {}
         self.osmap = {}
         self.sitesselect = ''
@@ -55,8 +55,8 @@ class aCTATLASProcess:
         self.log.info("Started %s", self.name)
 
     def setSites(self):
-        self.sites = self.agisparser.getSites(flavour=self.flavour)
-        self.osmap = self.agisparser.getOSMap()
+        self.sites = self.cricparser.getSites(flavour=self.flavour)
+        self.osmap = self.cricparser.getOSMap()
         # For DB queries
         self.sitesselect =  "('%s')" % "','".join(self.sites.keys())
 

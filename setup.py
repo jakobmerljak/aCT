@@ -33,6 +33,7 @@ setup(name='aCT',
             'actldmxadmin = act.ldmx.aCTLDMXAdmin:main',
 
             'actbulksub = act.client.actbulksub:main',
+            'actcat     = act.client.actcat:main',
             'actclean   = act.client.actclean:main',
             'actfetch   = act.client.actfetch:main',
             'actget     = act.client.actget:main',

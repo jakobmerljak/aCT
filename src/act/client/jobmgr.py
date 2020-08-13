@@ -495,7 +495,9 @@ class JobManager(object):
 
         return len(jobs)
 
-    def getJobStats(self, proxyid, jobids=[], state_filter='', name_filter='', clicols=[], arccols=[]):
+    # TODO: refactor to **kwargs
+    # TODO: should filters be used together or separately?
+    def getJobStats(self, proxyid, jobids=[], state_filter='', name_filter='', clicols=[], arccols=[], jobname=''):
         """
         Return info for jobs that match optional filters.
 
@@ -525,12 +527,16 @@ class JobManager(object):
         if state_filter:
             where += " a.arcstate = %s AND "
             where_params.append(state_filter)
-        where, where_params = self._addNameFilter(name_filter, where, where_params)
+        if jobname:
+            where += " c.jobname = %s AND "
+            where_params.append(jobname)
+        elif name_filter:
+            where, where_params = self._addNameFilter(name_filter, where, where_params)
         where, where_params = self._addIDFilter(jobids, where, where_params)
         where = where.rstrip('AND ')
 
         # state filter condition is for right table which might turn
-        # left join into inner join? TODO: check
+        # left join into inner join?
         if state_filter:
             jobs = self.clidb.getJoinJobsInfo(
                     clicols=clicols,

@@ -11,8 +11,6 @@ import act.common.aCTProxy as aCTProxy
 import act.arc.aCTDBArc as aCTDBArc
 import act.client.errors as errors
 
-# TODO: Should this be handled on library level? Default proxy path is
-#       managed in actproxy.
 DEFAULT_PROXY_PATH = '/tmp/x509up_u'
 
 
@@ -76,14 +74,21 @@ class ProxyManager(object):
 
         Returns:
             A tuple with proxy string, dn and expiry time.
+
+        Raises:
+            NoProxyFileError: Proxy was not found in a given file.
+            ProxyFileExpiredError: Proxy has expired.
         """
         if not os.path.isfile(proxyPath):
             raise errors.NoProxyFileError(proxyPath)
         try:
-            return self.actproxy._readProxyFromFile(proxyPath)
+            proxystr, dn, expirytime = self.actproxy._readProxyFromFile(proxyPath)
         except: # probably some file reading error
             self.logger.exception('Error reading proxy file {}'.format(proxyPath))
             raise
+        if expirytime < datetime.datetime.now():
+            raise errors.ProxyFileExpiredError()
+        return proxystr, dn, expirytime
 
     def readProxyString(self, proxyStr):
         """
@@ -133,12 +138,18 @@ class ProxyManager(object):
 
         Returns:
             Proxy ID from database.
+
+        Raises:
+            ProxyDBExpiredError: Proxy in DB has expired.
         """
         if not path:
             path = DEFAULT_PROXY_PATH + str(os.getuid())
 
-        __, dn, _ = self.readProxyFile(path)
-        return self.getProxyInfo(dn, '', ['id'])['id']
+        _, dn, expirytime = self.readProxyFile(path)
+        proxyinfo = self.getProxyInfo(dn, '', ['id', 'expirytime'])
+        if expirytime != proxyinfo["expirytime"]:
+            raise errors.ProxyDBExpiredError()
+        return proxyinfo["id"]
 
     def getProxiesWithDN(self, dn, columns=[]):
         """

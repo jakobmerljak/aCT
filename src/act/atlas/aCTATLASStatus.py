@@ -356,7 +356,7 @@ class aCTATLASStatus(aCTATLASProcess):
                     self.log.warning("%s: Failed to copy job output for %s: %s" % (aj['appjobid'], jobid, str(e)))
 
             try:
-                smeta = json.loads(str(aj['metadata']))
+                smeta = json.loads(aj['metadata'].decode())
             except:
                 smeta = None
 

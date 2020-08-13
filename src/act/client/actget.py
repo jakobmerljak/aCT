@@ -15,6 +15,7 @@ import argparse
 import sys
 import shutil
 import os
+import os.path
 import logging
 
 import act.client.jobmgr as jobmgr
@@ -34,6 +35,7 @@ def getLocalDir(jobdir, dirname=''):
         TargetDirExistsError: Destination for job results already exists.
     """
     if dirname:
+        dirname = os.path.realpath(dirname)
         dstDir = os.path.join(dirname, jobdir)
     else:
         dstDir = os.path.join(os.getcwd(), jobdir)
@@ -60,6 +62,8 @@ def main():
             help='custom path to proxy certificate')
     parser.add_argument('-n', '--no-clean', action='store_true',
             help='do not clean jobs')
+    parser.add_argument('-D', '--dir', default='',
+            help='directory where job result directoires should be copied to')
 
     clicommon.showHelpOnCommandOnly(parser)
 
@@ -109,7 +113,7 @@ def main():
         try:
             if result['dir']: # if there are job results in tmp
                 dst_dirname = os.path.basename(os.path.normpath(result['name']))
-                dstdir = getLocalDir(dst_dirname)
+                dstdir = getLocalDir(dst_dirname, args.dir)
                 shutil.copytree(result['dir'], dstdir)
                 print('Results stored at: {}'.format(dstdir))
             else:
