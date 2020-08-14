@@ -138,7 +138,7 @@ class aCTStatus(aCTProcess):
                     arcstate = 'finished'
                     self.log.debug('%s: reported walltime %d, cputime %d' % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), updatedjob.UsedTotalCPUTime.GetPeriod()))
                 elif updatedjob.State == arc.JobState.FAILED:
-                    # EMI-ES reports cancelled jobs as failed so check substate
+                    # EMI-ES reports cancelled jobs as failed so check substate (this is fixed in ARC 6.8)
                     if 'cancel' in updatedjob.State.GetSpecificState():
                         arcstate = 'cancelled'
                     else:
