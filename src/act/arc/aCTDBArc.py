@@ -264,7 +264,6 @@ class aCTDBArc(aCTDB):
         if job:
             s += "," + ",".join(['%s=%%s' % (k) for k in self._job2db(job).keys()])
         s+=" where id="+str(id)
-        print(s)
         if job:
             c.execute(s, list(desc.values()) + list(self._job2db(job).values()))
         else:
