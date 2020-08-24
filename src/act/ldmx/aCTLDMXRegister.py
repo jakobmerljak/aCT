@@ -95,7 +95,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
             if selinux:
-                selinux.restorecon(arcjoblog)
+                selinux.restorecon(arcjoblog) #pylint: disable=E1101
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
@@ -106,7 +106,7 @@ class aCTLDMXRegister(aCTLDMXProcess):
                             os.path.join(outd, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outd, '%s.out' % arcjob['id']), 0o644)
                 if selinux:
-                    selinux.restorecon(os.path.join(outd, '%s.out' % arcjob['id']))
+                    selinux.restorecon(os.path.join(outd, '%s.out' % arcjob['id'])) #pylint: disable=E1101
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 

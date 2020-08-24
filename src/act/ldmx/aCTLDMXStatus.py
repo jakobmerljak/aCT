@@ -264,12 +264,12 @@ class aCTLDMXStatus(aCTLDMXProcess):
             shutil.copy(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
             if selinux:
-                selinux.restorecon(arcjoblog)
+                selinux.restorecon(arcjoblog) #pylint: disable=E1101
             arcjoblog = os.path.join(outdfailed, "%s.log" % arcjob['id'])
             shutil.move(gmlogerrors, arcjoblog)
             os.chmod(arcjoblog, 0o644)
             if selinux:
-                selinux.restorecon(arcjoblog)
+                selinux.restorecon(arcjoblog) #pylint: disable=E1101
         except Exception as e:
             self.log.error(f'Failed to copy {gmlogerrors}: {e}')
 
@@ -279,12 +279,12 @@ class aCTLDMXStatus(aCTLDMXProcess):
                             os.path.join(outdir, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outdir, '%s.out' % arcjob['id']), 0o644)
                 if selinux:
-                    selinux.restorecon(os.path.join(outdir, '%s.out' % arcjob['id']))
+                    selinux.restorecon(os.path.join(outdir, '%s.out' % arcjob['id'])) #pylint: disable=E1101
                 shutil.move(os.path.join(localdir, jobstdout),
                             os.path.join(outdfailed, '%s.out' % arcjob['id']))
                 os.chmod(os.path.join(outdfailed, '%s.out' % arcjob['id']), 0o644)
                 if selinux:
-                    selinux.restorecon(os.path.join(outdfailed, '%s.out' % arcjob['id']))
+                    selinux.restorecon(os.path.join(outdfailed, '%s.out' % arcjob['id'])) #pylint: disable=E1101
             except Exception as e:
                 self.log.error(f'Failed to copy file {os.path.join(localdir, jobstdout)}, {str(e)}')
 
