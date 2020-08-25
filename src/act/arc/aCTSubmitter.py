@@ -494,7 +494,8 @@ class aCTSubmitter(aCTProcess):
                                                   "tarcstate": self.db.getTimeStamp()})
                 else:
                     self.db.updateArcJob(id, {"arcstate": "cancelling",
-                                              "tarcstate": self.db.getTimeStamp()})
+                                              "tarcstate": self.db.getTimeStamp(),
+                                              "tstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
 
