@@ -27,7 +27,7 @@ pandadb = aCTDBPanda(log)
 config = aCTConfigARC()
 
 def getARCJobs():
-    return str(arcdb.getNArcJobs())
+    return str(arcdb.getNArcJobs('TRUE'))
 
 def getARCSlots():
     jobs=arcdb.getArcJobsInfo("state='Running'",['RequestedSlots'])

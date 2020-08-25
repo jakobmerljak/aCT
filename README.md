@@ -4,6 +4,10 @@ ARC Control Tower (aCT) is a system for submitting and managing payloads on ARC 
 
 [![Build Status](https://travis-ci.com/ARCControlTower/aCT.svg?branch=master)](https://travis-ci.com/ARCControlTower/aCT)
 
+# Overview
+
+aCT consists of two related state-machines - one which controls job submission and management on Computing Elements (CEs) and another which manages an app-specific workflow. Normally the app-specific part creates jobs or pulls work from an external service, converts to ARC XRSL job descriptions, and passes them into the ARC-handling part. Then the ARC part submits jobs, queries their status and downloads the output when they finish. The app part can then do any post-processing of the result.
+
 # Installing
 
 aCT requires python >= 3.6 and is designed to run in a python virtual environment.
@@ -26,6 +30,8 @@ ARC python bindings are not available in pip so must be installed as a system pa
 
 `# yum install condor` - if aCT will submit to HTCondor-CE or CREAM CE
 
+`# yum install python3-libselinux` - if SELinux is enabled
+
 ## Setting up the virtualenv
 
 ```
@@ -45,11 +51,11 @@ export PYTHONPATH=/usr/lib64/python3.6/site-packages/arc
 ```
 The actual paths may depend on your system and python version.
 
-aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite.
+aCT requires a database. MySQL/MariaDB is the only officially supported database but work is ongoing to use sqlite. __Note__ that MySQL/MariaDB >= 5.6 is required whereas the default on CentOS 7 is 5.5.
 
 # Configuring
 
-aCT is configured with 2 configuration files, `aCTConfigARC.xml` and optional `aCTConfigAPP.xml`. These files are searched for in the following places in order until found:
+aCT is configured with 2 configuration files, `aCTConfigARC.xml` and optional `aCTConfigAPP.xml`. The former configures the ARC side of aCT and the latter configures the app-specific side. These files are searched for in the following places in order until found:
 ```
 $ACTCONFIGARC
 $VIRTUAL_ENV/etc/act/aCTConfigARC.xml
@@ -57,6 +63,20 @@ $VIRTUAL_ENV/etc/act/aCTConfigARC.xml
 ./aCTConfigARC.xml
 ```
 and the same for aCTConfigAPP.xml. Configuration templates can be found in etc/act in the virtualenv.
+
+The app config must contain at least
+
+```
+<config>
+
+<modules>
+  <app>act.app</app>
+</modules>
+
+</config>
+```
+
+where `app` is the app-specific python module. The app config can also contain any app-specific configuration.
 
 Once configuration is set up, the `actbootstrap` tool should be used to create the necessary database tables.
 
@@ -79,6 +99,29 @@ Several tools exist to help administer aCT
 - `actheartbeatwatchdog`: checks the database for jobs that have not sent heartbeats for a given time and manually send the heartbeat
 - `actcriticalmonitor`: checks logs for critical error messages in the last hour - can be run in a cron to send emails
 
+# Monitoring
+
+[Prometheus](https://prometheus.io/) monitoring can be enabled by setting the port number on which to expose metrics in `aCTConfigARC.xml`, eg
+
+```
+<monitor>
+  <prometheusport>8001</prometheusport>
+</monitor>
+```
+
+By default only ARC metrics are reported, but app-specific metrics can also be added - see the developers section below.
+
 # Client tools
 
 __Experimental__ client tools exist which allow job management through simple command line tools (`actsub`, `actstat`, etc). These tools allow aCT to be used as a generic job submission engine, independent from the ATLAS part.
+
+# For developers
+
+Developing a new app for aCT is as easy as defining a new sub-module of `act`. Certain elements of the app files must follow a template:
+
+- `__init__.py` may define a list of agent processes that will be started by aCT with `app_processes = [...]`
+- `aCTBootstrap.py` may define a `bootstrap()` method which will be called by `actbootstrap` to peform any initialisation
+- `aCTReport.py` may define a `report()` method which will be called by `actreport` and can output any app-specific information
+- `aCTMonitor.py` may define a `collect()` method which yields app-specific Prometheus metrics.
+
+Apart from these there is no limit to the naming or number of app agents.

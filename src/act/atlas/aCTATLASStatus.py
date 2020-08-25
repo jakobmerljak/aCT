@@ -140,7 +140,7 @@ class aCTATLASStatus(aCTATLASProcess):
         # do an inner join to pick up all jobs that should be set to running
         # todo: pandajobs.starttime will not be updated if a job is resubmitted
         # internally by the ARC part.
-        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate='running' and pandajobs.actpandastatus in ('starting', 'sent')"
+        select = "arcjobs.id=pandajobs.arcjobid and arcjobs.arcstate in ('running', 'finishing') and pandajobs.actpandastatus in ('starting', 'sent')"
         select += " and pandajobs.sitename in %s limit 100000" % self.sitesselect
 
         columns = ["arcjobs.id", "arcjobs.UsedTotalWalltime", "arcjobs.ExecutionNode",
@@ -444,13 +444,13 @@ class aCTATLASStatus(aCTATLASProcess):
 
         failedjobs = [job for job in jobstoupdate if job['arcstate']=='donefailed']
         if len(failedjobs) != 0:
-            self.log.debug("Found %d failed jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
+            self.log.debug("Found %d failed jobs (%s)" % (len(failedjobs), ','.join([j['appjobid'] for j in failedjobs])))
         lostjobs = [job for job in jobstoupdate if job['arcstate']=='lost']
         if len(lostjobs) != 0:
-            self.log.debug("Found %d lost jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
+            self.log.debug("Found %d lost jobs (%s)" % (len(lostjobs), ','.join([j['appjobid'] for j in lostjobs])))
         cancelledjobs = [job for job in jobstoupdate if job['arcstate']=='cancelled']
         if len(cancelledjobs) != 0:
-            self.log.debug("Found %d cancelled jobs (%s)" % (len(jobstoupdate), ','.join([j['appjobid'] for j in jobstoupdate])))
+            self.log.debug("Found %d cancelled jobs (%s)" % (len(cancelledjobs), ','.join([j['appjobid'] for j in cancelledjobs])))
 
         failedjobs=self.checkFailed(failedjobs)
         # process all failed jobs that couldn't be resubmitted

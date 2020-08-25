@@ -47,7 +47,7 @@ class aCTDBArc(aCTDB):
           - id:
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
-          - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
+          - arcstate: tosubmit, submitting, submitted, running, finishing, tocancel,
                       cancelling, cancelled, finished, failed, tofetch, torerun,
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
@@ -87,7 +87,7 @@ class aCTDBArc(aCTDB):
             id INTEGER PRIMARY KEY AUTO_INCREMENT,
             modified TIMESTAMP,
             created TIMESTAMP,
-            arcstate VARCHAR(255),
+            arcstate VARCHAR(12),
             tarcstate TIMESTAMP,
             tstate TIMESTAMP,
             cluster VARCHAR(255),
@@ -96,9 +96,9 @@ class aCTDBArc(aCTDB):
             attemptsleft INTEGER,
             downloadfiles VARCHAR(255),
             proxyid INTEGER,
-            appjobid VARCHAR(255),
+            appjobid VARCHAR(16),
             priority SMALLINT,
-            fairshare VARCHAR(255),
+            fairshare VARCHAR(50),
             """+",".join(['%s %s' % (k, self.jobattrmap[v]) for k, v in self.jobattrs.items()])+")"
 
         # First check if table already exists
@@ -348,14 +348,23 @@ class aCTDBArc(aCTDB):
             return None
         return row['jobdescription']
 
-    def getNArcJobs(self):
+    def getNArcJobs(self, select):
         '''
-        Return the total number of jobs in the table
+        Return the count of jobs in the table matching select
         '''
         c=self.db.getCursor()
-        c.execute("SELECT COUNT(*) FROM arcjobs")
+        c.execute("SELECT COUNT(*) FROM arcjobs WHERE "+select)
         row = c.fetchone()
         return row['COUNT(*)']
+
+    def getGroupedJobs(self, groupby):
+        '''
+        Return counts of jobs grouped by given column(s)
+        '''
+        c = self.db.getCursor()
+        c.execute(f"SELECT count(*), {groupby} FROM arcjobs GROUP BY {groupby}")
+        rows = c.fetchall()
+        return rows
 
     def getActiveClusters(self):
         '''
@@ -373,7 +382,7 @@ class aCTDBArc(aCTDB):
         c=self.db.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate in ('tosubmit', 'submitting', 'torerun', 'toresubmit', 'tocancel', 'cancelling') GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
 

@@ -1,6 +1,6 @@
 import time
 import os
-import re
+import random
 import sys
 import arc
 import traceback
@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 from . import aCTLogger
 from . import aCTConfig
-from . import aCTUtils
 from . import aCTSignal
 from act.arc import aCTDBArc
 from act.condor.aCTDBCondor import aCTDBCondor
@@ -78,16 +77,13 @@ class aCTProcess:
                 self.conf.parse()
                 # Check if the site is in downtime
                 if self.cluster not in self.conf.getList(['downtime', 'item']):
+                    # sleep between 5 and 10 seconds
+                    time.sleep(5 + random.random()*5)
                     # do class-specific things
                     self.process()
-                # sleep
-                aCTUtils.sleep(10)
                 # restart periodically for gsiftp crash
-                ip=self.conf.get(['periodicrestart', self.name.lower()])
-                if not ip:
-                    continue
-                ip = int(ip)
-                if time.time()-self.starttime > ip and ip != 0 :
+                ip = int(self.conf.get(['periodicrestart', self.name.lower()]) or 0)
+                if ip and time.time()-self.starttime > ip :
                     self.log.info("%s for %s exited for periodic restart", self.name, self.cluster)
                     return
         except aCTSignal.ExceptInterrupt as x:
