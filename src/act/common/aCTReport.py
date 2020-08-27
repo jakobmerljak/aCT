@@ -265,6 +265,7 @@ def main():
     parser = argparse.ArgumentParser(description='Report table of aCT jobs.')
     parser.add_argument('conffiles', nargs='*', help='list of configuration files')
     parser.add_argument('--web', help='Output suitable for web page')
+    parser.add_argument('--harvester', action='store_true', help='Dummy arg for backwards compatibility')
     args = parser.parse_args(sys.argv[1:])
 
     acts = aCTReport(args)
