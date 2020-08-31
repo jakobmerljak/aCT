@@ -125,7 +125,7 @@ def job_not_final_states():
     """
     Return db states which are not final
     """
-    return "('new', 'waiting', 'queueing', 'running', 'finishing')"
+    return "('new', 'waiting', 'queueing', 'running', 'finishing', 'registering')"
 
 def sanitise(query_string):
     """
