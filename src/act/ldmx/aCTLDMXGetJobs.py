@@ -83,6 +83,8 @@ class aCTLDMXGetJobs(aCTLDMXProcess):
                         for l in template:
                             if l.startswith('sim.runNumber'):
                                 ntf.write(f'sim.runNumber = {jobconfig["runNumber"]}\n')
+                            elif l.startswith('p.run'):
+                                ntf.write(f'p.run = {jobconfig["runNumber"]}\n')
                             elif l.startswith('sim.randomSeeds'):
                                 ntf.write(f'sim.randomSeeds = [ {jobconfig["RandomSeed1"]}, {jobconfig["RandomSeed2"]} ]\n')
                             else:
