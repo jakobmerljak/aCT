@@ -80,14 +80,20 @@ class aCTLDMXStatus(aCTLDMXProcess):
             self.log.info(f"Job {job['id']} requested to cancel, killing arc job")
 
             # Check if there is an arc job
-            columns = ['id']
+            columns = ['id', 'JobID']
             arcjob = self.dbarc.getArcJobInfo(job['arcjobid'], columns)
             if arcjob:
                 self.log.info(f"Cancelling arc job {arcjob['id']}")
                 select = "id='{}'".format(job['arcjobid'])
                 desc = {"arcstate": "tocancel", "tarcstate": self.dbarc.getTimeStamp()}
                 self.dbarc.updateArcJobs(desc, select)
-                self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelling'})
+                if arcjob['JobID']:
+                    # Job was submitted to wait for it to be cancelled
+                    self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelling'})
+                else:
+                    # No job submitted, mark cancelled
+                    self.log.info(f"Job {job['id']} was not submitted to arc, marking cancelled")
+                    self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelled'})
             else:
                 self.log.info(f"Job {job['id']} has no arc job, marking cancelled")
                 self.dbldmx.updateJobLazy(job['id'], {'ldmxstatus': 'cancelled'})
@@ -202,6 +208,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
         Clean jobs left behind in arcjobs table:
          - arcstate=tocancel or cancelling when cluster is empty
          - arcstate=done or cancelled or lost or donefailed when id not in ldmxjobs
+         - arcstate=done and ldmxstate=cancelling (job finished before it got cancel request)
         """
         select = "arcstate in ('tocancel', 'cancelling', 'toclean') and (cluster='' or cluster is NULL)"
         jobs = self.dbarc.getArcJobsInfo(select, ['id', 'appjobid'])
@@ -227,6 +234,11 @@ class aCTLDMXStatus(aCTLDMXProcess):
         if jobs:
             self.dbarc.Commit()
 
+        select = "arcstate='done' and ldmxstatus='cancelling' and arcjobs.id=ldmxjobs.arcjobid"
+        jobs = self.dbarc.getArcJobsInfo(select, ['arcjobs.id', 'appjobid'], tables='arcjobs,ldmxjobs')
+        for job in jobs:
+            self.log.info("%s: Cleaning finished job which was already cancelled" % job['appjobid'])
+            self.dbarc.updateArcJob(job['id'], {'arcstate': 'cancelled'})
 
     def checkForResubmission(self, arcjob):
         '''
