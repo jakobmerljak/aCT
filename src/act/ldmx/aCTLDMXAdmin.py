@@ -26,9 +26,11 @@ def submit(args):
         logger.error(f"Error: Failed to open job configuration file {args.conffile}: {str(e)}")
         return 1
 
-    if 'JobTemplate' not in config:
-        logger.error(f"Error: No JobTemplate defined in {args.conffile}")
-        return 1
+    # Check for mandatory parameters
+    for param in ('JobTemplate', 'RandomSeed1SequenceStart', 'RandomSeed2SequenceStart', 'NumberofJobs'):
+        if param not in config:
+            logger.error(f"Error: {param} not defined in {args.conffile}")
+            return 1
 
     actconf = aCTConfigAPP()
     bufferdir = actconf.get(['jobs', 'bufferdir'])
@@ -48,7 +50,7 @@ def submit(args):
         logger.error(f"Failed to copy {args.conffile} to {os.path.join(bufferdir, 'configs')}: {str(e)}")
         return 1
 
-    logger.info(f"Submitted job configuration at {args.conffile}")
+    logger.info(f"Submitted job configuration at {args.conffile} to create {config['NumberofJobs']} jobs")
     return 0
 
 def cancel(args):
@@ -125,7 +127,7 @@ def job_not_final_states():
     """
     Return db states which are not final
     """
-    return "('new', 'waiting', 'queueing', 'running', 'finishing')"
+    return "('new', 'waiting', 'queueing', 'running', 'finishing', 'registering')"
 
 def sanitise(query_string):
     """

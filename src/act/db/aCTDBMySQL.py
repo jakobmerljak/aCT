@@ -53,11 +53,9 @@ class aCTDBMySQL(aCTDBMS):
                 aCTUtils.sleep(1)
         raise Exception("Could not get cursor")
 
-    def timeStampLessThan(self,column,timediff):
-        return "UNIX_TIMESTAMP("+column+") < UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
-
-    def timeStampGreaterThan(self,column,timediff):
-        return "UNIX_TIMESTAMP("+column+") > UNIX_TIMESTAMP(UTC_TIMESTAMP()) - "+str(timediff)
+    def timeStampLessThan(self,column,timediff,utc=True):
+        # utc should be set to False for columns with auto incremented timestamp
+        return f"UNIX_TIMESTAMP({column}) < UNIX_TIMESTAMP({'UTC_TIMESTAMP()' if utc else ''}) - {timediff}"
 
     def addLock(self):
         return " FOR UPDATE"

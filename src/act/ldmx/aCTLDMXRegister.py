@@ -28,39 +28,58 @@ class aCTLDMXRegister(aCTLDMXProcess):
 
     def processDoneJobs(self):
         '''
-        Look for done jobs, and register output metadata in Rucio
+        Look for done jobs, set to registering, and output metadata in Rucio.
+        Check registering jobs that previously failed.
         '''
 
-        select = "arcstate='done' and arcjobs.id=ldmxjobs.arcjobid limit 100"
+        select = f"ldmxstatus='finishing' and arcstate='done' and arcjobs.id=ldmxjobs.arcjobid limit 100"
         columns = ['arcjobs.id', 'JobID', 'appjobid', 'cluster', 'UsedTotalWallTime', 'batchid',
                    'arcjobs.EndTime', 'stdout', 'ldmxjobs.created', 'description', 'template']
         arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
-        if not arcjobs:
-            return
-
         for aj in arcjobs:
             self.log.info(f'Found finished job {aj["id"]}')
-            jobid = aj.get('JobID')
-            if not jobid:
-                self.log.error(f'No JobID in arcjob {aj["id"]}')
-                continue
-
-            # Read the metadata and insert into rucio
             select = f"id={int(aj['appjobid'])}"
-            desc = {'computingelement': aj['cluster'],
+            desc = {'ldmxstatus': 'registering',
+                    'computingelement': aj['cluster'],
                     'sitename': self.endpoints[aj['cluster']],
                     'starttime': (aj['EndTime'] or datetime.now(timezone.utc)) - timedelta(0, aj['UsedTotalWallTime']),
                     'endtime': aj['EndTime'] or datetime.now(timezone.utc)}
+            self.dbldmx.updateJobs(select, desc)
+
+        self.register(arcjobs)
+
+        select = f"ldmxstatus='registering' and \
+                   {self.dbldmx.timeStampLessThan('ldmxjobs.modified', 300, utc=False)} and \
+                   arcjobs.id=ldmxjobs.arcjobid limit 100"
+        arcjobs = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
+        self.register(arcjobs)
+
+
+    def register(self, arcjobs):
+        '''
+        Do the registration and output file handling
+        '''
+        for aj in arcjobs:
+            select = f"id={int(aj['appjobid'])}"
+            jobid = aj.get('JobID')
+            if not jobid:
+                self.log.error(f'No JobID in arcjob {aj["id"]}')
+                self.dbldmx.updateJobs(select, {'ldmxstatus': 'failed'})
+                self.cleanInputFiles(aj)
+                # Nothing to fetch or clean so continue
+                continue
+
+            # Read the metadata and insert into rucio
             res = self.insertMetadata(aj)
             if res is None: # retry
                 self.log.info(f'Will try {aj["id"]} later')
+                # Update to set modification time
+                self.dbldmx.updateJobs(select, {'modified': datetime.now().isoformat()})
                 continue
             elif not res: # fail
-                desc['ldmxstatus'] = 'failed'
-                self.dbldmx.updateJobsLazy(select, desc)
+                self.dbldmx.updateJobs(select, {'ldmxstatus': 'failed'})
             else: # success
-                desc['ldmxstatus'] = 'finished'
-                self.dbldmx.updateJobsLazy(select, desc)
+                self.dbldmx.updateJobs(select, {'ldmxstatus': 'finished'})
 
             # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
             self.copyOutputFiles(aj)
@@ -71,13 +90,11 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Set arc job to clean
             select = f"id={aj['id']}"
             desc = {"arcstate": "toclean", "tarcstate": self.dbarc.getTimeStamp()}
-            self.dbarc.updateArcJobsLazy(desc, select)
+            self.dbarc.updateArcJobs(desc, select)
 
             # Clean input files
             self.cleanInputFiles(aj)
 
-        self.dbldmx.Commit()
-        self.dbarc.Commit()
 
     def copyOutputFiles(self, arcjob):
         '''

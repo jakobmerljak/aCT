@@ -21,6 +21,7 @@ class aCTDBLDMX(aCTDB):
                  queueing: job is submitted to CE
                  running: job is running in the site batch system
                  finishing: batch job has finished but is in post-processing
+                 registering: job output is being registered in Rucio
                  finished: job finished successfully
                  failed: job failed
                  toresubmit: job will be cancelled and resubmitted

@@ -27,8 +27,8 @@ class aCTDB(object):
         else:
             return datetime.datetime.utcnow().isoformat()
 
-    def timeStampLessThan(self, column, timediff):
-        return self.db.timeStampLessThan(column, timediff)
+    def timeStampLessThan(self, column, timediff, utc=True):
+        return self.db.timeStampLessThan(column, timediff, utc)
 
     def Commit(self, lock=False):
         if lock:
