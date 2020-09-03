@@ -24,6 +24,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
     def __init__(self):
 
         aCTLDMXProcess.__init__(self)
+        # Store a list of known scopes
+        self.scopes = self.rucio.list_scopes()
 
 
     def processDoneJobs(self):
@@ -171,8 +173,21 @@ class aCTLDMXRegister(aCTLDMXProcess):
             # Add replica
             pfn = f'file://{metadata["DataLocation"]}'
             meta = {'events': nevents}
-            self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
-                                   metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+            try:
+                self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
+                                       metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+            except RucioException as e:
+                # Check if the scope doesn't yet exist
+                # Should raise ScopeNotFound but see https://github.com/rucio/rucio/issues/3980
+                if scope not in self.scopes:
+                    self.log.warning(f'Scope {scope} does not exist, adding it')
+                    self.rucio.add_scope('ldmx-admin', scope)
+                    self.scopes.append(scope)
+                    self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
+                                           metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+                else:
+                    raise
+
             if 'remote_output' in metadata:
                 self.rucio.add_replica(metadata['remote_output']['rse'], scope, name, metadata['bytes'],
                                        metadata['adler32'], pfn=metadata['remote_output']['pfn'],
