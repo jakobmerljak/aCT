@@ -201,9 +201,10 @@ def job_starttime(starttime_f='.ldmx.job.starttime'):
 
 def set_remote_output(conf_dict, meta):
     # Check for remote location and construct URL
-    jobid = os.environ.get('GRID_GLOBAL_JOBID')
+    # GRID_GLOBAL_JOBHOST is available from ARC 6.8
+    cehost = os.environ.get('GRID_GLOBAL_JOBHOST')
     if 'FinalOutputDestination' in conf_dict and 'FinalOutputBasePath' in conf_dict \
-      and not [x for x in conf_dict.get('NoUploadSites', '').split(',') if jobid and jobid[:jobid.rfind(':')] in x]:
+      and cehost not in conf_dict.get('NoUploadSites', '').split(','):
         pfn = conf_dict['FinalOutputBasePath']
         while pfn.endswith('/'):
             pfn = pfn[:-1]
