@@ -153,7 +153,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
         # Look for failed final states in ARC which are still starting or running in LDMX
         select = "arcstate in ('donefailed', 'cancelled', 'lost') and arcjobs.id=ldmxjobs.arcjobid"
-        columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout',
+        columns = ['arcstate', 'arcjobs.id', 'cluster', 'JobID', 'ldmxjobs.created', 'stdout', 'ldmxstatus',
                    'description', 'template', 'sitename', 'ldmxjobs.proxyid', 'batchid', 'Error']
 
         jobstoupdate = self.dbarc.getArcJobsInfo(select, columns=columns, tables='arcjobs,ldmxjobs')
@@ -244,6 +244,11 @@ class aCTLDMXStatus(aCTLDMXProcess):
         '''
         Check error message against retryable errors and submit a new job
         '''
+
+        if arcjob['ldmxstatus'] in ['tocancel', 'cancelling']:
+            self.log.info(f"{arcjob['id']}: was already cancelled")
+            self.cleanInputFiles(arcjob)
+            return
 
         self.log.info(f"{arcjob['id']}: error: {arcjob['Error']}")
         resub = [err for err in self.arcconf.getList(['errors','toresubmit','arcerrors','item']) if err in arcjob['Error']]
