@@ -81,7 +81,7 @@ class aCTLDMXStatus(aCTLDMXProcess):
 
             # Check if there is an arc job
             columns = ['id', 'JobID']
-            arcjob = self.dbarc.getArcJobInfo(job['arcjobid'], columns)
+            arcjob = self.dbarc.getArcJobInfo(job['arcjobid'], columns) if job['arcjobid'] else None
             if arcjob:
                 self.log.info(f"Cancelling arc job {arcjob['id']}")
                 select = "id='{}'".format(job['arcjobid'])
