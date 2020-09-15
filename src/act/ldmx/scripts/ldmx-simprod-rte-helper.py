@@ -98,6 +98,8 @@ def collect_from_json( infile ):
 
     if 'runNumber' in mjson['sequence'][0] :
         config_dict['RunNumber'] = mjson['sequence'][0]['runNumber']
+    elif 'run' in mjson :
+        config_dict['RunNumber'] = mjson['run']
     else :
         logger.error('RunNumber is not set in %s. Job aborted.', infile)
         sys.exit(1)
