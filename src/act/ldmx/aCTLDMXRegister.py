@@ -141,6 +141,26 @@ class aCTLDMXRegister(aCTLDMXProcess):
         except:
             pass
 
+    def rucioAddReplica(self, rse, pfn, metadata, meta):
+        '''
+        Add a replica to Rucio and handle error conditions
+        '''
+        try:
+            self.rucio.add_replica(rse, metadata['scope'], metadata['name'], metadata['bytes'],
+                                   metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+        except RucioException as e:
+            # Check if the scope doesn't yet exist
+            # Should raise ScopeNotFound but see https://github.com/rucio/rucio/issues/3980
+            if metadata['scope'] not in self.scopes:
+                scope = metadata['scope']
+                self.log.warning(f'Scope {scope} does not exist, adding it')
+                self.rucio.add_scope('ldmx-admin', scope)
+                self.scopes.append(scope)
+                self.rucio.add_replica(rse, metadata['scope'], metadata['name'], metadata['bytes'],
+                                       metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
+            else:
+                raise
+
 
     def insertMetadata(self, arcjob):
         '''
@@ -155,8 +175,10 @@ class aCTLDMXRegister(aCTLDMXProcess):
             self.log.error(f'Failed to read metadata.json file at {metadatafile}: {e}')
             return False
 
-        # Set RSE from configuration
-        metadata['rse'] = self.sites[self.endpoints[arcjob['cluster']]]['rse']
+        if 'local_replica' not in metadata and 'remote_output' not in metadata:
+            self.log.error('No replicas to register')
+            return False
+
         # Set some aCT metadata
         metadata['ComputingElement'] = urlparse(arcjob['cluster']).hostname or 'unknown'
         metadata['JobSubmissionTime'] = arcjob['created']
@@ -169,29 +191,19 @@ class aCTLDMXRegister(aCTLDMXProcess):
             cscope = metadata['containerscope']
             cname = metadata['containername']
             nevents = int(metadata.get('NumberOfEvents', 0))
-            self.log.info(f'Inserting metadata info for {scope}:{name}: {metadata}')
-            # Add replica
-            pfn = f'file://{metadata["DataLocation"]}'
             meta = {'events': nevents}
-            try:
-                self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
-                                       metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
-            except RucioException as e:
-                # Check if the scope doesn't yet exist
-                # Should raise ScopeNotFound but see https://github.com/rucio/rucio/issues/3980
-                if scope not in self.scopes:
-                    self.log.warning(f'Scope {scope} does not exist, adding it')
-                    self.rucio.add_scope('ldmx-admin', scope)
-                    self.scopes.append(scope)
-                    self.rucio.add_replica(metadata['rse'], scope, name, metadata['bytes'],
-                                           metadata['adler32'], pfn=pfn, md5=metadata['md5'], meta=meta)
-                else:
-                    raise
+            self.log.info(f'Inserting metadata info for {scope}:{name}: {metadata}')
 
+            # Add replicas
+            if 'local_replica' in metadata:
+                pfn = f'file://{metadata["local_replica"]}'
+                rse = self.sites[self.endpoints[arcjob['cluster']]]['rse']
+                self.rucioAddReplica(rse, pfn, metadata, meta)
+ 
             if 'remote_output' in metadata:
-                self.rucio.add_replica(metadata['remote_output']['rse'], scope, name, metadata['bytes'],
-                                       metadata['adler32'], pfn=metadata['remote_output']['pfn'],
-                                       md5=metadata['md5'], meta=meta)
+                pfn = metadata['remote_output']['pfn']
+                rse = metadata['remote_output']['rse']
+                self.rucioAddReplica(rse, pfn, metadata, meta)
 
             try:
                 # Attach to dataset
@@ -216,8 +228,9 @@ class aCTLDMXRegister(aCTLDMXProcess):
 
             # Add metadata, removing all rucio "native" metadata
             native_metadata = ['scope', 'name', 'bytes', 'md5', 'adler32',
-                               'rse', 'datasetscope', 'datasetname',
-                               'containerscope', 'containername', 'remote_output']
+                               'datasetscope', 'datasetname',
+                               'containerscope', 'containername', 'remote_output',
+                               'local_replica']
             # Metadata values must be strings to be searchable
             self.rucio.add_did_meta(scope, name,
                                     {x: str(y) for x, y in metadata.items() if x not in native_metadata})
