@@ -228,7 +228,7 @@ def collect_meta(conf_dict, json_file):
         return meta
 
     data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
+    data_location += '/ldmx/mc-data/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
     meta['DataLocation'] = data_location
 
     # Rucio metadata
