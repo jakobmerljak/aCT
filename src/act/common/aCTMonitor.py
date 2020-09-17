@@ -4,11 +4,11 @@ from prometheus_client import start_http_server
 from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from act.common.aCTProcess import aCTProcess
 from act.common.aCTConfig import aCTConfigAPP
+from act.arc.aCTDBArc import aCTDBArc
 
 class aCTPrometheusCollector:
 
-    def __init__(self, arcdb, log):
-        self.db = arcdb
+    def __init__(self, log):
         self.log = log
 
     def app_collect(self):
@@ -41,7 +41,8 @@ class aCTPrometheusCollector:
                                                'Finishing jobs per ARC CE',
                                                labels=['ce_endpoint'])
 
-        jobs = self.db.getGroupedJobs('cluster, arcstate')
+        db = aCTDBArc(self.log)
+        jobs = db.getGroupedJobs('cluster, arcstate')
 
         for job in jobs:
             count, cluster, state = (job['count(*)'], job['cluster'], job['arcstate'])
@@ -65,7 +66,7 @@ class aCTMonitor(aCTProcess):
 
         if self.prometheus_port:
             start_http_server(self.prometheus_port)
-            REGISTRY.register(aCTPrometheusCollector(self.db, self.log))
+            REGISTRY.register(aCTPrometheusCollector(self.log))
         else:
             self.log.info('Prometheus monitoring not enabled')
 
