@@ -84,7 +84,8 @@ class aCTLDMXRegister(aCTLDMXProcess):
                 self.dbldmx.updateJobs(select, {'ldmxstatus': 'finished'})
 
             # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
-            self.copyOutputFiles(aj)
+            # Save space - don't save successful job output
+            #self.copyOutputFiles(aj)
 
             # Clean tmp dir
             self.cleanDownloadedJob(jobid)
