@@ -347,10 +347,9 @@ class aCTPanda2Xrsl:
         x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get cric files from cvmfs or over network
-        # TODO sync with pilot changes to CRIC jsons
         if self.cricjsons:
-            x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+            x += '(cric_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_ddmendpoints.json")'
+            x += '(cric_pandaqueues.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_pandaqueues.json")'
 
         # Panda queue configuration
         if self.eventranges:
