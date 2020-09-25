@@ -1,5 +1,5 @@
 import mysql.connector as mysql
-from _mysql_connector import MySQLInterfaceError # pylint: disable-msg=E0611
+#from mysql.connector import MySQLInterfaceError # pylint: disable-msg=E0611
 from act.common import aCTUtils
 from act.db.aCTDBMS import aCTDBMS
 
@@ -44,7 +44,7 @@ class aCTDBMySQL(aCTDBMS):
         # make sure cursor reads newest db state
         try:
             self.conn.commit()
-        except (mysql.errors.InternalError, MySQLInterfaceError) as e:
+        except mysql.errors.InternalError as e:
             # Unread result, force reconnection
             self.log.warning(str(e))
             self.conn.close()
