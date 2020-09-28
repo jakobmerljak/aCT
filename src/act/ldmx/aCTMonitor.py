@@ -37,31 +37,31 @@ def collect(log):
     for row in rows:
         if row['ldmxstatus'] == 'waiting':
             log.debug(f"{row['count(*)']} waiting jobs for batch {row['batchid']} on site {row['sitename']}")
-            waiting.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            waiting.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'queueing':
             log.debug(f"{row['count(*)']} queued jobs for batch {row['batchid']} on site {row['sitename']}")
-            queued.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            queued.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'running':
             log.debug(f"{row['count(*)']} running jobs for batch {row['batchid']} on site {row['sitename']}")
-            running.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            running.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'finishing':
             log.debug(f"{row['count(*)']} finishing jobs for batch {row['batchid']} on site {row['sitename']}")
-            finishing.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            finishing.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'registering':
             log.debug(f"{row['count(*)']} registering jobs for batch {row['batchid']} on site {row['sitename']}")
-            registering.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            registering.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'finished':
             log.debug(f"{row['count(*)']} finished jobs for batch {row['batchid']} on site {row['sitename']}")
-            finished.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            finished.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
         if row['ldmxstatus'] == 'failed':
             log.debug(f"{row['count(*)']} failed jobs for batch {row['batchid']} on site {row['sitename']}")
-            failed.add_metric([row['batchid'], row['sitename']], row['count(*)'])
+            failed.add_metric([row['batchid'], row['sitename'] or 'None'], row['count(*)'])
 
     yield waiting
     yield queued
