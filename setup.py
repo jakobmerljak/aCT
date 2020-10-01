@@ -16,6 +16,7 @@ setup(name='aCT',
         'pylint',                   # for travis automatic tests
         'requests',                 # for APF mon calls
         'prometheus_client',        # Prometheus monitoring
+        'selinux',                  # SELinux context handling
 
         'pyopenssl',
         'flask',
@@ -29,8 +30,10 @@ setup(name='aCT',
             'actreport = act.common.aCTReport:main',
             'actcriticalmonitor = act.common.aCTCriticalMonitor:main',
             'actheartbeatwatchdog = act.atlas.aCTHeartbeatWatchdog:main',
+            'actldmxadmin = act.ldmx.aCTLDMXAdmin:main',
 
             'actbulksub = act.client.actbulksub:main',
+            'actcat     = act.client.actcat:main',
             'actclean   = act.client.actclean:main',
             'actfetch   = act.client.actfetch:main',
             'actget     = act.client.actget:main',

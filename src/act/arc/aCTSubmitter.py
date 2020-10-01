@@ -494,7 +494,8 @@ class aCTSubmitter(aCTProcess):
                                                   "tarcstate": self.db.getTimeStamp()})
                 else:
                     self.db.updateArcJob(id, {"arcstate": "cancelling",
-                                              "tarcstate": self.db.getTimeStamp()})
+                                              "tarcstate": self.db.getTimeStamp(),
+                                              "tstate": self.db.getTimeStamp()})
 
     def processToResubmit(self):
 
@@ -555,7 +556,7 @@ class aCTSubmitter(aCTProcess):
         if not jobstorerun:
             return
 
-        # TODO: downtimes from AGIS
+        # TODO: downtimes from CRIC
         if self.conf.get(['downtime', 'srmdown']) == 'True':
             self.log.info('SRM down, not rerunning')
             return
@@ -583,7 +584,7 @@ class aCTSubmitter(aCTProcess):
                     # Force a wait before next status check, to allow the
                     # infosys to update and avoid the failed state being picked
                     # up again
-                    self.db.updateArcJob(id, {"arcstate": "submitted",
+                    self.db.updateArcJob(id, {"arcstate": "finishing" if job.RestartState == arc.JobState.FINISHING else 'submitted',
                                               "tarcstate": self.db.getTimeStamp(time.time()+3600)})
 
 

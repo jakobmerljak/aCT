@@ -71,7 +71,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
         # Register this aCT to APFMon
         self.apfmon.registerFactory()
-        # AGIS queue info
+        # CRIC queue info
         self.sites={}
         # Panda info on activated jobs: {queue: {'rc_test': 2, 'rest': 40}}
         self.activated = {}
@@ -80,7 +80,7 @@ class aCTPandaGetJobs(aCTATLASProcess):
 
 
     def setSites(self):
-        self.sites = self.agisparser.getSites()
+        self.sites = self.cricparser.getSites()
 
     def getActivated(self):
         """

@@ -47,7 +47,7 @@ class aCTConfig:
         el=[]
         for t in tn:
             n1=t.getElementsByTagName(c[0])
-            if( n1[0].firstChild.data == c[1] ):
+            if( n1 and n1[0].firstChild.data == c[1] ):
                 el.append(t)
 
         n0=el

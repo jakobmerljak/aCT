@@ -15,6 +15,7 @@ class aCTPanda2ClassAd:
         self.jobdesc = cgi.parse_qs(pandajob)
         self.pandaid = self.jobdesc['PandaID'][0]
         self.prodsourcelabel = self.jobdesc.get('prodSourceLabel', ['None'])[0]
+        self.resourcetype = self.jobdesc.get('resourceType', ['None'])[0]
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
         self.proxy = proxypath
@@ -29,6 +30,9 @@ class aCTPanda2ClassAd:
         self.walltime = siteinfo['maxwalltime'] * 60
         if self.walltime == 0:
             self.walltime = 4*24*3600
+
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -136,10 +140,36 @@ class aCTPanda2ClassAd:
 
         self.classad['Cmd'] = self.wrapper
 
+    def getJobType(self):
+
+        return 'user' if self.prodsourcelabel in ['user', 'panda'] else 'managed'
+
+    def getResourceType(self):
+
+        if self.resourcetype != 'None':
+            return self.resourcetype
+
+        resource = 'SCORE'
+        if self.ncores > 1:
+            resource = 'MCORE'
+        if self.memory > self.defaults['memory']:
+            resource += '_HIMEM'
+        return resource
+
     def setArguments(self):
 
-        psrclabel = '-j %s' % self.prodsourcelabel if self.prodsourcelabel != 'None' else ''
-        pargs = '-q %s -r %s -s %s -d %s --pilot-user ATLAS -w generic --url https://pandaserver.cern.ch -p 25443'  % (self.schedconfig, self.sitename, self.sitename, psrclabel)
+        pargs = '-q %s -r %s -s %s -d -j %s --pilot-user ATLAS -w generic --job-type %s --resource-type %s --url https://pandaserver.cern.ch -p 25443' \
+                % (self.schedconfig, self.sitename, self.sitename, self.prodsourcelabel, self.getJobType(), self.getResourceType())
+        if self.prodsourcelabel == 'rc_alrb':
+            pargs += ' -i ALRB'
+        elif self.prodsourcelabel.startswith('rc_test'):
+            pargs += ' -i RC'
+
+        if self.piloturl:
+            pargs += ' --piloturl %s' % (self.piloturl)
+        else:
+            pargs += ' --pilotversion %s' % (self.pilotversion)
+
         self.classad['Arguments'] = str(pargs)
 
     def setInputs(self):

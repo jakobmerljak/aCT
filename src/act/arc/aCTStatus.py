@@ -85,7 +85,7 @@ class aCTStatus(aCTProcess):
         self.checktime=time.time()
 
         # check jobs which were last checked more than checkinterval ago
-        jobstocheck=self.db.getArcJobs("(arcstate='submitted' or arcstate='running' or arcstate='cancelling' or arcstate='holding') and " \
+        jobstocheck=self.db.getArcJobs("arcstate in ('submitted', 'running', 'finishing', 'cancelling', 'holding') and " \
                                        "jobid not like '' and cluster='"+self.cluster+"' and "+ \
                                        self.db.timeStampLessThan("tarcstate", self.conf.get(['jobs','checkinterval'])) + \
                                        " limit 100000")
@@ -138,12 +138,17 @@ class aCTStatus(aCTProcess):
                     arcstate = 'finished'
                     self.log.debug('%s: reported walltime %d, cputime %d' % (appjobid, updatedjob.UsedTotalWallTime.GetPeriod(), updatedjob.UsedTotalCPUTime.GetPeriod()))
                 elif updatedjob.State == arc.JobState.FAILED:
-                    arcstate = self.processJobErrors(id, appjobid, updatedjob)
+                    # EMI-ES reports cancelled jobs as failed so check substate (this is fixed in ARC 6.8)
+                    if 'cancel' in updatedjob.State.GetSpecificState():
+                        arcstate = 'cancelled'
+                    else:
+                        arcstate = self.processJobErrors(id, appjobid, updatedjob)
                 elif updatedjob.State == arc.JobState.KILLED:
                     arcstate = 'cancelled'
-                elif updatedjob.State == arc.JobState.RUNNING or \
-                     updatedjob.State == arc.JobState.FINISHING:
+                elif updatedjob.State == arc.JobState.RUNNING:
                     arcstate = 'running'
+                elif updatedjob.State == arc.JobState.FINISHING:
+                    arcstate = 'finishing'
                 elif updatedjob.State == arc.JobState.HOLD:
                     arcstate = 'holding'
                 elif updatedjob.State == arc.JobState.DELETED or \

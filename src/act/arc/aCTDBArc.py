@@ -47,7 +47,7 @@ class aCTDBArc(aCTDB):
           - id:
           - created: timestamp of creation of the record
           - modified: timestamp of last record update
-          - arcstate: tosubmit, submitting, submitted, running, stalled, tocancel,
+          - arcstate: tosubmit, submitting, submitted, running, finishing, tocancel,
                       cancelling, cancelled, finished, failed, tofetch, torerun,
                       toresubmit, done, donefailed, lost, toclean
             "to" states are set by application engine or ARC engine for retries
@@ -90,11 +90,11 @@ class aCTDBArc(aCTDB):
             arcstate VARCHAR(12),
             tarcstate TIMESTAMP,
             tstate TIMESTAMP,
-            cluster VARCHAR(48),
-            clusterlist VARCHAR(255),
+            cluster VARCHAR(255),
+            clusterlist VARCHAR(1024),
             jobdesc INT(11),
             attemptsleft INTEGER,
-            downloadfiles VARCHAR(48),
+            downloadfiles VARCHAR(255),
             proxyid INTEGER,
             appjobid VARCHAR(16),
             priority SMALLINT,
@@ -382,7 +382,7 @@ class aCTDBArc(aCTDB):
         c=self.db.getCursor()
         # submitting state is included here so that a submitter process is not
         # killed while submitting jobs
-        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate='tosubmit' or arcstate='submitting' or arcstate='torerun' or arcstate='toresubmit' or arcstate='tocancel' GROUP BY clusterlist")
+        c.execute("SELECT clusterlist, COUNT(*) FROM arcjobs WHERE arcstate in ('tosubmit', 'submitting', 'torerun', 'toresubmit', 'tocancel', 'cancelling') GROUP BY clusterlist")
         rows=c.fetchall()
         return rows
 
@@ -445,11 +445,8 @@ class aCTDBArc(aCTDB):
         return d
 
     def _writeProxyFile(self, proxypath, proxy):
-        if os.path.isfile(proxypath):
-            os.remove(proxypath)
-        f=open(proxypath,'w')
-        f.write(proxy)
-        f.close()
+        with open(proxypath, 'w') as f:
+            f.write(proxy)
         # make sure permissions are correct
         os.chmod(proxypath, 0o600)
 
@@ -514,7 +511,7 @@ class aCTDBArc(aCTDB):
         row = c.fetchone()
         try:
             proxy = row['proxy']
-            return proxy
+            return str(proxy, encoding='utf-8') if type(proxy) == bytes else proxy
         except Exception as x:
             self.log.error("Could not find proxyid in proxies table. %s", x)
 

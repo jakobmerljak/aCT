@@ -30,7 +30,7 @@ if [ -z "$SINGULARITY_IMAGE" ]; then
 fi
 
 # Check singularity is installed
-type /usr/bin/singularity >/dev/null 2>&1
+type singularity
 if [ $? -ne 0 ]; then
   echo "ERROR: Singularity installation on the worker nodes is required to run LDMX software"
   exit 1
@@ -42,7 +42,7 @@ echo -e "Output data file is $OUTPUTDATAFILE\n"
 
 # Start the simulation container
 echo -e "Starting Singularity image $SINGULARITY_IMAGE\n"
-/usr/bin/singularity run $SINGULARITY_OPTIONS --home "$PWD" "$SINGULARITY_IMAGE" . ldmxjob.py
+singularity run $SINGULARITY_OPTIONS --home "$PWD" "$SINGULARITY_IMAGE" . ldmxjob.py
 RET=$?
 
 if [ $RET -ne 0 ]; then
@@ -59,11 +59,11 @@ if [ -z "$FINALOUTPUTFILE" ]; then
   exit 1
 fi
 
-echo "Moving $OUTPUTDATAFILE to $FINALOUTPUTFILE"
+echo "Copying $OUTPUTDATAFILE to $FINALOUTPUTFILE"
 mkdir -p "${FINALOUTPUTFILE%/*}"
-mv "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
+cp "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
 if [ $? -ne 0 ]; then
-  echo "Failed to move output to final destination"
+  echo "Failed to copy output to final destination"
   exit 1
 fi
 

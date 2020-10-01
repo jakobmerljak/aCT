@@ -74,7 +74,7 @@ class aCTReport:
                     continue
                 if cluster == '':
                     cluster = '(no cluster defined)'
-                elif not re.match(r'0\d:\d\d$', runningtime):
+                elif not re.match(r'\d\d:\d\d$', runningtime):
                     # Check for overrunning processes
                     longprocesses.append((process, pid, cluster, runningtime))
                 if cluster in cluster_procs:
@@ -83,7 +83,7 @@ class aCTReport:
                     cluster_procs[cluster] = [process]
 
         for proc in longprocesses:
-            self.log('WARNING: %s (pid %s) for %s running for more than 10 mins (%s), this process will be killed' % proc)
+            self.log('WARNING: %s (pid %s) for %s running for more than one hour (%s), this process will be killed' % proc)
             # Kill process and log a critical message to send email
             # Too many emails, disable
             #self.criticallog.critical('Killing process %s (pid %s) for %s running for more than one hour (%s)' % proc)
@@ -265,6 +265,7 @@ def main():
     parser = argparse.ArgumentParser(description='Report table of aCT jobs.')
     parser.add_argument('conffiles', nargs='*', help='list of configuration files')
     parser.add_argument('--web', help='Output suitable for web page')
+    parser.add_argument('--harvester', action='store_true', help='Dummy arg for backwards compatibility')
     args = parser.parse_args(sys.argv[1:])
 
     acts = aCTReport(args)

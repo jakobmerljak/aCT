@@ -99,7 +99,7 @@ class aCTValidator(aCTATLASProcess):
                 jobinfo.node = aj["ExecutionNode"]
 
             try:
-                smeta = json.loads(str(aj['metadata']))
+                smeta = json.loads(aj['metadata'].decode())
             except:
                 smeta = None
 

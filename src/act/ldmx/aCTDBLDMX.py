@@ -20,7 +20,8 @@ class aCTDBLDMX(aCTDB):
                  waiting: job is waiting to be submitted
                  queueing: job is submitted to CE
                  running: job is running in the site batch system
-                 tovalidate: job has finished and is in aCT post-processing
+                 finishing: batch job has finished but is in post-processing
+                 registering: job output is being registered in Rucio
                  finished: job finished successfully
                  failed: job failed
                  toresubmit: job will be cancelled and resubmitted

@@ -74,7 +74,10 @@ def report(actconfs):
             log += f'{rtot[s]:>10}'
         except:
             log += f'{"-":>10}'
-    return log + '\n\n' + HarvesterReport()
+    log += '\n\n'
+    if len(actconfs) == 1:
+        log += HarvesterReport()
+    return log
 
 def HarvesterReport():
     log = ''

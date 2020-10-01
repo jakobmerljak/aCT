@@ -18,14 +18,16 @@ class aCTPanda2Xrsl:
         self.siteinfo = siteinfo
         self.ncores = siteinfo['corecount']
         self.prodSourceLabel = self.jobdesc['prodSourceLabel'][0]
+        self.resourcetype = self.jobdesc.get('resourceType', ['None'])[0]
 
         self.defaults = {}
         self.defaults['memory'] = 2000
         self.defaults['cputime'] = 2*1440*60
+        self.memory = self.defaults['memory']
         self.sitename = pandadbjob['siteName']
         self.schedconfig = siteinfo['schedconfig']
         self.truepilot = siteinfo['truepilot']
-        self.agisjsons = siteinfo.get('agisjsons', 0)
+        self.cricjsons = siteinfo.get('cricjsons', 0)
         self.osmap = osmap
         self.maxwalltime = siteinfo['maxwalltime']
         if self.maxwalltime == 0:
@@ -36,11 +38,12 @@ class aCTPanda2Xrsl:
         if self.prodSourceLabel.startswith('rc_'):
             self.wrapper = atlasconf.get(["executable", "wrapperurlrc"])
 
-        self.piloturl = atlasconf.get(["executable", "ptarurl"])
-        if 'pilot_url' in siteinfo.get('params', {}):
-            self.piloturl = siteinfo.get('params', {}).get('pilot_url')
-        elif self.prodSourceLabel.startswith('rc_test'):
+        self.piloturl = siteinfo.get('params', {}).get('pilot_url')
+        if self.prodSourceLabel.startswith('rc_test'):
             self.piloturl = atlasconf.get(["executable", "ptarurlrc"])
+        if not self.truepilot and not self.piloturl:
+            self.piloturl = atlasconf.get(["executable", "ptarurl"])
+        self.pilotversion = siteinfo.get('pilot_version', '2')
 
         self.tmpdir = tmpdir
         self.inputfiledir = os.path.join(self.tmpdir, 'inputfiles')
@@ -50,7 +53,7 @@ class aCTPanda2Xrsl:
         self.traces = []
 
         try:
-            self.schedulerid = json.loads(pandadbjob['metadata'])['schedulerid']
+            self.schedulerid = json.loads(pandadbjob['metadata'].decode())['schedulerid']
         except:
             self.schedulerid = atlasconf.get(["panda", "schedulerid"])
 
@@ -131,6 +134,10 @@ class aCTPanda2Xrsl:
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
 
+        # for large core count
+        if self.getNCores() > 20:
+            walltime = walltime * 1.5
+
         # JEDI analysis hack
         walltime = max(60, walltime)
         walltime = min(self.maxwalltime, walltime)
@@ -185,6 +192,7 @@ class aCTPanda2Xrsl:
             memory = 2000
 
         self.xrsl['memory'] = '(memory = %d)' % (memory)
+        self.memory = memory
 
     def setRTE(self):
 
@@ -253,15 +261,35 @@ class aCTPanda2Xrsl:
 
         self.xrsl['executable'] = "(executable = runpilot2-wrapper.sh)"
 
+    def getJobType(self):
+
+        return 'user' if self.prodSourceLabel in ['user', 'panda'] else 'managed'
+
+    def getResourceType(self):
+
+        if self.resourcetype != 'None':
+            return self.resourcetype
+
+        resource = 'SCORE'
+        if self.ncores > 1:
+            resource = 'MCORE'
+        if self.memory > self.defaults['memory']:
+            resource += '_HIMEM'
+        return resource
+
     def setArguments(self):
 
-        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic"' % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel)
+        pargs = '"-q" "%s" "-r" "%s" "-s" "%s" "-d" "-j" "%s" "--pilot-user" "ATLAS" "-w" "generic" "--job-type" "%s" "--resource-type" "%s"' \
+                % (self.schedconfig, self.sitename, self.sitename, self.prodSourceLabel, self.getJobType(), self.getResourceType())
         if self.prodSourceLabel == 'rc_alrb':
             pargs += ' "-i" "ALRB"'
         elif self.prodSourceLabel.startswith('rc_test'):
             pargs += ' "-i" "RC"'
         if self.truepilot:
-            pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            if self.piloturl:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--piloturl" "%s"' % (self.piloturl)
+            else:
+                pargs += ' "--url" "https://pandaserver.cern.ch" "-p" "25443" "--pilotversion" "%s"' % (self.pilotversion)
         else:
             pargs += ' "-z" "-t" "--piloturl" "local" "--mute"'
 
@@ -292,16 +320,17 @@ class aCTPanda2Xrsl:
     def setInputs(self):
 
         x = ""
-        # create input file with job desc
-        pandaid = self.jobdesc['PandaID'][0]
-        try:
-            os.makedirs(self.inputjobdir)
-        except:
-            pass
-        tmpfile = self.inputjobdir+"/pandaJobData.out"
-        with open(tmpfile, "w") as f:
-            f.write(self.pandajob)
-        x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
+        if self.siteinfo['push']:
+            # create input file with job desc
+            pandaid = self.jobdesc['PandaID'][0]
+            try:
+                os.makedirs(self.inputjobdir)
+            except:
+                pass
+            tmpfile = self.inputjobdir+"/pandaJobData.out"
+            with open(tmpfile, "w") as f:
+                f.write(self.pandajob)
+            x += '(pandaJobData.out "%s/pandaJobData.out")' % self.inputjobdir
 
         if self.truepilot:
             x += '(runpilot2-wrapper.sh "%s")' % self.wrapper
@@ -317,10 +346,10 @@ class aCTPanda2Xrsl:
         # Pilot tarball
         x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
-        # Special HPCs which cannot get agis files from cvmfs or over network
-        if self.agisjsons:
-            x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+        # Special HPCs which cannot get cric files from cvmfs or over network
+        if self.cricjsons:
+            x += '(cric_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_ddmendpoints.json")'
+            x += '(cric_pandaqueues.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_pandaqueues.json")'
 
         # Panda queue configuration
         if self.eventranges:
