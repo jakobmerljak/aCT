@@ -90,7 +90,36 @@ def collect_from_json( infile ):
         config_dict['MomentumVectorZ'] = mjson['sequence'][0]['generators'][0]['direction'][2] if 'direction' in mjson['sequence'][0]['generators'][0] else None
         config_dict['BeamEnergy']    = mjson['sequence'][0]['generators'][0]['energy']  if 'energy' in mjson['sequence'][0]['generators'][0] else None
         config_dict['BeamParticle']  = mjson['sequence'][0]['generators'][0]['particle'] if 'particle' in mjson['sequence'][0]['generators'][0] else None
-
+        #or, if we're using the multiparticle gun, which has different names and conventions for the same parameters
+        if not config_dict['GunPositionX[mm]'] :
+            config_dict['GunPositionX[mm]']  = mjson['sequence'][0]['generators'][0]['vertex'][0] if 'vertex' in mjson['sequence'][0]['generators'][0] else None
+            config_dict['GunPositionY[mm]']  = mjson['sequence'][0]['generators'][0]['vertex'][1] if 'vertex' in mjson['sequence'][0]['generators'][0] else None
+            config_dict['GunPositionZ[mm]']  = mjson['sequence'][0]['generators'][0]['vertex'][2] if 'vertex' in mjson['sequence'][0]['generators'][0] else None
+        if not config_dict['MomentumVectorX'] :
+            config_dict['MomentumVectorX'] = mjson['sequence'][0]['generators'][0]['momentum'][0] if 'momentum' in mjson['sequence'][0]['generators'][0] else None
+            config_dict['MomentumVectorY'] = mjson['sequence'][0]['generators'][0]['momentum'][1] if 'momentum' in mjson['sequence'][0]['generators'][0] else None
+            config_dict['MomentumVectorZ'] = mjson['sequence'][0]['generators'][0]['momentum'][2] if 'momentum' in mjson['sequence'][0]['generators'][0] else None
+        if not config_dict['BeamEnergy'] :
+            px = float( str(config_dict['MomentumVectorX']) )
+            py = float( str(config_dict['MomentumVectorY']) )
+            pz = float( str(config_dict['MomentumVectorZ']) )   #config_dict['MomentumVectorZ'])
+            import math
+            energy = int( math.sqrt( px*px + py*py + pz*pz ) + 0.5 )
+            # now use this to normalise the momentum vector
+            config_dict['MomentumVectorX'] = px/energy
+            config_dict['MomentumVectorY'] = py/energy
+            config_dict['MomentumVectorZ'] = pz/energy
+            #and then set the beam energy. first get the units right
+            while energy > 999 :
+                energy = energy/1000.
+                
+            config_dict['BeamEnergy'] = energy
+        if not config_dict['BeamParticle'] :
+            config_dict['BeamParticle']  = mjson['sequence'][0]['generators'][0]['pdgID'] if 'pdgID' in mjson['sequence'][0]['generators'][0] else None
+        #note: defaults to 1, rather than "None"
+        config_dict['nBeamParticles']  = mjson['sequence'][0]['generators'][0]['nParticles'] if 'nParticles' in mjson['sequence'][0]['generators'][0] else 1
+            
+        
     if 'beamSpotSmear' in mjson['sequence'][0] :
         config_dict['BeamSpotSizeX[mm]'] = mjson['sequence'][0]['beamSpotSmear'][0]
         config_dict['BeamSpotSizeY[mm]'] = mjson['sequence'][0]['beamSpotSmear'][1]
