@@ -25,6 +25,12 @@ class aCTDBMySQL(aCTDBMS):
 
         self.log.debug("initialized aCTDBMySQL")
 
+    def close(self):
+        if self.conn is not None:
+            self.conn.close()
+        if self.log is not None:
+            self.log.warning("Database session closed")
+
     def _connect(self, dbname=None):
         if self.socket != 'None':
             self.conn = mysql.connect(unix_socket=self.socket, database=dbname)
