@@ -20,6 +20,9 @@ class aCTDBSqlite(aCTDBMS):
         self.conn.execute('''PRAGMA synchronous=OFF''')
         self.log.info("initialized aCTDBSqlite")
 
+    def close(self):
+        pass
+
     def getCursor(self):
         return self.conn.cursor()
 
