@@ -51,20 +51,18 @@ if [ $RET -ne 0 ]; then
 fi
 
 echo -e "\nSingularity exited normally, proceeding with post-processing...\n"
-
+export KEEP_LOCAL_OUTPUT=1
 # Post processing to extract metadata for rucio
 eval $( python ldmx-simprod-rte-helper.py -j rucio.metadata -c ldmxproduction.config collect-metadata )
-if [ -z "$FINALOUTPUTFILE" ]; then
-  echo "Post-processing script failed!"
-  exit 1
-fi
+if [ ! -z "$FINALOUTPUTFILE" ]; then
 
-echo "Copying $OUTPUTDATAFILE to $FINALOUTPUTFILE"
-mkdir -p "${FINALOUTPUTFILE%/*}"
-cp "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
-if [ $? -ne 0 ]; then
-  echo "Failed to copy output to final destination"
-  exit 1
+  echo "Copying $OUTPUTDATAFILE to $FINALOUTPUTFILE"
+  mkdir -p "${FINALOUTPUTFILE%/*}"
+  cp "$OUTPUTDATAFILE" "$FINALOUTPUTFILE"
+  if [ $? -ne 0 ]; then
+    echo "Failed to copy output to final destination"
+    exit 1
+  fi
 fi
 
 # Success

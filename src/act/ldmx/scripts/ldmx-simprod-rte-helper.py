@@ -232,16 +232,14 @@ def job_starttime(starttime_f='.ldmx.job.starttime'):
 
 def set_remote_output(conf_dict, meta):
     # Check for remote location and construct URL
-    # GRID_GLOBAL_JOBHOST is available from ARC 6.8
-    cehost = os.environ.get('GRID_GLOBAL_JOBHOST')
-    if 'FinalOutputDestination' in conf_dict and 'FinalOutputBasePath' in conf_dict \
-      and cehost not in conf_dict.get('NoUploadSites', '').split(','):
+    if 'FinalOutputDestination' in conf_dict and 'FinalOutputBasePath' in conf_dict:
         pfn = conf_dict['FinalOutputBasePath']
         while pfn.endswith('/'):
             pfn = pfn[:-1]
-        pfn += '/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
+        pfn += '/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/{name}'.format(**meta)
         meta['remote_output'] = {'rse': conf_dict['FinalOutputDestination'],
                                  'pfn': pfn}
+        meta['DataLocation'] = pfn
         # Add to ARC output list
         with open('output.files', 'w') as f:
             f.write('{} {}'.format(conf_dict['FileName'], pfn))
@@ -275,13 +273,23 @@ def collect_meta(conf_dict, json_file):
         logger.error('Output file {} does not exist!'.format(conf_dict.get('FileName', '')))
         return meta
 
-    data_location = os.environ['LDMX_STORAGE_BASE']
-    data_location += '/ldmx/mc-data/{Scope}/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
-    meta['DataLocation'] = data_location
+    meta['name'] = 'mc_{SampleId}_run{RunNumber}_t{FileCreationTime}.root'.format(**meta)
+    set_remote_output(conf_dict, meta)
+    if os.environ.get('KEEP_LOCAL_OUTPUT'):
+        data_location = os.environ['LDMX_STORAGE_BASE']
+        data_location += '/ldmx/mc-data/v{DetectorVersion}/{BeamEnergy}GeV/{BatchID}/{name}'.format(**meta)
+        meta['local_replica'] = data_location
+        if 'DataLocation' in meta:
+            meta['DataLocation'] = ','.join([meta['DataLocation'], data_location])
+        else:
+            meta['DataLocation'] = data_location
+
+    if not meta.get('DataLocation'):
+        logger.error('No local or remote output location for output file, file will not be registered in Rucio')
+        return meta
 
     # Rucio metadata
     meta['scope'] = meta['Scope']
-    meta['name'] = os.path.basename(data_location)
     meta['datasetscope'] = meta['Scope']
     meta['datasetname'] = meta['BatchID']
     meta['containerscope'] = meta['Scope']
@@ -290,7 +298,6 @@ def collect_meta(conf_dict, json_file):
     meta['bytes'] = os.stat(conf_dict['FileName']).st_size
     (meta['md5'], meta['adler32']) = calculate_md5_adler32_checksum(conf_dict['FileName'])
 
-    set_remote_output(conf_dict, meta)
     return meta
 
 def get_parser():
@@ -330,9 +337,8 @@ if __name__ == '__main__':
         print_eval(conf_dict)
     elif cmd_args.action == 'collect-metadata':
         meta = collect_meta(conf_dict, cmd_args.metaDump)
-        if 'DataLocation' not in meta:
-            sys.exit(1)
-        print('export FINALOUTPUTFILE="{DataLocation}"'.format(**meta))
+        if 'local_replica' in meta:
+            print('export FINALOUTPUTFILE="{local_replica}"'.format(**meta))
         with open(cmd_args.json_metadata, 'w') as meta_f:
             json.dump(meta, meta_f)
 
