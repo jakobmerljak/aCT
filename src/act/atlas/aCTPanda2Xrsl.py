@@ -134,6 +134,10 @@ class aCTPanda2Xrsl:
         # Jedi underestimates walltime increase by 50% for now
         walltime = walltime * 1.5
 
+        # for NDGF, analysis recaling
+        if self.sitename in [ 'ANALY_ARNES_DIRECT', 'ARNES', 'DCSC', 'HPC2N', 'LUNARC', 'NSC', 'UIO', 'UIO_CLOUD', 'UNIBE-LHEP', 'UNIBE-LHEP-UBELIX', 'UNIBE-LHEP-UBELIX_MCORE_LOPRI', 'UNIGE-BAOBAB'] and self.prodSourceLabel in ['user']:
+            walltime = walltime * 1.5
+
         # for large core count
         if self.getNCores() > 20:
             walltime = walltime * 1.5
@@ -143,7 +147,8 @@ class aCTPanda2Xrsl:
         walltime = min(self.maxwalltime, walltime)
 
         # For truepilot use queue maxwalltime
-        if self.truepilot:
+        # SFU wants job walltime
+        if self.truepilot and 'CA-SFU-T2' not in self.sitename and 'WATERLOO' not in self.sitename:
             walltime = self.maxwalltime
 
         cputime = self.getNCores() * walltime
@@ -347,10 +352,9 @@ class aCTPanda2Xrsl:
         x += '(pilot2.tar.gz "%s" "cache=check")' % self.piloturl
 
         # Special HPCs which cannot get cric files from cvmfs or over network
-        # TODO sync with pilot changes to CRIC jsons
         if self.cricjsons:
-            x += '(agis_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_ddmendpoints.json")'
-            x += '(agis_schedconf.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/agis_schedconf.json")'
+            x += '(cric_ddmendpoints.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_ddmendpoints.json")'
+            x += '(cric_pandaqueues.json "/cvmfs/atlas.cern.ch/repo/sw/local/etc/cric_pandaqueues.json")'
 
         # Panda queue configuration
         if self.eventranges:
@@ -380,7 +384,8 @@ class aCTPanda2Xrsl:
                 #    continue
                 # Hard-coded pilot rucio account - should change based on proxy
                 # Rucio does not expose mtime, set cache=invariant so not to download too much
-                if self.sitename in []:
+                #if self.sitename in ["SiGNET"]:
+                if self.sitename in ['ANALY_ARNES_DIRECT', 'ANALY_BOINC', 'ANALY_SiGNET_DIRECT', 'ARC-TEST', 'ARNES', 'DCSC', 'HPC2N', 'LUNARC', 'NSC', 'RIVR.UM', 'SiGNET', 'SiGNET-NSC_MCORE', 'UIO', 'UIO_CLOUD', 'UIO_CLOUD_LOPRI', 'UNIBE-LHEP', 'UNIBE-LHEP-UBELIX', 'UNIBE-LHEP-UBELIX_MCORE_LOPRI', 'UNIGE-BAOBAB']:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;transferprotocol=https;httpgetpartial=no;cache=invariant/replicas", scope, filename])
                 else:
                     lfn = '/'.join(["rucio://rucio-lb-prod.cern.ch;rucioaccount=pilot;cache=invariant/replicas", scope, filename])

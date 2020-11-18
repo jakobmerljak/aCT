@@ -6,6 +6,9 @@ class aCTDBOracle(aCTDBMS):
     def __init__(self, log, conf):
         raise Exception("Oracle class is not implemented yet")
 
+    def close(self):
+        pass
+
     def getCursor(self):
         raise Exception("Oracle class is not implemented yet")
 

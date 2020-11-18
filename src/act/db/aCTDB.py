@@ -42,3 +42,7 @@ class aCTDB(object):
         if lock:
             c = self.db.getCursor()
             c.execute("UNLOCK TABLES")
+
+    def close(self):
+        self.db.close()
+

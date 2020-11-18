@@ -98,5 +98,7 @@ class aCTProcess:
         '''
         Clean up code when process exits
         '''
+        self.db.close()
+        self.dbcondor.close()
         self.log.info("Cleanup for cluster %s", self.cluster)
         os._exit(0)
