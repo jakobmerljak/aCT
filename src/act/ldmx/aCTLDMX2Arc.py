@@ -66,7 +66,7 @@ class aCTLDMX2Arc(aCTLDMXProcess):
             xrsl['runtimeenvironment'] = ''
             if 'RunTimeEnvironment' in config:
                 xrsl['runtimeenvironment'] = f"(runtimeenvironment = APPS/{config.get('RunTimeEnvironment')})"
-            xrsl['runtimeenvironment'] += "(runtimeenvironment = APPS/LDMX-SIMPROD-2.1)"
+            xrsl['runtimeenvironment'] += f"(runtimeenvironment = APPS/{self.conf.get(['executable', 'simprodrte'])})"
             if config.get('FinalOutputDestination'):
                 xrsl['outputfiles'] = '(outputfiles = ("rucio.metadata" "")("@output.files" ""))'
             else:
