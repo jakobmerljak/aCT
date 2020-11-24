@@ -83,9 +83,10 @@ class aCTLDMXRegister(aCTLDMXProcess):
             else: # success
                 self.dbldmx.updateJobs(select, {'ldmxstatus': 'finished'})
 
-            # copy to joblog dir files downloaded for the job: gmlog errors and job stdout
-            # Save space - don't save successful job output
-            #self.copyOutputFiles(aj)
+            # copy to joblog dir files downloaded for the job if configured:
+            # gmlog errors and job stdout
+            if self.conf.get(['joblog', 'keepsuccessful']) and self.conf.get(['joblog','dir']):
+                self.copyOutputFiles(aj)
 
             # Clean tmp dir
             self.cleanDownloadedJob(jobid)
